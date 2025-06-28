@@ -9,7 +9,17 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
+
+if (!firebaseConfig.apiKey) {
+    throw new Error(
+        'La clave de API de Firebase (NEXT_PUBLIC_FIREBASE_API_KEY) no está configurada. ' +
+        'Por favor, sigue las instrucciones en `firebase-instructions.md`, ' +
+        'asegúrate de haber guardado tus credenciales en el archivo `.env.local` ' +
+        'y de haber REINICIADO el servidor de desarrollo.'
+    );
+}
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
