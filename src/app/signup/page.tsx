@@ -38,11 +38,25 @@ export default function SignupPage() {
       });
       router.push("/dashboard");
     } catch (error: any) {
-      let description = "Ocurrió un error. Por favor, inténtalo de nuevo.";
-      if (error.code === "auth/email-already-in-use") {
-        description = "Este correo electrónico ya está en uso.";
-      } else if (error.code === "auth/weak-password") {
-        description = "La contraseña es demasiado débil. Debe tener al menos 6 caracteres.";
+      let description = "Ocurrió un error inesperado. Por favor, inténtalo de nuevo.";
+      switch (error.code) {
+        case "auth/email-already-in-use":
+          description = "Este correo electrónico ya está en uso por otra cuenta.";
+          break;
+        case "auth/weak-password":
+          description = "La contraseña es demasiado débil. Debe tener al menos 6 caracteres.";
+          break;
+        case "auth/invalid-api-key":
+          description = "La clave de API de Firebase no es válida. Revisa tus credenciales en el archivo .env.local.";
+          break;
+        case "auth/network-request-failed":
+            description = "Error de red. Por favor, comprueba tu conexión a internet.";
+            break;
+        case "auth/operation-not-allowed":
+            description = "El registro por correo y contraseña no está habilitado en tu proyecto de Firebase.";
+            break;
+        default:
+            console.error("Firebase signup error:", error);
       }
       toast({
         variant: "destructive",

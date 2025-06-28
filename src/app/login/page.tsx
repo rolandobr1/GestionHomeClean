@@ -38,10 +38,26 @@ export default function LoginPage() {
       });
       router.push("/dashboard");
     } catch (error: any) {
+      let description = "Ocurrió un error inesperado. Por favor, inténtalo de nuevo.";
+      switch (error.code) {
+        case "auth/user-not-found":
+        case "auth/wrong-password":
+        case "auth/invalid-credential":
+          description = "Credenciales incorrectas. Por favor, verifica tu correo y contraseña.";
+          break;
+        case "auth/invalid-api-key":
+          description = "La clave de API de Firebase no es válida. Revisa tus credenciales en el archivo .env.local.";
+          break;
+        case "auth/network-request-failed":
+          description = "Error de red. Por favor, comprueba tu conexión a internet.";
+          break;
+        default:
+          console.error("Firebase login error:", error);
+      }
       toast({
         variant: "destructive",
         title: "Error al iniciar sesión",
-        description: "Credenciales inválidas. Por favor, inténtalo de nuevo.",
+        description,
       });
     } finally {
       setLoading(false);
