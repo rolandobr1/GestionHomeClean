@@ -45,8 +45,9 @@ export default function SignupPage() {
             break;
           case "auth/invalid-api-key":
           case "auth/api-key-not-valid":
+          case "auth/configuration-not-found":
             description =
-              "La clave de API de Firebase no es válida. Por favor, sigue las instrucciones en el archivo 'firebase-instructions.md' para configurarla correctamente.";
+              "Error de configuración de Firebase. Revisa que tus credenciales en '.env.local' sean correctas y reinicia el servidor.";
             break;
           case "auth/weak-password":
             description =
