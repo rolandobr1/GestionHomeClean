@@ -46,8 +46,9 @@ export default function LoginPage() {
             description = "Correo electrónico o contraseña incorrectos.";
             break;
           case "auth/invalid-api-key":
+          case "auth/api-key-not-valid":
             description =
-              "La clave de API de Firebase no es válida. Por favor, revisa tus variables de entorno.";
+              "La clave de API de Firebase no es válida. Por favor, revisa el archivo .env.local y tus variables de entorno.";
             break;
           default:
             description = error.message;
