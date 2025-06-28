@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, isConfigured } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, Terminal } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(auth!, email, password);
       toast({
         title: "Registro exitoso",
         description: "Tu cuenta ha sido creada. Ahora puedes iniciar sesión.",
@@ -38,25 +39,10 @@ export default function SignupPage() {
       router.push("/dashboard");
     } catch (error: any) {
       let description = "Ocurrió un error. Por favor, inténtalo de nuevo.";
-      if (error.code) {
-        switch (error.code) {
-          case "auth/email-already-in-use":
-            description = "Este correo electrónico ya está en uso.";
-            break;
-          case "auth/invalid-api-key":
-          case "auth/api-key-not-valid":
-          case "auth/configuration-not-found":
-            description =
-              "Error de configuración de Firebase. Revisa que tus credenciales en '.env.local' sean correctas y reinicia el servidor.";
-            break;
-          case "auth/weak-password":
-            description =
-              "La contraseña es demasiado débil. Debe tener al menos 6 caracteres.";
-            break;
-          default:
-            description = error.message;
-            break;
-        }
+      if (error.code === "auth/email-already-in-use") {
+        description = "Este correo electrónico ya está en uso.";
+      } else if (error.code === "auth/weak-password") {
+        description = "La contraseña es demasiado débil. Debe tener al menos 6 caracteres.";
       }
       toast({
         variant: "destructive",
@@ -67,6 +53,40 @@ export default function SignupPage() {
       setLoading(false);
     }
   };
+
+  if (!isConfigured) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-background p-4">
+             <Card className="mx-auto max-w-md w-full">
+                <CardHeader>
+                    <CardTitle className="text-xl">Configuración Requerida</CardTitle>
+                    <CardDescription>
+                        La aplicación necesita conectarse a Firebase.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Alert variant="destructive">
+                        <Terminal className="h-4 w-4" />
+                        <AlertTitle>¡Acción Requerida!</AlertTitle>
+                        <AlertDescription>
+                            <div className="space-y-2 mt-2">
+                                <p>Sigue estos pasos para configurar la aplicación:</p>
+                                <ul className="list-disc pl-5 mt-2 space-y-1 text-xs">
+                                    <li>Copia tus credenciales del proyecto Firebase.</li>
+                                    <li>Pégalas en el archivo <code>.env.local</code>.</li>
+                                    <li>Guarda el archivo y <strong>reinicia el servidor</strong>.</li>
+                                </ul>
+                                <p className="text-xs text-muted-foreground pt-2">
+                                    Consulta <code>firebase-instructions.md</code> para ver la guía detallada.
+                                </p>
+                            </div>
+                        </AlertDescription>
+                    </Alert>
+                </CardContent>
+             </Card>
+        </div>
+    )
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">

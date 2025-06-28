@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useEffect, ReactNode } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, isConfigured } from "@/lib/firebase";
 import { Skeleton } from "./ui/skeleton";
 
 interface AuthContextType {
@@ -20,6 +20,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isConfigured || !auth) {
+        setLoading(false);
+        return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, isConfigured } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, Terminal } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,41 +31,56 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth!, email, password);
       toast({
         title: "Inicio de sesión exitoso",
         description: "Bienvenido de nuevo a QuimioGest.",
       });
       router.push("/dashboard");
     } catch (error: any) {
-      let description = "Credenciales inválidas. Por favor, inténtalo de nuevo.";
-      if (error.code) {
-        switch (error.code) {
-          case "auth/user-not-found":
-          case "auth/wrong-password":
-          case "auth/invalid-credential":
-            description = "Correo electrónico o contraseña incorrectos.";
-            break;
-          case "auth/invalid-api-key":
-          case "auth/api-key-not-valid":
-          case "auth/configuration-not-found":
-            description =
-              "Error de configuración de Firebase. Revisa que tus credenciales en '.env.local' sean correctas y reinicia el servidor.";
-            break;
-          default:
-            description = error.message;
-            break;
-        }
-      }
       toast({
         variant: "destructive",
         title: "Error al iniciar sesión",
-        description,
+        description: "Credenciales inválidas. Por favor, inténtalo de nuevo.",
       });
     } finally {
       setLoading(false);
     }
   };
+
+  if (!isConfigured) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-background p-4">
+             <Card className="mx-auto max-w-md w-full">
+                <CardHeader>
+                    <CardTitle className="text-xl">Configuración Requerida</CardTitle>
+                    <CardDescription>
+                        La aplicación necesita conectarse a Firebase.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Alert variant="destructive">
+                        <Terminal className="h-4 w-4" />
+                        <AlertTitle>¡Acción Requerida!</AlertTitle>
+                        <AlertDescription>
+                            <div className="space-y-2 mt-2">
+                                <p>Sigue estos pasos para configurar la aplicación:</p>
+                                <ul className="list-disc pl-5 mt-2 space-y-1 text-xs">
+                                    <li>Copia tus credenciales del proyecto Firebase.</li>
+                                    <li>Pégalas en el archivo <code>.env.local</code>.</li>
+                                    <li>Guarda el archivo y <strong>reinicia el servidor</strong>.</li>
+                                </ul>
+                                <p className="text-xs text-muted-foreground pt-2">
+                                    Consulta <code>firebase-instructions.md</code> para ver la guía detallada.
+                                </p>
+                            </div>
+                        </AlertDescription>
+                    </Alert>
+                </CardContent>
+             </Card>
+        </div>
+    )
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
