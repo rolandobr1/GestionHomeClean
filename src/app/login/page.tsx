@@ -37,10 +37,27 @@ export default function LoginPage() {
       });
       router.push("/dashboard");
     } catch (error: any) {
+      let description = "Credenciales inválidas. Por favor, inténtalo de nuevo.";
+      if (error.code) {
+        switch (error.code) {
+          case "auth/user-not-found":
+          case "auth/wrong-password":
+          case "auth/invalid-credential":
+            description = "Correo electrónico o contraseña incorrectos.";
+            break;
+          case "auth/invalid-api-key":
+            description =
+              "La clave de API de Firebase no es válida. Por favor, revisa tus variables de entorno.";
+            break;
+          default:
+            description = error.message;
+            break;
+        }
+      }
       toast({
         variant: "destructive",
         title: "Error al iniciar sesión",
-        description: "Credenciales inválidas. Por favor, inténtalo de nuevo.",
+        description,
       });
     } finally {
       setLoading(false);

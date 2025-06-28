@@ -37,13 +37,29 @@ export default function SignupPage() {
       });
       router.push("/dashboard");
     } catch (error: any) {
+      let description = "Ocurrió un error. Por favor, inténtalo de nuevo.";
+      if (error.code) {
+        switch (error.code) {
+          case "auth/email-already-in-use":
+            description = "Este correo electrónico ya está en uso.";
+            break;
+          case "auth/invalid-api-key":
+            description =
+              "La clave de API de Firebase no es válida. Por favor, revisa tus variables de entorno.";
+            break;
+          case "auth/weak-password":
+            description =
+              "La contraseña es demasiado débil. Debe tener al menos 6 caracteres.";
+            break;
+          default:
+            description = error.message;
+            break;
+        }
+      }
       toast({
         variant: "destructive",
         title: "Error en el registro",
-        description:
-          error.code === "auth/email-already-in-use"
-            ? "Este correo electrónico ya está en uso."
-            : "Ocurrió un error. Por favor, inténtalo de nuevo.",
+        description,
       });
     } finally {
       setLoading(false);
