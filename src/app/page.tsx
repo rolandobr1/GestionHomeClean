@@ -1,3 +1,46 @@
+import { Button } from "@/components/ui/button";
+import { FlaskConical, LogIn, UserPlus } from "lucide-react";
+import Link from "next/link";
+
 export default function Home() {
-  return <></>;
+  return (
+    <div className="flex flex-col min-h-screen">
+      <header className="px-4 lg:px-6 h-14 flex items-center">
+        <Link href="#" className="flex items-center justify-center" prefetch={false}>
+          <FlaskConical className="h-6 w-6 text-primary" />
+          <span className="sr-only">QuimioGest</span>
+        </Link>
+      </header>
+      <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
+        <div className="space-y-4 max-w-2xl">
+          <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm">
+            Gestión de Inventario y Finanzas
+          </div>
+          <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl text-primary font-headline">
+            QuimioGest
+          </h1>
+          <p className="text-lg text-muted-foreground md:text-xl">
+            La solución todo-en-uno para administrar eficientemente tu negocio de productos químicos. Controla tu inventario, ingresos, egresos y cuentas por cobrar desde un solo lugar.
+          </p>
+        </div>
+        <div className="flex flex-col gap-4 min-[400px]:flex-row mt-8">
+          <Button asChild size="lg">
+            <Link href="/login">
+              <LogIn className="mr-2 h-5 w-5" />
+              Iniciar Sesión
+            </Link>
+          </Button>
+          <Button asChild size="lg" variant="secondary">
+            <Link href="/signup">
+              <UserPlus className="mr-2 h-5 w-5" />
+              Registrarse
+            </Link>
+          </Button>
+        </div>
+      </main>
+      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
+        <p className="text-xs text-muted-foreground">© 2024 QuimioGest. Todos los derechos reservados.</p>
+      </footer>
+    </div>
+  );
 }
