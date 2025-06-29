@@ -20,11 +20,7 @@ type Client = {
   address: string;
 };
 
-const initialClients: Client[] = [
-  { id: '1', name: 'Laboratorios Alfa', email: 'compras@alfa.com', phone: '809-555-1234', address: 'Calle Falsa 123, Santo Domingo' },
-  { id: '2', name: 'Farmacia San José', email: 'contacto@fsj.do', phone: '829-555-5678', address: 'Av. Principal 45, Santiago' },
-  { id: '3', name: 'Industrias del Caribe', email: 'gerencia@icaribe.com', phone: '809-555-9012', address: 'Zona Franca, La Romana' },
-];
+const initialClients: Client[] = [];
 
 export default function ClientesPage() {
     const [clients, setClients] = useState<Client[]>(initialClients);

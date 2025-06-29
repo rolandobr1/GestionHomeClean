@@ -31,11 +31,7 @@ type Client = {
   name: string;
 };
 
-const initialClients: Client[] = [
-  { id: '1', name: 'Laboratorios Alfa' },
-  { id: '2', name: 'Farmacia San José' },
-  { id: '3', name: 'Industrias del Caribe' },
-];
+const initialClients: Client[] = [];
 
 export const allClients = [
     { id: 'generic', name: 'Cliente Genérico' },

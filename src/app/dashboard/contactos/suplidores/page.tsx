@@ -20,11 +20,7 @@ type Supplier = {
   address: string;
 };
 
-const initialSuppliers: Supplier[] = [
-  { id: '1', name: 'Químicos del Este', email: 'ventas@qde.com.do', phone: '809-222-1111', address: 'Parque Industrial, Haina' },
-  { id: '2', name: 'Distribuidora Central', email: 'pedidos@dcentral.com', phone: '829-333-4444', address: 'Autopista Duarte Km 14, Santo Domingo' },
-  { id: '3', name: 'Importadora Global', email: 'info@iglobal.net', phone: '809-444-5555', address: 'Av. 27 de Febrero, Santo Domingo' },
-];
+const initialSuppliers: Supplier[] = [];
 
 export default function SuplidoresPage() {
     const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
