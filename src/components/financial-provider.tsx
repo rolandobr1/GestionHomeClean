@@ -3,15 +3,21 @@
 import React, { createContext, useState, ReactNode } from 'react';
 
 // Type definitions
+export type SoldProduct = {
+  productId: string;
+  quantity: number;
+  price: number;
+  name: string;
+};
+
 export type Income = {
   id: string;
-  amount: number;
+  totalAmount: number;
   date: string;
   category: string;
   clientId: string;
   paymentMethod: 'credito' | 'contado';
-  productId: string;
-  priceType: 'retail' | 'wholesale';
+  products: SoldProduct[];
 };
 
 export type Expense = {
@@ -43,7 +49,7 @@ export const FinancialProvider = ({ children }: { children: ReactNode }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
 
   const addIncome = (income: Omit<Income, 'id'>) => {
-    setIncomes(prev => [...prev, { ...income, id: new Date().toISOString() }]);
+    setIncomes(prev => [...prev, { ...income, id: new Date().toISOString() + Math.random() }]);
   };
 
   const updateIncome = (updatedIncome: Income) => {
@@ -55,7 +61,7 @@ export const FinancialProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addExpense = (expense: Omit<Expense, 'id'>) => {
-    setExpenses(prev => [...prev, { ...expense, id: new Date().toISOString() }]);
+    setExpenses(prev => [...prev, { ...expense, id: new Date().toISOString() + Math.random() }]);
   };
 
   const updateExpense = (updatedExpense: Expense) => {

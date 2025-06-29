@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { PlusCircle, MoreHorizontal, Trash2, Edit } from 'lucide-react';
@@ -12,11 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { initialProducts } from '../../inventario/productos/page';
 import { useFinancialData } from '@/hooks/use-financial-data';
-import type { Income } from '@/components/financial-provider';
+import type { Income, SoldProduct } from '@/components/financial-provider';
 
 type Client = {
   id: string;
@@ -33,6 +34,204 @@ export const allClients = [
     { id: 'generic', name: 'Cliente Genérico' },
     ...initialClients
 ];
+
+const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income: Income) => void }) => {
+    const [clientId, setClientId] = useState('generic');
+    const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [soldProducts, setSoldProducts] = useState<SoldProduct[]>([]);
+    
+    const [currentProduct, setCurrentProduct] = useState('');
+    const [currentQuantity, setCurrentQuantity] = useState(1);
+    const [currentPriceType, setCurrentPriceType] = useState<'retail' | 'wholesale'>('retail');
+
+    useEffect(() => {
+        if (income) {
+            setClientId(income.clientId);
+            setPaymentMethod(income.paymentMethod);
+            setDate(income.date);
+            setSoldProducts(income.products);
+        } else {
+            setClientId('generic');
+            setPaymentMethod('contado');
+            setDate(new Date().toISOString().split('T')[0]);
+            setSoldProducts([]);
+        }
+    }, [income]);
+
+    const handleAddProduct = () => {
+        const product = initialProducts.find(p => p.id === currentProduct);
+        if (!product || currentQuantity <= 0) return;
+
+        const price = currentPriceType === 'retail' ? product.salePriceRetail : product.salePriceWholesale;
+        
+        const existingProduct = soldProducts.find(p => p.productId === product.id && p.price === price);
+
+        if (existingProduct) {
+            setSoldProducts(soldProducts.map(p => 
+                p.productId === product.id && p.price === price
+                ? { ...p, quantity: p.quantity + currentQuantity } 
+                : p
+            ));
+        } else {
+            setSoldProducts([...soldProducts, {
+                productId: product.id,
+                name: product.name,
+                quantity: currentQuantity,
+                price: price,
+            }]);
+        }
+        
+        setCurrentProduct('');
+        setCurrentQuantity(1);
+        setCurrentPriceType('retail');
+    };
+
+    const handleRemoveProduct = (productId: string) => {
+        setSoldProducts(soldProducts.filter(p => p.productId !== productId));
+    };
+
+    const totalAmount = soldProducts.reduce((acc, p) => acc + (p.price * p.quantity), 0);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (soldProducts.length === 0) {
+             alert("Debes agregar al menos un producto.");
+            return;
+        }
+
+        onSave({
+            id: income?.id || '',
+            clientId,
+            paymentMethod,
+            date,
+            products: soldProducts,
+            totalAmount,
+            category: 'Venta de Producto',
+        });
+    }
+    
+    return (
+        <form onSubmit={handleSubmit}>
+            <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="clientId">Cliente</Label>
+                        <Select onValueChange={setClientId} value={clientId}>
+                            <SelectTrigger id="clientId">
+                                <SelectValue placeholder="Selecciona un cliente" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {allClients.map(client => (
+                                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="date">Fecha</Label>
+                        <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="paymentMethod">Método Pago</Label>
+                        <Select onValueChange={(value: 'contado' | 'credito') => setPaymentMethod(value)} value={paymentMethod}>
+                            <SelectTrigger id="paymentMethod">
+                                <SelectValue placeholder="Selecciona un método" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="contado">Contado</SelectItem>
+                                <SelectItem value="credito">Crédito</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                
+                <Separator />
+
+                <div className="space-y-2">
+                    <Label>Añadir Productos</Label>
+                    <Card className="p-4 space-y-4 bg-muted/50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                                <Label htmlFor="productId-form">Producto</Label>
+                                <Select onValueChange={setCurrentProduct} value={currentProduct}>
+                                    <SelectTrigger id="productId-form">
+                                        <SelectValue placeholder="Selecciona un producto" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {initialProducts.map(product => (
+                                            <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="quantity">Cantidad</Label>
+                                <Input id="quantity" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                             <Label>Tipo de Precio</Label>
+                            <RadioGroup value={currentPriceType} onValueChange={(value: 'retail' | 'wholesale') => setCurrentPriceType(value)} className="flex gap-4">
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="retail" id="retail" /><Label htmlFor="retail">Detalle</Label></div>
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="wholesale" id="wholesale" /><Label htmlFor="wholesale">Por Mayor</Label></div>
+                            </RadioGroup>
+                        </div>
+                        <Button type="button" onClick={handleAddProduct} className="w-full" disabled={!currentProduct}>Añadir Producto a la Venta</Button>
+                    </Card>
+                </div>
+
+                {soldProducts.length > 0 && (
+                     <div className="space-y-2">
+                        <Label>Productos en la Venta</Label>
+                        <Card>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Producto</TableHead>
+                                            <TableHead className="text-center">Cant.</TableHead>
+                                            <TableHead className="text-right">Precio</TableHead>
+                                            <TableHead className="text-right">Subtotal</TableHead>
+                                            <TableHead className="w-[50px]"></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {soldProducts.map(p => (
+                                            <TableRow key={p.productId}>
+                                                <TableCell>{p.name}</TableCell>
+                                                <TableCell className="text-center">{p.quantity}</TableCell>
+                                                <TableCell className="text-right">RD${p.price.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">RD${(p.quantity * p.price).toFixed(2)}</TableCell>
+                                                <TableCell>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(p.productId)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                     </div>
+                )}
+
+                 <div className="text-right text-xl font-bold">
+                    Total: RD${totalAmount.toFixed(2)}
+                </div>
+            </div>
+             <DialogFooter>
+                <DialogClose asChild>
+                     <Button type="button" variant="secondary">Cancelar</Button>
+                </DialogClose>
+                <Button type="submit">Guardar</Button>
+            </DialogFooter>
+        </form>
+    );
+};
 
 export default function IngresosPage() {
     const { incomes, addIncome, deleteIncome, updateIncome } = useFinancialData();
@@ -59,137 +258,6 @@ export default function IngresosPage() {
         setIsDialogOpen(false);
     };
 
-    const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income: Income) => void }) => {
-        const [formData, setFormData] = useState(income || {
-            amount: 0, date: new Date().toISOString().split('T')[0], category: 'Venta de Producto',
-            clientId: 'generic', paymentMethod: 'contado' as 'credito' | 'contado', productId: '',
-            priceType: 'retail' as 'retail' | 'wholesale'
-        });
-
-        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const { id, value, type } = e.target;
-            setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
-        };
-
-        const handleSelectChange = (field: keyof Omit<typeof formData, 'priceType'>) => (value: string) => {
-            if (field === 'productId') {
-                const product = initialProducts.find(p => p.id === value);
-                 if (product) {
-                    setFormData(prev => ({
-                        ...prev,
-                        productId: value,
-                        amount: prev.priceType === 'retail' ? product.salePriceRetail : product.salePriceWholesale
-                    }));
-                }
-            } else {
-                setFormData(prev => ({ ...prev, [field]: value }));
-            }
-        };
-
-        const handlePriceTypeChange = (value: 'retail' | 'wholesale') => {
-            const product = initialProducts.find(p => p.id === formData.productId);
-            setFormData(prev => ({
-                ...prev,
-                priceType: value,
-                amount: product ? (value === 'retail' ? product.salePriceRetail : product.salePriceWholesale) : prev.amount
-            }));
-        };
-
-        const handleSubmit = (e: React.FormEvent) => {
-            e.preventDefault();
-            onSave({ ...formData, id: income?.id || '' });
-        }
-        
-        return (
-            <form onSubmit={handleSubmit}>
-                <div className="grid gap-4 py-4">
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="productId" className="text-right">Producto</Label>
-                        <Select onValueChange={handleSelectChange('productId')} defaultValue={formData.productId} required>
-                            <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder="Selecciona un producto" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {initialProducts.map(product => (
-                                    <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label className="text-right">Tipo de Precio</Label>
-                        <RadioGroup
-                            value={formData.priceType}
-                            onValueChange={handlePriceTypeChange}
-                            className="col-span-3 flex gap-4"
-                        >
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="retail" id="retail" />
-                                <Label htmlFor="retail">Detalle</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="wholesale" id="wholesale" />
-                                <Label htmlFor="wholesale">Por Mayor</Label>
-                            </div>
-                        </RadioGroup>
-                    </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="clientId" className="text-right">Cliente</Label>
-                        <Select onValueChange={handleSelectChange('clientId')} defaultValue={formData.clientId}>
-                            <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder="Selecciona un cliente" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {allClients.map(client => (
-                                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="paymentMethod" className="text-right">Método Pago</Label>
-                        <Select onValueChange={handleSelectChange('paymentMethod')} defaultValue={formData.paymentMethod}>
-                            <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder="Selecciona un método" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="contado">Contado</SelectItem>
-                                <SelectItem value="credito">Crédito</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="amount" className="text-right">Monto</Label>
-                        <Input id="amount" type="number" value={formData.amount} onChange={handleChange} className="col-span-3" required />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="date" className="text-right">Fecha</Label>
-                        <Input id="date" type="date" value={formData.date} onChange={handleChange} className="col-span-3" required />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="category" className="text-right">Categoría</Label>
-                        <Select onValueChange={handleSelectChange('category')} defaultValue={formData.category}>
-                            <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder="Selecciona una categoría" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Venta de Producto">Venta de Producto</SelectItem>
-                                <SelectItem value="Servicios">Servicios</SelectItem>
-                                <SelectItem value="Otro">Otro</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-                 <DialogFooter>
-                    <DialogClose asChild>
-                         <Button type="button" variant="secondary">Cancelar</Button>
-                    </DialogClose>
-                    <Button type="submit">Guardar</Button>
-                </DialogFooter>
-            </form>
-        );
-    };
-
     return (
         <div className="space-y-6">
              <div className="flex justify-end items-start">
@@ -208,24 +276,42 @@ export default function IngresosPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Producto</TableHead>
                                 <TableHead>Cliente</TableHead>
+                                <TableHead>Productos</TableHead>
                                 <TableHead>Método</TableHead>
-                                <TableHead className="text-right">Monto</TableHead>
+                                <TableHead className="text-right">Monto Total</TableHead>
                                 <TableHead className="text-right">Fecha</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {incomes.map((income) => {
-                                const product = initialProducts.find(p => p.id === income.productId);
                                 const client = allClients.find(c => c.id === income.clientId);
+                                const productDetails = income.products.length > 2 
+                                    ? `${income.products.slice(0, 2).map(p => p.name).join(', ')}...`
+                                    : income.products.map(p => p.name).join(', ');
+                                
                                 return (
                                 <TableRow key={income.id}>
-                                    <TableCell className="font-medium">{product?.name || 'N/A'}</TableCell>
-                                    <TableCell>{client?.name || 'N/A'}</TableCell>
+                                    <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
+                                    <TableCell>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger>
+                                                    <span className="cursor-pointer underline-dashed">{income.products.length} producto(s)</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                   <ul className="list-disc pl-4">
+                                                        {income.products.map(p => (
+                                                            <li key={p.productId}>{p.quantity} x {p.name} @ RD${p.price.toFixed(2)}</li>
+                                                        ))}
+                                                   </ul>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </TableCell>
                                     <TableCell className="capitalize">{income.paymentMethod}</TableCell>
-                                    <TableCell className="text-right">RD${income.amount.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
                                     <TableCell className="text-right">{format(new Date(income.date), 'PPP', { locale: es })}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
@@ -264,8 +350,8 @@ export default function IngresosPage() {
                 </CardContent>
             </Card>
 
-             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+             <Dialog open={isDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingIncome(null); setIsDialogOpen(isOpen);}}>
+                <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>{editingIncome ? 'Editar Ingreso' : 'Añadir Ingreso'}</DialogTitle>
                         <DialogDescription>

@@ -24,7 +24,7 @@ import {
   ChartConfig,
 } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
-import { ArrowUpCircle, ArrowDownCircle, CircleDollarSign, FlaskConical, AlertTriangle, PlusCircle } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, CircleDollarSign, FlaskConical, AlertTriangle, PlusCircle, Trash2 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -33,9 +33,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from "@/hooks/use-toast";
 import { initialProducts } from './inventario/productos/page';
 import { useFinancialData } from '@/hooks/use-financial-data';
-import type { Income, Expense } from '@/components/financial-provider';
+import type { Income, Expense, SoldProduct } from '@/components/financial-provider';
 import { allClients } from './registros/ingresos/page';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Separator } from '@/components/ui/separator';
 
 const chartData: { month: string, income: number, expense: number }[] = [];
 
@@ -52,125 +53,178 @@ const chartConfig = {
 
 const lowStockItems: { name: string, sku: string, stock: number, reorderLevel: number, unit: string }[] = [];
 
-const IncomeForm = ({ onSave }: { onSave: (income: Omit<Income, 'id'>) => void }) => {
-    const [formData, setFormData] = useState({
-        amount: 0, date: new Date().toISOString().split('T')[0], category: 'Venta de Producto',
-        clientId: 'generic', paymentMethod: 'contado' as 'credito' | 'contado', productId: '',
-        priceType: 'retail' as 'retail' | 'wholesale'
-    });
+const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) => void, income: Income | null }) => {
+    const [clientId, setClientId] = useState('generic');
+    const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [soldProducts, setSoldProducts] = useState<SoldProduct[]>([]);
+    
+    const [currentProduct, setCurrentProduct] = useState('');
+    const [currentQuantity, setCurrentQuantity] = useState(1);
+    const [currentPriceType, setCurrentPriceType] = useState<'retail' | 'wholesale'>('retail');
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { id, value, type } = e.target;
-        setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
-    };
+    const handleAddProduct = () => {
+        const product = initialProducts.find(p => p.id === currentProduct);
+        if (!product || currentQuantity <= 0) return;
 
-    const handleSelectChange = (field: keyof Omit<typeof formData, 'priceType'>) => (value: string) => {
-        if (field === 'productId') {
-            const product = initialProducts.find(p => p.id === value);
-            if (product) {
-                setFormData(prev => ({
-                    ...prev,
-                    productId: value,
-                    amount: prev.priceType === 'retail' ? product.salePriceRetail : product.salePriceWholesale
-                }));
-            }
+        const price = currentPriceType === 'retail' ? product.salePriceRetail : product.salePriceWholesale;
+        
+        const existingProduct = soldProducts.find(p => p.productId === product.id);
+
+        if (existingProduct) {
+            setSoldProducts(soldProducts.map(p => 
+                p.productId === product.id 
+                ? { ...p, quantity: p.quantity + currentQuantity, price } 
+                : p
+            ));
         } else {
-            setFormData(prev => ({ ...prev, [field]: value }));
+            setSoldProducts([...soldProducts, {
+                productId: product.id,
+                name: product.name,
+                quantity: currentQuantity,
+                price: price,
+            }]);
         }
+        
+        setCurrentProduct('');
+        setCurrentQuantity(1);
+        setCurrentPriceType('retail');
     };
 
-    const handlePriceTypeChange = (value: 'retail' | 'wholesale') => {
-        const product = initialProducts.find(p => p.id === formData.productId);
-        setFormData(prev => ({
-            ...prev,
-            priceType: value,
-            amount: product ? (value === 'retail' ? product.salePriceRetail : product.salePriceWholesale) : prev.amount
-        }));
+    const handleRemoveProduct = (productId: string) => {
+        setSoldProducts(soldProducts.filter(p => p.productId !== productId));
     };
+
+    const totalAmount = soldProducts.reduce((acc, p) => acc + (p.price * p.quantity), 0);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(formData);
+        if (soldProducts.length === 0) {
+            alert("Debes agregar al menos un producto.");
+            return;
+        }
+
+        onSave({
+            clientId,
+            paymentMethod,
+            date,
+            products: soldProducts,
+            totalAmount,
+            category: 'Venta de Producto',
+        });
+        setSoldProducts([]); // Clear form after save
     }
     
     return (
         <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="productId" className="text-right">Producto</Label>
-                    <Select onValueChange={handleSelectChange('productId')} defaultValue={formData.productId} required>
-                        <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="Selecciona un producto" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {initialProducts.map(product => (
-                                <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+            <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="clientId">Cliente</Label>
+                        <Select onValueChange={setClientId} defaultValue={clientId}>
+                            <SelectTrigger id="clientId">
+                                <SelectValue placeholder="Selecciona un cliente" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {allClients.map(client => (
+                                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="date">Fecha</Label>
+                        <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                    </div>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Tipo de Precio</Label>
-                    <RadioGroup
-                        value={formData.priceType}
-                        onValueChange={handlePriceTypeChange}
-                        className="col-span-3 flex gap-4"
-                    >
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="retail" id="retail-dash" />
-                            <Label htmlFor="retail-dash">Detalle</Label>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="paymentMethod">Método Pago</Label>
+                        <Select onValueChange={(value: 'contado' | 'credito') => setPaymentMethod(value)} defaultValue={paymentMethod}>
+                            <SelectTrigger id="paymentMethod">
+                                <SelectValue placeholder="Selecciona un método" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="contado">Contado</SelectItem>
+                                <SelectItem value="credito">Crédito</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                
+                <Separator />
+
+                <div className="space-y-2">
+                    <Label>Añadir Productos</Label>
+                    <Card className="p-4 space-y-4 bg-muted/50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                                <Label htmlFor="productId">Producto</Label>
+                                <Select onValueChange={setCurrentProduct} value={currentProduct}>
+                                    <SelectTrigger id="productId">
+                                        <SelectValue placeholder="Selecciona un producto" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {initialProducts.map(product => (
+                                            <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="quantity">Cantidad</Label>
+                                <Input id="quantity" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" />
+                            </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="wholesale" id="wholesale-dash" />
-                            <Label htmlFor="wholesale-dash">Por Mayor</Label>
+                        <div className="space-y-2">
+                             <Label>Tipo de Precio</Label>
+                            <RadioGroup value={currentPriceType} onValueChange={(value: 'retail' | 'wholesale') => setCurrentPriceType(value)} className="flex gap-4">
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="retail" id="retail-dash" /><Label htmlFor="retail-dash">Detalle</Label></div>
+                                <div className="flex items-center space-x-2"><RadioGroupItem value="wholesale" id="wholesale-dash" /><Label htmlFor="wholesale-dash">Por Mayor</Label></div>
+                            </RadioGroup>
                         </div>
-                    </RadioGroup>
+                        <Button type="button" onClick={handleAddProduct} className="w-full" disabled={!currentProduct}>Añadir Producto a la Venta</Button>
+                    </Card>
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="clientId" className="text-right">Cliente</Label>
-                    <Select onValueChange={handleSelectChange('clientId')} defaultValue={formData.clientId}>
-                        <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="Selecciona un cliente" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {allClients.map(client => (
-                                <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="paymentMethod" className="text-right">Método Pago</Label>
-                    <Select onValueChange={handleSelectChange('paymentMethod')} defaultValue={formData.paymentMethod}>
-                        <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="Selecciona un método" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="contado">Contado</SelectItem>
-                            <SelectItem value="credito">Crédito</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="amount" className="text-right">Monto</Label>
-                    <Input id="amount" type="number" value={formData.amount} onChange={handleChange} className="col-span-3" required />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="date" className="text-right">Fecha</Label>
-                    <Input id="date" type="date" value={formData.date} onChange={handleChange} className="col-span-3" required />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="category" className="text-right">Categoría</Label>
-                    <Select onValueChange={handleSelectChange('category')} defaultValue={formData.category}>
-                        <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="Selecciona una categoría" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Venta de Producto">Venta de Producto</SelectItem>
-                            <SelectItem value="Servicios">Servicios</SelectItem>
-                            <SelectItem value="Otro">Otro</SelectItem>
-                        </SelectContent>
-                    </Select>
+
+                {soldProducts.length > 0 && (
+                     <div className="space-y-2">
+                        <Label>Productos en la Venta</Label>
+                        <Card>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Producto</TableHead>
+                                            <TableHead className="text-center">Cant.</TableHead>
+                                            <TableHead className="text-right">Precio</TableHead>
+                                            <TableHead className="text-right">Subtotal</TableHead>
+                                            <TableHead className="w-[50px]"></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {soldProducts.map(p => (
+                                            <TableRow key={p.productId}>
+                                                <TableCell>{p.name}</TableCell>
+                                                <TableCell className="text-center">{p.quantity}</TableCell>
+                                                <TableCell className="text-right">RD${p.price.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">RD${(p.quantity * p.price).toFixed(2)}</TableCell>
+                                                <TableCell>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(p.productId)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                     </div>
+                )}
+
+                 <div className="text-right text-xl font-bold">
+                    Total: RD${totalAmount.toFixed(2)}
                 </div>
             </div>
              <DialogFooter>
@@ -262,11 +316,11 @@ export default function DashboardPage() {
         const incomeDate = new Date(i.date);
         return incomeDate.getUTCMonth() === today.getUTCMonth() && incomeDate.getUTCFullYear() === today.getUTCFullYear();
       })
-      .reduce((acc, income) => acc + income.amount, 0);
+      .reduce((acc, income) => acc + income.totalAmount, 0);
     setTotalIncome(currentMonthIncome);
 
     const creditIncomes = incomes.filter(i => i.paymentMethod === 'credito');
-    const arTotal = creditIncomes.reduce((acc, income) => acc + income.amount, 0);
+    const arTotal = creditIncomes.reduce((acc, income) => acc + income.totalAmount, 0);
     const arCount = creditIncomes.length;
     setAccountsReceivable({ total: arTotal, count: arCount });
 
@@ -288,7 +342,7 @@ export default function DashboardPage() {
       setIsIncomeDialogOpen(false);
       toast({
           title: "Ingreso Registrado",
-          description: `Se ha añadido un ingreso por RD$${income.amount.toFixed(2)}.`,
+          description: `Se ha añadido un ingreso por RD$${income.totalAmount.toFixed(2)}.`,
       });
   };
 
@@ -424,14 +478,14 @@ export default function DashboardPage() {
       </div>
 
       <Dialog open={isIncomeDialogOpen} onOpenChange={setIsIncomeDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-xl">
               <DialogHeader>
                   <DialogTitle>Añadir Ingreso</DialogTitle>
                   <DialogDescription>
                       Añade un nuevo ingreso a tus registros.
                   </DialogDescription>
               </DialogHeader>
-              <IncomeForm onSave={handleIncomeSave} />
+              <IncomeForm onSave={handleIncomeSave} income={null} />
           </DialogContent>
       </Dialog>
 

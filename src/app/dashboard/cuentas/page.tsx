@@ -6,7 +6,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { CircleDollarSign, CheckCircle, MoreHorizontal } from "lucide-react";
 import { useFinancialData } from '@/hooks/use-financial-data';
-import { initialProducts } from '../inventario/productos/page';
 import { allClients } from '../registros/ingresos/page';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -41,7 +40,7 @@ export default function CuentasPage() {
                   <TableHeader>
                       <TableRow>
                           <TableHead>Cliente</TableHead>
-                          <TableHead>Producto</TableHead>
+                          <TableHead>Detalle</TableHead>
                           <TableHead>Fecha</TableHead>
                           <TableHead className="text-right">Monto</TableHead>
                           <TableHead className="text-right">Acciones</TableHead>
@@ -49,14 +48,13 @@ export default function CuentasPage() {
                   </TableHeader>
                   <TableBody>
                       {accountsReceivable.map((income) => {
-                          const product = initialProducts.find(p => p.id === income.productId);
                           const client = allClients.find(c => c.id === income.clientId);
                           return (
                               <TableRow key={income.id}>
                                   <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
-                                  <TableCell>{product?.name || 'N/A'}</TableCell>
+                                  <TableCell>Venta de {income.products.length} producto(s)</TableCell>
                                   <TableCell>{format(new Date(income.date), 'PPP', { locale: es })}</TableCell>
-                                  <TableCell className="text-right">RD${income.amount.toFixed(2)}</TableCell>
+                                  <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
                                   <TableCell className="text-right">
                                     <AlertDialog>
                                         <DropdownMenu>
