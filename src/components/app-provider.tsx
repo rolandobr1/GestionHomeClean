@@ -105,54 +105,50 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   const addIncome = (income: Omit<Income, 'id'>) => {
-    // Update product stock
-    setProducts(prevProducts => {
-        const newProducts = [...prevProducts];
-        income.products.forEach(soldProduct => {
-            const productIndex = newProducts.findIndex(p => p.id === soldProduct.productId);
-            if (productIndex !== -1) {
-                newProducts[productIndex].stock -= soldProduct.quantity;
-            }
-        });
-        return newProducts;
+    const quantitySoldMap = new Map<string, number>();
+    income.products.forEach(soldProduct => {
+        quantitySoldMap.set(soldProduct.productId, (quantitySoldMap.get(soldProduct.productId) || 0) + soldProduct.quantity);
     });
+
+    setProducts(prevProducts => 
+        prevProducts.map(product => {
+            if (quantitySoldMap.has(product.id)) {
+                const quantitySold = quantitySoldMap.get(product.id)!;
+                return { ...product, stock: product.stock - quantitySold };
+            }
+            return product;
+        })
+    );
 
     setIncomes(prev => [...prev, { ...income, id: new Date().toISOString() + Math.random() }]);
   };
 
   const addMultipleIncomes = (incomesToUpsert: Income[]) => {
       const stockChanges = new Map<string, number>();
+      const existingIncomesMap = new Map(incomes.map(i => [i.id, i]));
 
       incomesToUpsert.forEach(income => {
-          const originalIncome = incomes.find(i => i.id && i.id === income.id);
-
-          if (originalIncome) { // This is an UPDATE
-              // Add back original stock
+          const originalIncome = income.id ? existingIncomesMap.get(income.id) : undefined;
+          
+          if (originalIncome) { // This is an UPDATE, so add back original stock
               originalIncome.products.forEach(p => {
                   stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
               });
-              // Subtract new stock
-              income.products.forEach(p => {
-                  stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
-              });
-          } else { // This is a NEW income
-              // Subtract new stock
-              income.products.forEach(p => {
-                  stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
-              });
           }
+          // Subtract new/updated stock
+          income.products.forEach(p => {
+              stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+          });
       });
       
-      setProducts(prevProducts => {
-          const newProducts = [...prevProducts];
-          stockChanges.forEach((change, productId) => {
-              const productIndex = newProducts.findIndex(p => p.id === productId);
-              if (productIndex !== -1) {
-                  newProducts[productIndex].stock += change;
+      setProducts(prevProducts => 
+          prevProducts.map(product => {
+              if (stockChanges.has(product.id)) {
+                  return { ...product, stock: product.stock + stockChanges.get(product.id)! };
               }
-          });
-          return newProducts;
-      });
+              return product;
+          })
+      );
 
       setIncomes(prevIncomes => {
         const incomeMap = new Map(prevIncomes.map(i => [i.id, i]));
@@ -168,27 +164,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const originalIncome = incomes.find(i => i.id === updatedIncome.id);
 
       if (originalIncome) {
-          setProducts(prevProducts => {
-              const newProducts = [...prevProducts];
-
-              // 1. Return stock from original sale
-              originalIncome.products.forEach(soldProduct => {
-                  const productIndex = newProducts.findIndex(p => p.id === soldProduct.productId);
-                  if (productIndex !== -1) {
-                      newProducts[productIndex].stock += soldProduct.quantity;
-                  }
-              });
-
-              // 2. Deduct stock for new sale
-              updatedIncome.products.forEach(soldProduct => {
-                  const productIndex = newProducts.findIndex(p => p.id === soldProduct.productId);
-                  if (productIndex !== -1) {
-                      newProducts[productIndex].stock -= soldProduct.quantity;
-                  }
-              });
-              
-              return newProducts;
+          const stockChanges = new Map<string, number>();
+          // + for original items, - for updated items
+          originalIncome.products.forEach(p => {
+              stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
           });
+          updatedIncome.products.forEach(p => {
+              stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+          });
+          
+          setProducts(prevProducts => 
+              prevProducts.map(product => {
+                  if (stockChanges.has(product.id)) {
+                      return { ...product, stock: product.stock + stockChanges.get(product.id)! };
+                  }
+                  return product;
+              })
+          );
       }
       
       setIncomes(prev => prev.map(i => i.id === updatedIncome.id ? updatedIncome : i));
@@ -198,16 +190,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const incomeToDelete = incomes.find(i => i.id === id);
 
     if (incomeToDelete) {
-        setProducts(prevProducts => {
-            const newProducts = [...prevProducts];
-            incomeToDelete.products.forEach(soldProduct => {
-                const productIndex = newProducts.findIndex(p => p.id === soldProduct.productId);
-                if (productIndex !== -1) {
-                    newProducts[productIndex].stock += soldProduct.quantity;
-                }
-            });
-            return newProducts;
+        const stockToReturn = new Map<string, number>();
+        incomeToDelete.products.forEach(p => {
+            stockToReturn.set(p.productId, (stockToReturn.get(p.productId) || 0) + p.quantity);
         });
+
+        setProducts(prevProducts => 
+            prevProducts.map(product => {
+                if (stockToReturn.has(product.id)) {
+                    return { ...product, stock: product.stock + stockToReturn.get(product.id)! };
+                }
+                return product;
+            })
+        );
     }
 
     setIncomes(prev => prev.filter(i => i.id !== id));
