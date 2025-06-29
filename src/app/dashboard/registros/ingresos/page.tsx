@@ -395,7 +395,7 @@ export default function IngresosPage() {
         if (data.length === 0) return '';
         const columnDelimiter = ',';
         const lineDelimiter = '\n';
-        const keys = Object.keys(data[0]);
+        const keys = ['idtransaccion', 'fecha', 'cliente', 'metododepago', 'producto', 'cantidad', 'preciounitario', 'subtotalproducto', 'totalfactura'];
 
         let result = keys.join(columnDelimiter) + lineDelimiter;
 
@@ -440,15 +440,15 @@ export default function IngresosPage() {
         const flattenedIncomes = filteredIncomes.flatMap(income => {
             const client = allClients.find(c => c.id === income.clientId)?.name || 'N/A';
             return income.products.map(product => ({
-                'ID Transaccion': income.id,
-                'Fecha': income.date,
-                'Cliente': client,
-                'Metodo de Pago': income.paymentMethod,
-                'Producto': product.name,
-                'Cantidad': product.quantity,
-                'Precio Unitario': product.price,
-                'Subtotal Producto': (product.quantity * product.price).toFixed(2),
-                'Total Factura': income.totalAmount.toFixed(2),
+                'idtransaccion': income.id,
+                'fecha': income.date,
+                'cliente': client,
+                'metododepago': income.paymentMethod,
+                'producto': product.name,
+                'cantidad': product.quantity,
+                'preciounitario': product.price,
+                'subtotalproducto': (product.quantity * product.price).toFixed(2),
+                'totalfactura': income.totalAmount.toFixed(2),
             }));
         });
         const csvString = convertArrayOfObjectsToCSV(flattenedIncomes);
@@ -473,14 +473,15 @@ export default function IngresosPage() {
                 if (lines.length < 2) throw new Error("El archivo CSV está vacío o solo contiene la cabecera.");
 
                 const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
-                const requiredHeaders = ['idtransaccion', 'fecha', 'cliente', 'metododepago', 'producto', 'cantidad', 'preciounitario', 'subtotalproducto', 'totalfactura'];
+                const requiredHeaders = ['producto', 'cantidad', 'preciounitario'];
                 const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
                 if (missingHeaders.length > 0) {
-                    throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
+                    throw new Error(`Faltan las siguientes columnas obligatorias en el CSV: ${missingHeaders.join(', ')}`);
                 }
 
-                // Group rows by transaction ID
                 const transactionsMap = new Map<string, any[]>();
+                let newTransactionCounter = 0;
+
                 for (let i = 1; i < lines.length; i++) {
                     const values = lines[i].split(',');
                     const rowData: any = {};
@@ -488,8 +489,10 @@ export default function IngresosPage() {
                         rowData[header] = values[index]?.trim() || '';
                     });
 
-                    const transactionId = rowData.idtransaccion;
-                    if (!transactionId) continue; // Skip rows without transaction ID
+                    let transactionId = rowData.idtransaccion;
+                    if (!transactionId) {
+                        transactionId = `new_transaction_${newTransactionCounter++}`;
+                    }
 
                     if (!transactionsMap.has(transactionId)) {
                         transactionsMap.set(transactionId, []);
@@ -499,36 +502,27 @@ export default function IngresosPage() {
 
                 const newIncomes: Income[] = [];
                 
-                // Process each transaction group
                 for (const [transactionId, rows] of transactionsMap.entries()) {
                     if (rows.length === 0) continue;
 
-                    // Use first row for transaction-wide data, with defaults for empty values
                     const firstRow = rows[0];
                     const date = firstRow.fecha || new Date().toISOString().split('T')[0];
                     const clientName = firstRow.cliente || 'Cliente Genérico';
                     const paymentMethodRaw = (firstRow.metododepago || 'contado').toLowerCase();
                     const paymentMethod = (paymentMethodRaw === 'credito' || paymentMethodRaw === 'contado') ? paymentMethodRaw : 'contado';
                     
-                    // Check if total is provided for validation
                     const totalFacturaFromFile = firstRow.totalfactura ? parseFloat(firstRow.totalfactura) : null;
                     if (totalFacturaFromFile !== null && isNaN(totalFacturaFromFile)) {
-                        throw new Error(`El Total Factura para la transacción ${transactionId} no es un número válido.`);
+                        throw new Error(`El Total Factura para la transacción ${transactionId.startsWith('new_transaction_') ? 'nueva' : transactionId} no es un número válido.`);
                     }
 
-                    // Validate that transaction-wide data is consistent across all rows for this transaction
                     for (const row of rows) {
-                        // Only validate if data exists in the row. If it's empty, we assume it's the same as the first row's (or its default).
                         if (row.fecha && row.fecha !== date) throw new Error(`Fechas inconsistentes para transacción ${transactionId}.`);
                         if (row.cliente && row.cliente !== clientName) throw new Error(`Clientes inconsistentes para transacción ${transactionId}.`);
                         if (row.metododepago && row.metododepago.toLowerCase() !== paymentMethod) throw new Error(`Métodos de pago inconsistentes para transacción ${transactionId}.`);
                     }
                     
                     const client = allClients.find(c => c.name.toLowerCase() === clientName.toLowerCase()) || allClients.find(c => c.id === 'generic');
-                    if (!client) {
-                        // This case is unlikely now but good for safety
-                        throw new Error(`Cliente '${clientName}' no encontrado para transacción ${transactionId}.`);
-                    }
                     
                     const soldProducts: SoldProduct[] = [];
                     let calculatedTotal = 0;
@@ -536,7 +530,6 @@ export default function IngresosPage() {
                     for (const row of rows) {
                         const productName = row.producto;
                         
-                        // Skip product row if essential info is missing
                         if (!productName || !row.cantidad || !row.preciounitario) {
                             continue; 
                         }
@@ -549,12 +542,10 @@ export default function IngresosPage() {
                         const quantity = parseFloat(row.cantidad);
                         const unitPrice = parseFloat(row.preciounitario);
                         
-                        // Skip if quantity or price are not valid numbers
                         if (isNaN(quantity) || quantity <= 0 || isNaN(unitPrice) || unitPrice < 0) {
                             continue;
                         }
 
-                        // Validate subtotal only if it exists in the CSV
                         const subtotalFromFile = row.subtotalproducto ? parseFloat(row.subtotalproducto) : null;
                         if (subtotalFromFile !== null) {
                             if(isNaN(subtotalFromFile)) {
@@ -575,19 +566,19 @@ export default function IngresosPage() {
                         calculatedTotal += (quantity * unitPrice);
                     }
                     
-                    // Skip creating income if no valid products were found for this transaction
                     if (soldProducts.length === 0) {
                         continue;
                     }
 
-                    // Validate total amount only if it exists in the CSV
                     if (totalFacturaFromFile !== null && Math.abs(calculatedTotal - totalFacturaFromFile) > 0.01) {
                         throw new Error(`Total Factura (${totalFacturaFromFile.toFixed(2)}) no coincide con la suma de subtotales (${calculatedTotal.toFixed(2)}) en transacción ${transactionId}.`);
                     }
+                    
+                    const isNewTransaction = transactionId.startsWith('new_transaction_');
 
                     newIncomes.push({
-                        id: transactionId,
-                        clientId: client.id,
+                        id: isNewTransaction ? '' : transactionId,
+                        clientId: client!.id,
                         paymentMethod: paymentMethod as 'credito' | 'contado',
                         date,
                         products: soldProducts,
@@ -601,7 +592,7 @@ export default function IngresosPage() {
 
                 toast({
                     title: "Importación Exitosa",
-                    description: `${newIncomes.length} transacciones han sido importadas.`,
+                    description: `${newIncomes.length} transacciones han sido importadas/actualizadas.`,
                 });
 
             } catch (error: any) {

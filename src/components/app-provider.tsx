@@ -112,9 +112,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setIncomes(prevIncomes => {
       const incomeMap = new Map(prevIncomes.map(i => [i.id, i]));
       incomesToUpsert.forEach(income => {
-        if (income.id) {
-            incomeMap.set(income.id, income);
-        }
+        const id = income.id || (new Date().toISOString() + Math.random());
+        incomeMap.set(id, { ...income, id });
       });
       return Array.from(incomeMap.values());
     });
