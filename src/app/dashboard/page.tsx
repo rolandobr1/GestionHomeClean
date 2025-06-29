@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -23,7 +24,13 @@ import {
   ChartConfig,
 } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
-import { ArrowUpCircle, ArrowDownCircle, CircleDollarSign, FlaskConical, AlertTriangle } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, CircleDollarSign, FlaskConical, AlertTriangle, PlusCircle } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from "@/hooks/use-toast";
 
 const chartData = [
   { month: "Ene", income: 1860, expense: 800 },
@@ -51,9 +58,187 @@ const lowStockItems = [
     { name: "Cloro Granulado", sku: "CG-003", stock: 12, reorderLevel: 20, unit: "Kg" },
 ];
 
+type Income = {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  category: string;
+};
+
+type Expense = {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  category: string;
+};
+
+const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income: Income) => void }) => {
+    const [formData, setFormData] = useState(income || {
+        description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Venta de Producto'
+    });
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { id, value, type } = e.target;
+        setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
+    };
+
+    const handleSelectChange = (value: string) => {
+        setFormData(prev => ({ ...prev, category: value }));
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({ ...formData, id: income?.id || '' });
+    }
+    
+    return (
+        <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="description" className="text-right">Descripción</Label>
+                    <Input id="description" value={formData.description} onChange={handleChange} className="col-span-3" required />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="amount" className="text-right">Monto</Label>
+                    <Input id="amount" type="number" value={formData.amount} onChange={handleChange} className="col-span-3" required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="date" className="text-right">Fecha</Label>
+                    <Input id="date" type="date" value={formData.date} onChange={handleChange} className="col-span-3" required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="category" className="text-right">Categoría</Label>
+                    <Select onValueChange={handleSelectChange} defaultValue={formData.category}>
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Selecciona una categoría" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Venta de Producto">Venta de Producto</SelectItem>
+                            <SelectItem value="Servicios">Servicios</SelectItem>
+                            <SelectItem value="Otro">Otro</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+             <DialogFooter>
+                <DialogClose asChild>
+                     <Button type="button" variant="secondary">Cancelar</Button>
+                </DialogClose>
+                <Button type="submit">Guardar</Button>
+            </DialogFooter>
+        </form>
+    );
+};
+
+const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (expense: Expense) => void }) => {
+    const [formData, setFormData] = useState(expense || {
+        description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Compra de Material'
+    });
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { id, value, type } = e.target;
+        setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
+    };
+
+    const handleSelectChange = (value: string) => {
+        setFormData(prev => ({ ...prev, category: value }));
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({ ...formData, id: expense?.id || '' });
+    }
+    
+    return (
+        <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="description" className="text-right">Descripción</Label>
+                    <Input id="description" value={formData.description} onChange={handleChange} className="col-span-3" required />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="amount" className="text-right">Monto</Label>
+                    <Input id="amount" type="number" value={formData.amount} onChange={handleChange} className="col-span-3" required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="date" className="text-right">Fecha</Label>
+                    <Input id="date" type="date" value={formData.date} onChange={handleChange} className="col-span-3" required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="category" className="text-right">Categoría</Label>
+                    <Select onValueChange={handleSelectChange} defaultValue={formData.category}>
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Selecciona una categoría" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Compra de Material">Compra de Material</SelectItem>
+                            <SelectItem value="Salarios">Salarios</SelectItem>
+                            <SelectItem value="Servicios Públicos">Servicios Públicos</SelectItem>
+                            <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
+                            <SelectItem value="Otro">Otro</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+             <DialogFooter>
+                <DialogClose asChild>
+                     <Button type="button" variant="secondary">Cancelar</Button>
+                </DialogClose>
+                <Button type="submit">Guardar</Button>
+            </DialogFooter>
+        </form>
+    );
+};
+
+
 export default function DashboardPage() {
+  const { toast } = useToast();
+
+  const [incomes, setIncomes] = useState<Income[]>([]);
+  const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
+  const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  const handleIncomeSave = (income: Income) => {
+      const newIncome = { ...income, id: new Date().toISOString() };
+      setIncomes(prev => [...prev, newIncome]); // Although not displayed, we keep state consistent
+      setEditingIncome(null);
+      setIsIncomeDialogOpen(false);
+      toast({
+          title: "Ingreso Registrado",
+          description: `Se ha añadido un ingreso por $${newIncome.amount.toFixed(2)}.`,
+      });
+  };
+
+  const handleExpenseSave = (expense: Expense) => {
+      const newExpense = { ...expense, id: new Date().toISOString() };
+      setExpenses(prev => [...prev, newExpense]); // Although not displayed, we keep state consistent
+      setEditingExpense(null);
+      setIsExpenseDialogOpen(false);
+      toast({
+          title: "Egreso Registrado",
+          description: `Se ha añadido un egreso por $${newExpense.amount.toFixed(2)}.`,
+      });
+  };
+
   return (
     <div className="flex flex-col gap-6">
+       <div className="flex flex-col sm:flex-row gap-4">
+            <Button size="lg" className="w-full flex-1" onClick={() => { setEditingIncome(null); setIsIncomeDialogOpen(true); }}>
+                <PlusCircle className="mr-2 h-5 w-5"/>
+                Registrar Ingreso
+            </Button>
+            <Button size="lg" className="w-full flex-1" onClick={() => { setEditingExpense(null); setIsExpenseDialogOpen(true); }}>
+                <PlusCircle className="mr-2 h-5 w-5"/>
+                Registrar Egreso
+            </Button>
+        </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -149,6 +334,30 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isIncomeDialogOpen} onOpenChange={setIsIncomeDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                  <DialogTitle>Añadir Ingreso</DialogTitle>
+                  <DialogDescription>
+                      Añade un nuevo ingreso a tus registros.
+                  </DialogDescription>
+              </DialogHeader>
+              <IncomeForm income={editingIncome} onSave={handleIncomeSave} />
+          </DialogContent>
+      </Dialog>
+
+      <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                  <DialogTitle>Añadir Egreso</DialogTitle>
+                  <DialogDescription>
+                    Añade un nuevo egreso a tus registros.
+                  </DialogDescription>
+              </DialogHeader>
+              <ExpenseForm expense={editingExpense} onSave={handleExpenseSave} />
+          </DialogContent>
+      </Dialog>
     </div>
   );
 }
