@@ -1,11 +1,13 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { Menu, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { UserNav } from "./user-nav";
@@ -30,8 +32,18 @@ export function DashboardHeader() {
               <span className="sr-only">Toggle navigation menu</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="flex flex-col">
-            <nav className="grid gap-2 text-lg font-medium">
+          <SheetContent side="left" className="flex flex-col p-0">
+            <SheetHeader className="border-b p-4">
+                <SheetTitle>
+                    <Link href="/dashboard" className="flex items-center gap-2">
+                        <FlaskConical className="h-6 w-6 text-primary" />
+                        <span className="text-lg font-semibold text-primary font-headline">
+                            QuimioGest
+                        </span>
+                    </Link>
+                </SheetTitle>
+            </SheetHeader>
+            <nav className="grid gap-2 text-lg font-medium p-4">
               {navLinks.map(link => (
                  <Link
                     key={link.href}
