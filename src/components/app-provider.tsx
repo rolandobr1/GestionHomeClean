@@ -105,25 +105,111 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   const addIncome = (income: Omit<Income, 'id'>) => {
+    // Update product stock
+    setProducts(prevProducts => {
+        const newProducts = [...prevProducts];
+        income.products.forEach(soldProduct => {
+            const productIndex = newProducts.findIndex(p => p.id === soldProduct.productId);
+            if (productIndex !== -1) {
+                newProducts[productIndex].stock -= soldProduct.quantity;
+            }
+        });
+        return newProducts;
+    });
+
     setIncomes(prev => [...prev, { ...income, id: new Date().toISOString() + Math.random() }]);
   };
 
   const addMultipleIncomes = (incomesToUpsert: Income[]) => {
-    setIncomes(prevIncomes => {
-      const incomeMap = new Map(prevIncomes.map(i => [i.id, i]));
+      const stockChanges = new Map<string, number>();
+
       incomesToUpsert.forEach(income => {
-        const id = income.id || (new Date().toISOString() + Math.random());
-        incomeMap.set(id, { ...income, id });
+          const originalIncome = incomes.find(i => i.id && i.id === income.id);
+
+          if (originalIncome) { // This is an UPDATE
+              // Add back original stock
+              originalIncome.products.forEach(p => {
+                  stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+              });
+              // Subtract new stock
+              income.products.forEach(p => {
+                  stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+              });
+          } else { // This is a NEW income
+              // Subtract new stock
+              income.products.forEach(p => {
+                  stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+              });
+          }
       });
-      return Array.from(incomeMap.values());
-    });
+      
+      setProducts(prevProducts => {
+          const newProducts = [...prevProducts];
+          stockChanges.forEach((change, productId) => {
+              const productIndex = newProducts.findIndex(p => p.id === productId);
+              if (productIndex !== -1) {
+                  newProducts[productIndex].stock += change;
+              }
+          });
+          return newProducts;
+      });
+
+      setIncomes(prevIncomes => {
+        const incomeMap = new Map(prevIncomes.map(i => [i.id, i]));
+        incomesToUpsert.forEach(income => {
+          const id = income.id || (new Date().toISOString() + Math.random());
+          incomeMap.set(id, { ...income, id });
+        });
+        return Array.from(incomeMap.values());
+      });
   };
 
   const updateIncome = (updatedIncome: Income) => {
-    setIncomes(prev => prev.map(i => i.id === updatedIncome.id ? updatedIncome : i));
+      const originalIncome = incomes.find(i => i.id === updatedIncome.id);
+
+      if (originalIncome) {
+          setProducts(prevProducts => {
+              const newProducts = [...prevProducts];
+
+              // 1. Return stock from original sale
+              originalIncome.products.forEach(soldProduct => {
+                  const productIndex = newProducts.findIndex(p => p.id === soldProduct.productId);
+                  if (productIndex !== -1) {
+                      newProducts[productIndex].stock += soldProduct.quantity;
+                  }
+              });
+
+              // 2. Deduct stock for new sale
+              updatedIncome.products.forEach(soldProduct => {
+                  const productIndex = newProducts.findIndex(p => p.id === soldProduct.productId);
+                  if (productIndex !== -1) {
+                      newProducts[productIndex].stock -= soldProduct.quantity;
+                  }
+              });
+              
+              return newProducts;
+          });
+      }
+      
+      setIncomes(prev => prev.map(i => i.id === updatedIncome.id ? updatedIncome : i));
   };
 
   const deleteIncome = (id: string) => {
+    const incomeToDelete = incomes.find(i => i.id === id);
+
+    if (incomeToDelete) {
+        setProducts(prevProducts => {
+            const newProducts = [...prevProducts];
+            incomeToDelete.products.forEach(soldProduct => {
+                const productIndex = newProducts.findIndex(p => p.id === soldProduct.productId);
+                if (productIndex !== -1) {
+                    newProducts[productIndex].stock += soldProduct.quantity;
+                }
+            });
+            return newProducts;
+        });
+    }
+
     setIncomes(prev => prev.filter(i => i.id !== id));
   };
 
