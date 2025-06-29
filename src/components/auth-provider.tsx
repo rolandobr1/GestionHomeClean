@@ -1,32 +1,46 @@
 "use client";
 
-import React, { createContext, ReactNode } from "react";
-import type { User } from "firebase/auth";
+import React, { createContext, ReactNode, useState, useMemo, useEffect } from "react";
+
+export type AppUser = {
+  name: "Rolando" | "Mikel";
+};
 
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   loading: boolean;
+  login: (name: "Rolando" | "Mikel") => void;
+  logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  loading: false, // Default to not loading
+  loading: true,
+  login: () => {},
+  logout: () => {},
 });
-
-// A mock user to simulate being logged in
-const mockUser = {
-  uid: "mock-user-123",
-  email: "test@quimiogest.app",
-  displayName: "Usuario de Prueba",
-  photoURL: null,
-} as User;
 
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // We bypass the actual Firebase auth and provide a mock user.
-  // This makes the app think we are always logged in.
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(false);
+  }, []);
+
+  const login = (name: "Rolando" | "Mikel") => {
+    setUser({ name });
+  };
+
+  const logout = () => {
+    setUser(null);
+  };
+
+  const value = useMemo(() => ({ user, loading, login, logout }), [user, loading]);
+
   return (
-    <AuthContext.Provider value={{ user: mockUser, loading: false }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

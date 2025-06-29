@@ -38,6 +38,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { subMonths, format, getMonth, getYear } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useAuth } from '@/hooks/use-auth';
 
 const chartConfig = {
   income: {
@@ -50,7 +51,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) => void, income: Income | null }) => {
+const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id' | 'recordedBy'>) => void, income: Income | null }) => {
     const { products: allProducts } = useAppData();
     const [clientId, setClientId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
@@ -255,7 +256,7 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) =
     );
 };
 
-const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id'>) => void }) => {
+const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id' | 'recordedBy'>) => void }) => {
     const [formData, setFormData] = useState({
         description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Compra de Material'
     });
@@ -319,6 +320,7 @@ const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id'>) => voi
 export default function DashboardPage() {
   const { toast } = useToast();
   const { incomes, expenses, products, addIncome, addExpense } = useAppData();
+  const { user } = useAuth();
 
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
@@ -404,8 +406,9 @@ export default function DashboardPage() {
 
   }, [incomes, expenses, products]);
 
-  const handleIncomeSave = (income: Omit<Income, 'id'>) => {
-      addIncome(income);
+  const handleIncomeSave = (income: Omit<Income, 'id' | 'recordedBy'>) => {
+      if (!user) return;
+      addIncome({ ...income, recordedBy: user.name });
       setIsIncomeDialogOpen(false);
       toast({
           title: "Ingreso Registrado",
@@ -413,8 +416,9 @@ export default function DashboardPage() {
       });
   };
 
-  const handleExpenseSave = (expense: Omit<Expense, 'id'>) => {
-      addExpense(expense);
+  const handleExpenseSave = (expense: Omit<Expense, 'id' | 'recordedBy'>) => {
+      if (!user) return;
+      addExpense({ ...expense, recordedBy: user.name });
       setIsExpenseDialogOpen(false);
       toast({
           title: "Egreso Registrado",

@@ -18,6 +18,7 @@ export type Income = {
   clientId: string;
   paymentMethod: 'credito' | 'contado';
   products: SoldProduct[];
+  recordedBy: string;
 };
 
 export type Expense = {
@@ -26,6 +27,7 @@ export type Expense = {
   amount: number;
   date: string;
   category: string;
+  recordedBy: string;
 };
 
 export type Product = {
@@ -97,7 +99,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addMultipleExpenses = (newExpenses: Omit<Expense, 'id'>[]) => {
-      const expensesWithId = newExpenses.map(e => ({ ...e, id: e.id || new Date().toISOString() + Math.random() }));
+      const expensesWithId = newExpenses.map(e => ({ ...e, id: new Date().toISOString() + Math.random() }));
       setExpenses(prev => [...prev, ...expensesWithId]);
   }
 

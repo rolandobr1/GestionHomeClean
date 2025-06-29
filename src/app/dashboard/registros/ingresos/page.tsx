@@ -25,6 +25,7 @@ import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import type { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { useAuth } from '@/hooks/use-auth';
 
 type Client = {
   id: string;
@@ -112,6 +113,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
             products: soldProducts,
             totalAmount,
             category: 'Venta de Producto',
+            recordedBy: income?.recordedBy || '',
         });
     }
     
@@ -259,6 +261,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
 
 export default function IngresosPage() {
     const { incomes, addIncome, deleteIncome, updateIncome, products, addMultipleIncomes } = useAppData();
+    const { user } = useAuth();
     const { toast } = useToast();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingIncome, setEditingIncome] = useState<Income | null>(null);
@@ -322,10 +325,16 @@ export default function IngresosPage() {
     };
 
     const handleSave = (income: Income) => {
+        if (!user) {
+            toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
+            return;
+        }
+        const incomeToSave: Income = { ...income, recordedBy: user.name };
+        
         if (editingIncome) {
-            updateIncome(income);
+            updateIncome(incomeToSave);
         } else {
-            const { id, ...newIncomeData } = income;
+            const { id, ...newIncomeData } = incomeToSave;
             addIncome(newIncomeData);
         }
         setEditingIncome(null);
@@ -447,6 +456,7 @@ export default function IngresosPage() {
                 'Precio Unitario': product.price,
                 'Subtotal Producto': (product.quantity * product.price).toFixed(2),
                 'Total Factura': income.totalAmount.toFixed(2),
+                'Registrado Por': income.recordedBy,
             }));
         });
         const csvString = convertArrayOfObjectsToCSV(flattenedIncomes);
@@ -461,7 +471,7 @@ export default function IngresosPage() {
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file || !user) return;
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -570,6 +580,7 @@ export default function IngresosPage() {
                         products: soldProducts,
                         totalAmount: calculatedTotal,
                         category: 'Venta de Producto',
+                        recordedBy: user.name
                     });
                 }
                 
@@ -604,7 +615,7 @@ export default function IngresosPage() {
                 </Button>
                 <Button variant="outline" onClick={handleExport}>
                     <Download className="mr-2 h-4 w-4" />
-                    Exportar (CSV)
+                    Exportar
                 </Button>
                 <Button onClick={() => { setEditingIncome(null); setIsDialogOpen(true); }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -699,6 +710,7 @@ export default function IngresosPage() {
                                 <TableHead>Cliente</TableHead>
                                 <TableHead>Productos</TableHead>
                                 <TableHead className="hidden sm:table-cell">Método</TableHead>
+                                <TableHead className="hidden lg:table-cell">Registrado por</TableHead>
                                 <TableHead className="text-right">Monto Total</TableHead>
                                 <TableHead className="text-right hidden md:table-cell">Fecha</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
@@ -728,6 +740,7 @@ export default function IngresosPage() {
                                         </TooltipProvider>
                                     </TableCell>
                                     <TableCell className="capitalize hidden sm:table-cell">{income.paymentMethod}</TableCell>
+                                    <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
                                     <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
                                     <TableCell className="text-right hidden md:table-cell">{format(new Date(income.date), 'PPP', { locale: es })}</TableCell>
                                     <TableCell className="text-right">
@@ -764,7 +777,7 @@ export default function IngresosPage() {
                                 </TableRow>
                             )}) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
+                                    <TableCell colSpan={7} className="h-24 text-center">
                                         No se encontraron resultados.
                                     </TableCell>
                                 </TableRow>

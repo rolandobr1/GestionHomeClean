@@ -18,11 +18,13 @@ import type { Expense } from '@/components/app-provider';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import type { DateRange } from 'react-day-picker';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/hooks/use-auth';
 
 const expenseCategories = ["Compra de Material", "Salarios", "Servicios Públicos", "Mantenimiento", "Otro"];
 
 export default function EgresosPage() {
     const { expenses, addExpense, deleteExpense, updateExpense, addMultipleExpenses } = useAppData();
+    const { user } = useAuth();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
     const { toast } = useToast();
@@ -79,10 +81,16 @@ export default function EgresosPage() {
     };
 
     const handleSave = (expense: Expense) => {
+        if (!user) {
+            toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
+            return;
+        }
+        const expenseToSave: Expense = { ...expense, recordedBy: user.name };
+
         if (editingExpense) {
-            updateExpense(expense);
+            updateExpense(expenseToSave);
         } else {
-            const { id, ...newExpenseData } = expense;
+            const { id, ...newExpenseData } = expenseToSave;
             addExpense(newExpenseData);
         }
         setEditingExpense(null);
@@ -141,6 +149,7 @@ export default function EgresosPage() {
             'Descripcion': expense.description,
             'Categoria': expense.category,
             'Monto': expense.amount,
+            'Registrado Por': expense.recordedBy,
         }));
         const csvString = convertArrayOfObjectsToCSV(flattenedExpenses);
         downloadCSV(csvString, 'egresos.csv');
@@ -150,7 +159,7 @@ export default function EgresosPage() {
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file || !user) return;
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -179,6 +188,7 @@ export default function EgresosPage() {
                         amount: parseFloat(expenseData.amount) || 0,
                         date: expenseData.date || new Date().toISOString().split('T')[0],
                         category: expenseData.category || 'Otro',
+                        recordedBy: user.name,
                     });
                 }
                 
@@ -214,7 +224,7 @@ export default function EgresosPage() {
 
     const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (expense: Expense) => void }) => {
         const [formData, setFormData] = useState(expense || {
-            description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Compra de Material'
+            description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Compra de Material', recordedBy: ''
         });
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -278,7 +288,7 @@ export default function EgresosPage() {
                 </Button>
                 <Button variant="outline" onClick={handleExport}>
                     <Download className="mr-2 h-4 w-4" />
-                    Exportar (CSV)
+                    Exportar
                 </Button>
                 <Button onClick={() => { setEditingExpense(null); setIsDialogOpen(true); }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -330,6 +340,7 @@ export default function EgresosPage() {
                             <TableRow>
                                 <TableHead>Descripción</TableHead>
                                 <TableHead className="hidden sm:table-cell">Categoría</TableHead>
+                                <TableHead className="hidden lg:table-cell">Registrado por</TableHead>
                                 <TableHead className="text-right">Monto</TableHead>
                                 <TableHead className="text-right hidden md:table-cell">Fecha</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
@@ -340,6 +351,7 @@ export default function EgresosPage() {
                                 <TableRow key={expense.id}>
                                     <TableCell className="font-medium">{expense.description}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{expense.category}</TableCell>
+                                    <TableCell className="hidden lg:table-cell">{expense.recordedBy}</TableCell>
                                     <TableCell className="text-right">RD${expense.amount.toFixed(2)}</TableCell>
                                     <TableCell className="text-right hidden md:table-cell">{format(new Date(expense.date), 'PPP', { locale: es })}</TableCell>
                                     <TableCell className="text-right">
@@ -375,7 +387,7 @@ export default function EgresosPage() {
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">
+                                    <TableCell colSpan={6} className="h-24 text-center">
                                         No se encontraron resultados.
                                     </TableCell>
                                 </TableRow>
