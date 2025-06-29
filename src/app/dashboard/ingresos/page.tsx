@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { initialProducts } from '../inventario/productos/page';
 
 // Data definitions copied from other pages for now
 type Client = {
@@ -36,13 +37,6 @@ type Product = {
   id: string;
   name: string;
 };
-
-const initialProducts: Product[] = [
-  { id: '1', name: 'Ácido Clorhídrico' },
-  { id: '2', name: 'Hipoclorito de Sodio' },
-  { id: '3', name: 'Sosa Cáustica (Escamas)' },
-  { id: '4', name: 'Peróxido de Hidrógeno' },
-];
 
 type Income = {
   id: string;

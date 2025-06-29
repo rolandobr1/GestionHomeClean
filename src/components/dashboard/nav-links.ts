@@ -25,7 +25,7 @@ export const navLinks = [
     icon: ArrowDownCircle,
   },
   {
-    href: "/dashboard/inventario",
+    href: "/dashboard/inventario/productos",
     label: "Inventario",
     icon: FlaskConical,
   },

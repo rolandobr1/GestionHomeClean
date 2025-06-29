@@ -1,0 +1,231 @@
+"use client";
+
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { PlusCircle, MoreHorizontal, Trash2, Edit } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from "@/components/ui/alert-dialog"
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+
+type RawMaterial = {
+  id: string;
+  name: string;
+  sku: string;
+  unit: string;
+  purchasePrice: number;
+  stock: number;
+  reorderLevel: number;
+  supplier: string;
+};
+
+const initialRawMaterials: RawMaterial[] = [
+  { id: '1', name: 'Envase Plástico 1L', sku: 'ENV-001', unit: 'Unidades', purchasePrice: 0.75, stock: 500, reorderLevel: 100, supplier: 'Plásticos del Caribe' },
+  { id: '2', name: 'Etiqueta Adhesiva', sku: 'ETQ-001', unit: 'Unidades', purchasePrice: 0.10, stock: 2000, reorderLevel: 500, supplier: 'Impresos Rápidos' },
+  { id: '3', name: 'Caja de Cartón Grande', sku: 'CAJ-001', unit: 'Unidades', purchasePrice: 1.20, stock: 150, reorderLevel: 40, supplier: 'Empaques Nacionales' },
+];
+
+export default function MateriaPrimaPage() {
+    const [materials, setMaterials] = useState<RawMaterial[]>(initialRawMaterials);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
+
+    const handleEdit = (material: RawMaterial) => {
+        setEditingMaterial(material);
+        setIsDialogOpen(true);
+    };
+
+    const handleDelete = (materialId: string) => {
+        setMaterials(materials.filter(m => m.id !== materialId));
+    };
+
+    const handleSave = (material: RawMaterial) => {
+        if (editingMaterial) {
+            setMaterials(materials.map(m => m.id === material.id ? material : m));
+        } else {
+            setMaterials([...materials, { ...material, id: (materials.length + 1).toString() }]);
+        }
+        setEditingMaterial(null);
+        setIsDialogOpen(false);
+    };
+
+    const MaterialForm = ({ material, onSave }: { material: RawMaterial | null, onSave: (material: RawMaterial) => void }) => {
+        const [formData, setFormData] = useState<Omit<RawMaterial, 'id'>>(material || {
+            name: '', sku: '', unit: '', purchasePrice: 0, stock: 0, reorderLevel: 0, supplier: ''
+        });
+
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const { id, value, type } = e.target;
+            setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) : value }));
+        };
+
+        const handleSubmit = (e: React.FormEvent) => {
+            e.preventDefault();
+            onSave({ ...formData, id: material?.id || '' });
+        }
+        
+        return (
+            <form onSubmit={handleSubmit}>
+                <div className="grid gap-4 py-4">
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="name" className="text-right">Nombre</Label>
+                        <Input id="name" value={formData.name} onChange={handleChange} className="col-span-3" required />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="sku" className="text-right">SKU</Label>
+                        <Input id="sku" value={formData.sku} onChange={handleChange} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="stock" className="text-right">Stock</Label>
+                        <Input id="stock" type="number" value={formData.stock} onChange={handleChange} className="col-span-3" required/>
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="unit" className="text-right">Unidad</Label>
+                        <Input id="unit" value={formData.unit} onChange={handleChange} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="purchasePrice" className="text-right">Precio Compra</Label>
+                        <Input id="purchasePrice" type="number" value={formData.purchasePrice} onChange={handleChange} className="col-span-3" required/>
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="reorderLevel" className="text-right">Nivel Reorden</Label>
+                        <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} className="col-span-3" required/>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="supplier" className="text-right">Suplidor</Label>
+                        <Input id="supplier" value={formData.supplier} onChange={handleChange} className="col-span-3" />
+                    </div>
+                </div>
+                 <DialogFooter>
+                    <DialogClose asChild>
+                         <Button type="button" variant="secondary">Cancelar</Button>
+                    </DialogClose>
+                    <Button type="submit">Guardar</Button>
+                </DialogFooter>
+            </form>
+        );
+    };
+
+    return (
+        <div className="space-y-6">
+             <div className="flex justify-end items-start">
+                <Button onClick={() => { setEditingMaterial(null); setIsDialogOpen(true); }}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Añadir Materia Prima
+                </Button>
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Materia Prima</CardTitle>
+                    <CardDescription>Un listado de todas las materias primas en tu inventario.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Nombre</TableHead>
+                                <TableHead>Suplidor</TableHead>
+                                <TableHead className="text-right">Stock</TableHead>
+                                <TableHead className="text-right">Precio Compra</TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {materials.map((material) => (
+                                <TableRow key={material.id}>
+                                    <TableCell className="font-medium">{material.name}</TableCell>
+                                    <TableCell>{material.supplier}</TableCell>
+                                    <TableCell className="text-right">
+                                        {material.stock <= material.reorderLevel ? (
+                                            <Badge variant="destructive">{material.stock} {material.unit}</Badge>
+                                        ) : (
+                                            <Badge variant="secondary">{material.stock} {material.unit}</Badge>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-right">RD${material.purchasePrice.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">
+                                        <AlertDialog>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <span className="sr-only">Abrir menú</span>
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleEdit(material)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                                    <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                <AlertDialogTitle>¿Estás seguro de que quieres eliminar este material?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Esta acción no se puede deshacer. Esto eliminará permanentemente el material de tus registros.
+                                                </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(material.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>{editingMaterial ? 'Editar Materia Prima' : 'Añadir Materia Prima'}</DialogTitle>
+                        <DialogDescription>
+                            {editingMaterial ? 'Actualiza los detalles de tu material.' : 'Añade un nuevo material a tu inventario.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <MaterialForm material={editingMaterial} onSave={handleSave} />
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}

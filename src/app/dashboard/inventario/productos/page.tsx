@@ -53,14 +53,14 @@ type Product = {
   reorderLevel: number;
 };
 
-const initialProducts: Product[] = [
+export const initialProducts: Product[] = [
   { id: '1', name: 'Ácido Clorhídrico', sku: 'AC-001', unit: 'Litros', purchasePrice: 5.5, salePrice: 10.0, stock: 150, reorderLevel: 20 },
   { id: '2', name: 'Hipoclorito de Sodio', sku: 'HS-002', unit: 'Galones', purchasePrice: 12.0, salePrice: 25.0, stock: 80, reorderLevel: 15 },
   { id: '3', name: 'Sosa Cáustica (Escamas)', sku: 'SC-001', unit: 'Kg', purchasePrice: 8.2, salePrice: 15.5, stock: 200, reorderLevel: 50 },
   { id: '4', name: 'Peróxido de Hidrógeno', sku: 'PH-001', unit: 'Litros', purchasePrice: 7.0, salePrice: 14.0, stock: 45, reorderLevel: 30 },
 ];
 
-export default function InventoryPage() {
+export default function ProductosPage() {
     const [products, setProducts] = useState<Product[]>(initialProducts);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -139,11 +139,7 @@ export default function InventoryPage() {
 
     return (
         <div className="space-y-6">
-             <div className="flex justify-between items-start">
-                <div>
-                    <h1 className="text-2xl font-bold">Gestión de Inventario</h1>
-                    <p className="text-muted-foreground">Administra todos tus productos químicos.</p>
-                </div>
+             <div className="flex justify-end items-start">
                 <Button onClick={() => { setEditingProduct(null); setIsDialogOpen(true); }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Producto
@@ -152,8 +148,8 @@ export default function InventoryPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Lista de Productos</CardTitle>
-                    <CardDescription>Un listado de todos los productos en tu inventario.</CardDescription>
+                    <CardTitle>Productos Terminados</CardTitle>
+                    <CardDescription>Un listado de todos tus productos listos para la venta.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>

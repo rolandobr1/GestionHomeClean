@@ -31,6 +31,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
+import { initialProducts } from './inventario/productos/page';
 
 const chartData: { month: string, income: number, expense: number }[] = [];
 
@@ -65,12 +66,6 @@ type Product = {
   id: string;
   name: string;
 };
-const initialProducts: Product[] = [
-  { id: '1', name: 'Ácido Clorhídrico' },
-  { id: '2', name: 'Hipoclorito de Sodio' },
-  { id: '3', name: 'Sosa Cáustica (Escamas)' },
-  { id: '4', name: 'Peróxido de Hidrógeno' },
-];
 
 type Income = {
   id: string;
