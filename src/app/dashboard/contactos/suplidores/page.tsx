@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -99,6 +99,53 @@ export default function SuplidoresPage() {
         fileInputRef.current?.click();
     };
 
+    const convertArrayOfObjectsToCSV = (data: any[]) => {
+        if (data.length === 0) return '';
+        const columnDelimiter = ',';
+        const lineDelimiter = '\n';
+        const keys = Object.keys(data[0]);
+        let result = keys.join(columnDelimiter) + lineDelimiter;
+        data.forEach(item => {
+            let ctr = 0;
+            keys.forEach(key => {
+                if (ctr > 0) result += columnDelimiter;
+                let value = item[key] ?? '';
+                if (typeof value === 'string' && value.includes('"')) {
+                   value = value.replace(/"/g, '""');
+                }
+                if (typeof value === 'string' && value.includes(columnDelimiter)) {
+                   value = `"${value}"`;
+                }
+                result += value;
+                ctr++;
+            });
+            result += lineDelimiter;
+        });
+        return result;
+    }
+
+    const downloadCSV = (csvStr: string, fileName: string) => {
+        const blob = new Blob([`\uFEFF${csvStr}`], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    const handleExport = () => {
+        if (suppliers.length === 0) {
+            toast({ title: 'No hay datos', description: 'No hay suplidores para exportar.', variant: 'destructive' });
+            return;
+        }
+        const csvString = convertArrayOfObjectsToCSV(suppliers);
+        downloadCSV(csvString, 'suplidores.csv');
+        toast({ title: 'Exportación Exitosa', description: 'Tus suplidores han sido descargados.' });
+    };
+
     const handleEdit = (supplier: Supplier) => {
         setEditingSupplier(supplier);
         setIsDialogOpen(true);
@@ -169,7 +216,11 @@ export default function SuplidoresPage() {
              <div className="flex justify-end items-start gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />
-                    Importar Suplidores
+                    Importar
+                </Button>
+                <Button variant="outline" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar
                 </Button>
                 <Button onClick={() => { setEditingSupplier(null); setIsDialogOpen(true); }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
