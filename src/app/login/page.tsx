@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -109,7 +108,7 @@ export default function LoginPage() {
         <CardHeader>
            <div className="flex justify-center mb-4">
              <Link href="/" className="flex items-center gap-2">
-                <Image src="/logohomeclean.png" alt="QuimioGest Logo" width={180} height={60} className="object-contain" />
+                <img src="/logohomeclean.png" alt="QuimioGest Logo" width="180" height="60" className="object-contain" />
              </Link>
            </div>
           <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
