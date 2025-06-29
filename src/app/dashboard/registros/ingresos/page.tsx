@@ -262,7 +262,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
 };
 
 export default function IngresosPage() {
-    const { incomes, addIncome, deleteIncome, updateIncome, products } = useAppData();
+    const { incomes, addIncome, deleteIncome, updateIncome, products, addMultipleIncomes } = useAppData();
     const { toast } = useToast();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingIncome, setEditingIncome] = useState<Income | null>(null);
@@ -460,15 +460,147 @@ export default function IngresosPage() {
     };
 
     const handleImportClick = () => {
-        toast({
-            title: 'Función no disponible',
-            description: 'La importación de ingresos es compleja y no está implementada en este prototipo.',
-        });
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result as string;
+                const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+                if (lines.length < 2) throw new Error("El archivo CSV está vacío o solo contiene la cabecera.");
+
+                const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
+                const requiredHeaders = ['idtransaccion', 'fecha', 'cliente', 'metododepago', 'producto', 'cantidad', 'preciounitario', 'subtotalproducto', 'totalfactura'];
+                const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
+                if (missingHeaders.length > 0) {
+                    throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
+                }
+
+                // Group rows by transaction ID
+                const transactionsMap = new Map<string, any[]>();
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',');
+                    const rowData: any = {};
+                    headers.forEach((header, index) => {
+                        rowData[header] = values[index]?.trim() || '';
+                    });
+
+                    const transactionId = rowData.idtransaccion;
+                    if (!transactionId) continue; 
+
+                    if (!transactionsMap.has(transactionId)) {
+                        transactionsMap.set(transactionId, []);
+                    }
+                    transactionsMap.get(transactionId)?.push(rowData);
+                }
+
+                const newIncomes: Income[] = [];
+                
+                // Process each transaction group
+                for (const [transactionId, rows] of transactionsMap.entries()) {
+                    if (rows.length === 0) continue;
+
+                    const firstRow = rows[0];
+                    const date = firstRow.fecha;
+                    const clientName = firstRow.cliente;
+                    const paymentMethod = firstRow.metododepago.toLowerCase();
+                    const totalFacturaFromFile = parseFloat(firstRow.totalfactura);
+                    if (isNaN(totalFacturaFromFile)) throw new Error(`El Total Factura para la transacción ${transactionId} no es un número válido.`);
+                    
+                    if (paymentMethod !== 'credito' && paymentMethod !== 'contado') {
+                         throw new Error(`Método de pago '${firstRow.metododepago}' no válido para transacción ${transactionId}. Use 'credito' o 'contado'.`);
+                    }
+
+                    rows.forEach(row => {
+                        if (row.fecha !== date || row.cliente !== clientName || row.metododepago.toLowerCase() !== paymentMethod) {
+                            throw new Error(`Datos inconsistentes para transacción ${transactionId}. Fecha, Cliente y Método de Pago deben ser iguales.`);
+                        }
+                    });
+                    
+                    const client = allClients.find(c => c.name.toLowerCase() === clientName.toLowerCase()) || allClients.find(c => c.id === 'generic');
+                    if (!client) {
+                        throw new Error(`Cliente '${clientName}' no encontrado para transacción ${transactionId}.`);
+                    }
+
+                    const soldProducts: SoldProduct[] = [];
+                    let calculatedTotal = 0;
+
+                    for (const row of rows) {
+                        const productName = row.producto;
+                        const product = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
+                        if (!product) {
+                            throw new Error(`Producto "${productName}" no encontrado en inventario para transacción ${transactionId}.`);
+                        }
+
+                        const quantity = parseFloat(row.cantidad);
+                        const unitPrice = parseFloat(row.preciounitario);
+                        const subtotalFromFile = parseFloat(row.subtotalproducto);
+
+                        if (isNaN(quantity) || quantity <= 0 || isNaN(unitPrice) || unitPrice < 0) {
+                            throw new Error(`Cantidad o Precio Unitario inválido para "${productName}" en transacción ${transactionId}.`);
+                        }
+                        if (isNaN(subtotalFromFile)) {
+                            throw new Error(`Subtotal inválido para "${productName}" en transacción ${transactionId}.`);
+                        }
+                        
+                        const calculatedSubtotal = quantity * unitPrice;
+                        if (Math.abs(calculatedSubtotal - subtotalFromFile) > 0.01) { // Tolerance for floating point
+                           throw new Error(`Subtotal para "${productName}" (${subtotalFromFile.toFixed(2)}) no coincide con el cálculo (${calculatedSubtotal.toFixed(2)}) en transacción ${transactionId}.`);
+                        }
+
+                        soldProducts.push({
+                            productId: product.id,
+                            name: product.name,
+                            quantity,
+                            price: unitPrice,
+                        });
+                        calculatedTotal += calculatedSubtotal;
+                    }
+
+                     if (Math.abs(calculatedTotal - totalFacturaFromFile) > 0.01) {
+                        throw new Error(`Total Factura (${totalFacturaFromFile.toFixed(2)}) no coincide con la suma de subtotales (${calculatedTotal.toFixed(2)}) en transacción ${transactionId}.`);
+                    }
+
+                    newIncomes.push({
+                        id: transactionId,
+                        clientId: client.id,
+                        paymentMethod: paymentMethod as 'credito' | 'contado',
+                        date,
+                        products: soldProducts,
+                        totalAmount: calculatedTotal,
+                        category: 'Venta de Producto',
+                    });
+                }
+                
+                addMultipleIncomes(newIncomes);
+
+                toast({
+                    title: "Importación Exitosa",
+                    description: `${newIncomes.length} transacciones han sido importadas.`,
+                });
+
+            } catch (error: any) {
+                toast({
+                    variant: "destructive",
+                    title: "Error de Importación",
+                    description: error.message || "No se pudo procesar el archivo CSV.",
+                    duration: 10000,
+                });
+            } finally {
+                if(event.target) event.target.value = '';
+            }
+        };
+        reader.readAsText(file);
     };
 
     return (
         <div className="space-y-6">
-            <input type="file" ref={fileInputRef} accept=".csv" className="hidden" />
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
              <div className="flex justify-end items-start gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />

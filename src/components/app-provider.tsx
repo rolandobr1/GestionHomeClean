@@ -53,6 +53,7 @@ interface AppContextType {
   expenses: Expense[];
   products: Product[];
   addIncome: (income: Omit<Income, 'id'>) => void;
+  addMultipleIncomes: (incomes: Income[]) => void;
   deleteIncome: (id: string) => void;
   updateIncome: (income: Income) => void;
   addExpense: (expense: Omit<Expense, 'id'>) => void;
@@ -76,6 +77,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const addIncome = (income: Omit<Income, 'id'>) => {
     setIncomes(prev => [...prev, { ...income, id: new Date().toISOString() + Math.random() }]);
+  };
+
+  const addMultipleIncomes = (newIncomes: Income[]) => {
+    const existingIds = new Set(incomes.map(i => i.id));
+    const uniqueNewIncomes = newIncomes.filter(i => !existingIds.has(i.id));
+    setIncomes(prev => [...prev, ...uniqueNewIncomes]);
   };
 
   const updateIncome = (updatedIncome: Income) => {
@@ -126,7 +133,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AppContext.Provider value={{
         incomes, expenses, products,
-        addIncome, deleteIncome, updateIncome,
+        addIncome, addMultipleIncomes, deleteIncome, updateIncome,
         addExpense, addMultipleExpenses, deleteExpense, updateExpense,
         addProduct, addMultipleProducts, deleteProduct, updateProduct
     }}>
