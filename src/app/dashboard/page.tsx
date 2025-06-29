@@ -76,7 +76,16 @@ const IncomeForm = ({ onSave }: { onSave: (income: Omit<Income, 'id'>) => void }
     };
 
     const handleSelectChange = (field: keyof typeof formData) => (value: string) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+        if (field === 'productId') {
+            const product = initialProducts.find(p => p.id === value);
+            setFormData(prev => ({
+                ...prev,
+                productId: value,
+                amount: product ? product.salePrice : 0
+            }));
+        } else {
+            setFormData(prev => ({ ...prev, [field]: value }));
+        }
     };
 
     const handleSubmit = (e: React.FormEvent) => {
