@@ -118,8 +118,8 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
     
     return (
         <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4 max-h-[60vh] md:max-h-[65vh] overflow-y-auto pr-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="clientId">Cliente</Label>
                         <Select onValueChange={setClientId} value={clientId}>
@@ -158,8 +158,8 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
                 <div className="space-y-2">
                     <Label>Añadir Productos</Label>
                     <Card className="p-4 space-y-4 bg-muted/50">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <div className="space-y-2">
+                        <div className="grid grid-cols-3 gap-4">
+                             <div className="space-y-2 col-span-2">
                                 <Label htmlFor="productId-form">Producto</Label>
                                 <Select onValueChange={setCurrentProduct} value={currentProduct}>
                                     <SelectTrigger id="productId-form">
@@ -455,7 +455,7 @@ export default function IngresosPage() {
                             Puedes descargar la factura como imagen o compartirla directamente.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="max-h-[70vh] overflow-y-auto px-2">
+                    <div className="px-2">
                        {selectedIncomeForInvoice && <InvoiceTemplate ref={invoiceRef} income={selectedIncomeForInvoice} />}
                     </div>
                     <DialogFooter className="p-6 bg-muted/50 flex-col-reverse sm:flex-row sm:justify-end gap-2">

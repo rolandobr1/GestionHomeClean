@@ -115,8 +115,8 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) =
     
     return (
         <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4 max-h-[60vh] md:max-h-[65vh] overflow-y-auto pr-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="clientId-dash">Cliente</Label>
                         <Select onValueChange={setClientId} defaultValue={clientId}>
@@ -155,8 +155,8 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) =
                 <div className="space-y-2">
                     <Label>Añadir Productos</Label>
                     <Card className="p-4 space-y-4 bg-muted/50">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <div className="space-y-2">
+                        <div className="grid grid-cols-3 gap-4">
+                             <div className="space-y-2 col-span-2">
                                 <Label htmlFor="productId-dash">Producto</Label>
                                 <Select onValueChange={setCurrentProduct} value={currentProduct}>
                                     <SelectTrigger id="productId-dash">
