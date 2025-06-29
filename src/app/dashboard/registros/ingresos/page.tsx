@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { initialProducts } from '../../inventario/productos/page';
@@ -61,7 +62,8 @@ export default function IngresosPage() {
     const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income: Income) => void }) => {
         const [formData, setFormData] = useState(income || {
             amount: 0, date: new Date().toISOString().split('T')[0], category: 'Venta de Producto',
-            clientId: 'generic', paymentMethod: 'contado' as 'credito' | 'contado', productId: ''
+            clientId: 'generic', paymentMethod: 'contado' as 'credito' | 'contado', productId: '',
+            priceType: 'retail' as 'retail' | 'wholesale'
         });
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,17 +71,28 @@ export default function IngresosPage() {
             setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
         };
 
-        const handleSelectChange = (field: keyof typeof formData) => (value: string) => {
+        const handleSelectChange = (field: keyof Omit<typeof formData, 'priceType'>) => (value: string) => {
             if (field === 'productId') {
                 const product = initialProducts.find(p => p.id === value);
-                setFormData(prev => ({
-                    ...prev,
-                    productId: value,
-                    amount: product ? product.salePrice : 0
-                }));
+                 if (product) {
+                    setFormData(prev => ({
+                        ...prev,
+                        productId: value,
+                        amount: prev.priceType === 'retail' ? product.salePriceRetail : product.salePriceWholesale
+                    }));
+                }
             } else {
                 setFormData(prev => ({ ...prev, [field]: value }));
             }
+        };
+
+        const handlePriceTypeChange = (value: 'retail' | 'wholesale') => {
+            const product = initialProducts.find(p => p.id === formData.productId);
+            setFormData(prev => ({
+                ...prev,
+                priceType: value,
+                amount: product ? (value === 'retail' ? product.salePriceRetail : product.salePriceWholesale) : prev.amount
+            }));
         };
 
         const handleSubmit = (e: React.FormEvent) => {
@@ -102,6 +115,23 @@ export default function IngresosPage() {
                                 ))}
                             </SelectContent>
                         </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right">Tipo de Precio</Label>
+                        <RadioGroup
+                            value={formData.priceType}
+                            onValueChange={handlePriceTypeChange}
+                            className="col-span-3 flex gap-4"
+                        >
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="retail" id="retail" />
+                                <Label htmlFor="retail">Detalle</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="wholesale" id="wholesale" />
+                                <Label htmlFor="wholesale">Por Mayor</Label>
+                            </div>
+                        </RadioGroup>
                     </div>
                      <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="clientId" className="text-right">Cliente</Label>

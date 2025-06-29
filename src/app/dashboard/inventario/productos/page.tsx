@@ -47,17 +47,17 @@ type Product = {
   name: string;
   sku: string;
   unit: string;
-  purchasePrice: number;
-  salePrice: number;
+  salePriceRetail: number;
+  salePriceWholesale: number;
   stock: number;
   reorderLevel: number;
 };
 
 export const initialProducts: Product[] = [
-  { id: '1', name: 'Ácido Clorhídrico', sku: 'AC-001', unit: 'Litros', purchasePrice: 5.5, salePrice: 10.0, stock: 150, reorderLevel: 20 },
-  { id: '2', name: 'Hipoclorito de Sodio', sku: 'HS-002', unit: 'Galones', purchasePrice: 12.0, salePrice: 25.0, stock: 80, reorderLevel: 15 },
-  { id: '3', name: 'Sosa Cáustica (Escamas)', sku: 'SC-001', unit: 'Kg', purchasePrice: 8.2, salePrice: 15.5, stock: 200, reorderLevel: 50 },
-  { id: '4', name: 'Peróxido de Hidrógeno', sku: 'PH-001', unit: 'Litros', purchasePrice: 7.0, salePrice: 14.0, stock: 45, reorderLevel: 30 },
+  { id: '1', name: 'Ácido Clorhídrico', sku: 'AC-001', unit: 'Litros', salePriceRetail: 10.0, salePriceWholesale: 8.5, stock: 150, reorderLevel: 20 },
+  { id: '2', name: 'Hipoclorito de Sodio', sku: 'HS-002', unit: 'Galones', salePriceRetail: 25.0, salePriceWholesale: 22.0, stock: 80, reorderLevel: 15 },
+  { id: '3', name: 'Sosa Cáustica (Escamas)', sku: 'SC-001', unit: 'Kg', salePriceRetail: 15.5, salePriceWholesale: 13.0, stock: 200, reorderLevel: 50 },
+  { id: '4', name: 'Peróxido de Hidrógeno', sku: 'PH-001', unit: 'Litros', salePriceRetail: 14.0, salePriceWholesale: 12.0, stock: 45, reorderLevel: 30 },
 ];
 
 export default function ProductosPage() {
@@ -86,12 +86,12 @@ export default function ProductosPage() {
 
     const ProductForm = ({ product, onSave }: { product: Product | null, onSave: (product: Product) => void }) => {
         const [formData, setFormData] = useState(product || {
-            name: '', sku: '', unit: '', purchasePrice: 0, salePrice: 0, stock: 0, reorderLevel: 0
+            name: '', sku: '', unit: '', salePriceRetail: 0, salePriceWholesale: 0, stock: 0, reorderLevel: 0
         });
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             const { id, value, type } = e.target;
-            setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) : value }));
+            setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
         };
 
         const handleSubmit = (e: React.FormEvent) => {
@@ -119,8 +119,12 @@ export default function ProductosPage() {
                         <Input id="unit" value={formData.unit} onChange={handleChange} className="col-span-3" />
                     </div>
                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="salePrice" className="text-right">Precio Venta</Label>
-                        <Input id="salePrice" type="number" value={formData.salePrice} onChange={handleChange} className="col-span-3" />
+                        <Label htmlFor="salePriceRetail" className="text-right">Precio Detalle</Label>
+                        <Input id="salePriceRetail" type="number" value={formData.salePriceRetail} onChange={handleChange} className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="salePriceWholesale" className="text-right">Precio Por Mayor</Label>
+                        <Input id="salePriceWholesale" type="number" value={formData.salePriceWholesale} onChange={handleChange} className="col-span-3" />
                     </div>
                      <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="reorderLevel" className="text-right">Nivel Reorden</Label>
@@ -158,7 +162,7 @@ export default function ProductosPage() {
                                 <TableHead>Nombre</TableHead>
                                 <TableHead>SKU</TableHead>
                                 <TableHead className="text-right">Stock</TableHead>
-                                <TableHead className="text-right">Precio Venta</TableHead>
+                                <TableHead className="text-right">Precio Detalle</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -174,7 +178,7 @@ export default function ProductosPage() {
                                             <Badge variant="secondary">{product.stock} {product.unit}</Badge>
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-right">RD${product.salePrice.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">RD${product.salePriceRetail.toFixed(2)}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <DropdownMenu>

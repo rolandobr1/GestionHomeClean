@@ -11,6 +11,7 @@ export type Income = {
   clientId: string;
   paymentMethod: 'credito' | 'contado';
   productId: string;
+  priceType: 'retail' | 'wholesale';
 };
 
 export type Expense = {
