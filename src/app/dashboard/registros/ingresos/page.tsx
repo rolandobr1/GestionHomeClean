@@ -118,7 +118,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
     
     return (
         <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 max-h-[60vh] md:max-h-[65vh] overflow-y-auto pr-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="clientId">Cliente</Label>
@@ -242,12 +242,13 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
                         </Card>
                      </div>
                 )}
-
-                 <div className="text-right text-xl font-bold">
+            </div>
+            <div className="pt-4 mt-4 border-t">
+                <div className="text-right text-xl font-bold">
                     Total: RD${totalAmount.toFixed(2)}
                 </div>
             </div>
-             <DialogFooter>
+            <DialogFooter className="pt-4">
                 <DialogClose asChild>
                      <Button type="button" variant="secondary">Cancelar</Button>
                 </DialogClose>
