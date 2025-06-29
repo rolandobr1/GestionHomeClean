@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, ChevronsUpDown, Check } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from '@/components/ui/separator';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { initialProducts } from '../../inventario/productos/page';
 import { useFinancialData } from '@/hooks/use-financial-data';
@@ -22,7 +22,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toJpeg, toBlob } from 'html-to-image';
 import { InvoiceTemplate } from '@/components/invoice-template';
 import { useToast } from "@/hooks/use-toast";
-
+import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
+import type { DateRange } from 'react-day-picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Client = {
   id: string;
@@ -118,8 +122,8 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
     
     return (
         <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="clientId">Cliente</Label>
                         <Select onValueChange={setClientId} value={clientId}>
@@ -243,16 +247,16 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
                      </div>
                 )}
             </div>
-            <div className="pt-4 mt-4 border-t">
-                <div className="text-right text-xl font-bold">
+            <DialogFooter className="pt-4 mt-4 border-t flex-col sm:flex-row sm:justify-between sm:items-center">
+                 <div className="text-right sm:text-left text-xl font-bold">
                     Total: RD${totalAmount.toFixed(2)}
                 </div>
-            </div>
-            <DialogFooter className="pt-4">
-                <DialogClose asChild>
-                     <Button type="button" variant="secondary">Cancelar</Button>
-                </DialogClose>
-                <Button type="submit">Guardar</Button>
+                <div className="flex justify-end gap-2">
+                    <DialogClose asChild>
+                         <Button type="button" variant="secondary">Cancelar</Button>
+                    </DialogClose>
+                    <Button type="submit">Guardar</Button>
+                </div>
             </DialogFooter>
         </form>
     );
@@ -267,6 +271,50 @@ export default function IngresosPage() {
     const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
     const [selectedIncomeForInvoice, setSelectedIncomeForInvoice] = useState<Income | null>(null);
     const invoiceRef = useRef<HTMLDivElement>(null);
+
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: subDays(new Date(), 90),
+        to: new Date(),
+    });
+    const [clientFilter, setClientFilter] = useState<string>('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [openClientPopover, setOpenClientPopover] = useState(false);
+
+    const filteredIncomes = useMemo(() => {
+        return incomes.filter(income => {
+            const incomeDate = new Date(income.date);
+            
+            if (dateRange?.from && dateRange?.to) {
+                const fromDate = new Date(dateRange.from.setHours(0,0,0,0));
+                const toDate = new Date(dateRange.to.setHours(23,59,59,999));
+                if (incomeDate < fromDate || incomeDate > toDate) {
+                    return false;
+                }
+            }
+            
+            if (clientFilter && income.clientId !== clientFilter) {
+                return false;
+            }
+
+            if (searchTerm) {
+                const client = allClients.find(c => c.id === income.clientId);
+                const lowerCaseSearchTerm = searchTerm.toLowerCase();
+                const inClient = client?.name.toLowerCase().includes(lowerCaseSearchTerm);
+                const inProducts = income.products.some(p => p.name.toLowerCase().includes(lowerCaseSearchTerm));
+                if (!inClient && !inProducts) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [incomes, dateRange, clientFilter, searchTerm]);
+
+    const clearFilters = () => {
+        setDateRange({ from: undefined, to: undefined });
+        setClientFilter('');
+        setSearchTerm('');
+    };
 
     const handleEdit = (income: Income) => {
         setEditingIncome(income);
@@ -356,6 +404,81 @@ export default function IngresosPage() {
 
             <Card>
                 <CardHeader>
+                    <CardTitle>Filtros</CardTitle>
+                    <CardDescription>Filtra los ingresos por fecha, cliente o producto.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+                        
+                        <Popover open={openClientPopover} onOpenChange={setOpenClientPopover}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openClientPopover}
+                                className="w-full md:w-[280px] justify-between"
+                                >
+                                {clientFilter
+                                    ? allClients.find((client) => client.id === clientFilter)?.name
+                                    : "Filtrar por cliente..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                <Command>
+                                <CommandInput placeholder="Buscar cliente..." />
+                                <CommandEmpty>No se encontró el cliente.</CommandEmpty>
+                                <CommandList>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            key="all"
+                                            value=""
+                                            onSelect={() => {
+                                                setClientFilter('');
+                                                setOpenClientPopover(false);
+                                            }}
+                                        >
+                                             <Check className={`mr-2 h-4 w-4 ${clientFilter === '' ? "opacity-100" : "opacity-0"}`} />
+                                            Todos los clientes
+                                        </CommandItem>
+                                        {allClients.map((client) => (
+                                            <CommandItem
+                                                key={client.id}
+                                                value={client.name}
+                                                onSelect={() => {
+                                                    setClientFilter(client.id);
+                                                    setOpenClientPopover(false);
+                                                }}
+                                            >
+                                                 <Check className={`mr-2 h-4 w-4 ${clientFilter === client.id ? "opacity-100" : "opacity-0"}`} />
+                                                {client.name}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                        
+                        <Input 
+                            placeholder="Buscar por producto..." 
+                            value={searchTerm} 
+                            onChange={(e) => setSearchTerm(e.target.value)} 
+                            className="w-full md:w-[280px]" 
+                        />
+                    </div>
+                </CardContent>
+                 <CardFooter>
+                    <Button variant="ghost" onClick={clearFilters}>
+                        <X className="mr-2 h-4 w-4"/>
+                        Limpiar Filtros
+                    </Button>
+                </CardFooter>
+            </Card>
+
+            <Card>
+                <CardHeader>
                     <CardTitle>Historial de Ingresos</CardTitle>
                     <CardDescription>Un listado de todas tus transacciones de ingresos.</CardDescription>
                 </CardHeader>
@@ -372,7 +495,7 @@ export default function IngresosPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {incomes.map((income) => {
+                            {filteredIncomes.length > 0 ? filteredIncomes.map((income) => {
                                 const client = allClients.find(c => c.id === income.clientId);
                                 
                                 return (
@@ -429,7 +552,13 @@ export default function IngresosPage() {
                                         </AlertDialog>
                                     </TableCell>
                                 </TableRow>
-                            )})}
+                            )}) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">
+                                        No se encontraron resultados.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

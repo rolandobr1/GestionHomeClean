@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -11,15 +11,60 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useFinancialData } from '@/hooks/use-financial-data';
 import type { Expense } from '@/components/financial-provider';
+import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
+import type { DateRange } from 'react-day-picker';
+
+const expenseCategories = ["Compra de Material", "Salarios", "Servicios Públicos", "Mantenimiento", "Otro"];
 
 export default function EgresosPage() {
     const { expenses, addExpense, deleteExpense, updateExpense } = useFinancialData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: subDays(new Date(), 90),
+        to: new Date(),
+    });
+    const [categoryFilter, setCategoryFilter] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredExpenses = useMemo(() => {
+        return expenses.filter(expense => {
+            const expenseDate = new Date(expense.date);
+            
+            // Date filter
+            if (dateRange?.from && dateRange?.to) {
+                // Adjust for timezone differences by comparing dates only
+                const fromDate = new Date(dateRange.from.setHours(0,0,0,0));
+                const toDate = new Date(dateRange.to.setHours(23,59,59,999));
+                if (expenseDate < fromDate || expenseDate > toDate) {
+                    return false;
+                }
+            }
+            
+            // Category filter
+            if (categoryFilter && expense.category !== categoryFilter) {
+                return false;
+            }
+
+            // Search term filter (searches in description)
+            if (searchTerm && !expense.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+                return false;
+            }
+            
+            return true;
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [expenses, dateRange, categoryFilter, searchTerm]);
+    
+    const clearFilters = () => {
+        setDateRange({ from: undefined, to: undefined });
+        setCategoryFilter('');
+        setSearchTerm('');
+    };
 
     const handleEdit = (expense: Expense) => {
         setEditingExpense(expense);
@@ -82,11 +127,7 @@ export default function EgresosPage() {
                                 <SelectValue placeholder="Selecciona una categoría" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Compra de Material">Compra de Material</SelectItem>
-                                <SelectItem value="Salarios">Salarios</SelectItem>
-                                <SelectItem value="Servicios Públicos">Servicios Públicos</SelectItem>
-                                <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
-                                <SelectItem value="Otro">Otro</SelectItem>
+                                {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -112,6 +153,39 @@ export default function EgresosPage() {
 
             <Card>
                 <CardHeader>
+                    <CardTitle>Filtros</CardTitle>
+                    <CardDescription>Filtra los egresos por fecha, categoría o descripción.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                            <SelectTrigger className="w-full md:w-[280px]">
+                                <SelectValue placeholder="Filtrar por categoría..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">Todas las Categorías</SelectItem>
+                                {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Input 
+                            placeholder="Buscar por descripción..." 
+                            value={searchTerm} 
+                            onChange={(e) => setSearchTerm(e.target.value)} 
+                            className="w-full md:w-[280px]" 
+                        />
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button variant="ghost" onClick={clearFilters}>
+                        <X className="mr-2 h-4 w-4"/>
+                        Limpiar Filtros
+                    </Button>
+                </CardFooter>
+            </Card>
+
+            <Card>
+                <CardHeader>
                     <CardTitle>Historial de Egresos</CardTitle>
                     <CardDescription>Un listado de todas tus transacciones de egresos.</CardDescription>
                 </CardHeader>
@@ -127,7 +201,7 @@ export default function EgresosPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {expenses.map((expense) => (
+                            {filteredExpenses.length > 0 ? filteredExpenses.map((expense) => (
                                 <TableRow key={expense.id}>
                                     <TableCell className="font-medium">{expense.description}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{expense.category}</TableCell>
@@ -164,7 +238,13 @@ export default function EgresosPage() {
                                         </AlertDialog>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="h-24 text-center">
+                                        No se encontraron resultados.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
