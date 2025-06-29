@@ -1,9 +1,7 @@
 "use client";
 
-import React, { createContext, useState, useEffect, ReactNode } from "react";
-import { onAuthStateChanged, User } from "firebase/auth";
-import { auth, isConfigured } from "@/lib/firebase";
-import { Skeleton } from "./ui/skeleton";
+import React, { createContext, ReactNode } from "react";
+import type { User } from "firebase/auth";
 
 interface AuthContextType {
   user: User | null;
@@ -12,43 +10,23 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  loading: true,
+  loading: false, // Default to not loading
 });
 
+// A mock user to simulate being logged in
+const mockUser = {
+  uid: "mock-user-123",
+  email: "test@quimiogest.app",
+  displayName: "Usuario de Prueba",
+  photoURL: null,
+} as User;
+
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!isConfigured || !auth) {
-        setLoading(false);
-        return;
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="flex flex-col items-center space-y-4">
-            <Skeleton className="h-12 w-12 rounded-full" />
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-[250px]" />
-                <Skeleton className="h-4 w-[200px]" />
-            </div>
-        </div>
-      </div>
-    );
-  }
-
+  // We bypass the actual Firebase auth and provide a mock user.
+  // This makes the app think we are always logged in.
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user: mockUser, loading: false }}>
       {children}
     </AuthContext.Provider>
   );

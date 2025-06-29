@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { FlaskConical, LogIn, UserPlus } from "lucide-react";
+import { FlaskConical, LogIn } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -25,15 +25,9 @@ export default function Home() {
         </div>
         <div className="flex flex-col gap-4 min-[400px]:flex-row mt-8">
           <Button asChild size="lg">
-            <Link href="/login">
+            <Link href="/dashboard">
               <LogIn className="mr-2 h-5 w-5" />
-              Iniciar Sesión
-            </Link>
-          </Button>
-          <Button asChild size="lg" variant="secondary">
-            <Link href="/signup">
-              <UserPlus className="mr-2 h-5 w-5" />
-              Registrarse
+              Entrar al Dashboard
             </Link>
           </Button>
         </div>
