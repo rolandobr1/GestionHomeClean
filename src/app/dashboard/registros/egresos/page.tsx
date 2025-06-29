@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, X } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, X, Download } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -17,6 +17,7 @@ import { useFinancialData } from '@/hooks/use-financial-data';
 import type { Expense } from '@/components/financial-provider';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import type { DateRange } from 'react-day-picker';
+import { useToast } from "@/hooks/use-toast";
 
 const expenseCategories = ["Compra de Material", "Salarios", "Servicios Públicos", "Mantenimiento", "Otro"];
 
@@ -24,6 +25,7 @@ export default function EgresosPage() {
     const { expenses, addExpense, deleteExpense, updateExpense } = useFinancialData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+    const { toast } = useToast();
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: subDays(new Date(), 90),
@@ -86,6 +88,65 @@ export default function EgresosPage() {
         setIsDialogOpen(false);
     };
 
+    const convertArrayOfObjectsToCSV = (data: any[]) => {
+        if (data.length === 0) return '';
+        const columnDelimiter = ',';
+        const lineDelimiter = '\n';
+        const keys = Object.keys(data[0]);
+
+        let result = keys.join(columnDelimiter) + lineDelimiter;
+
+        data.forEach(item => {
+            let ctr = 0;
+            keys.forEach(key => {
+                if (ctr > 0) result += columnDelimiter;
+                let value = item[key] ?? '';
+                if (typeof value === 'string' && value.includes('"')) {
+                   value = value.replace(/"/g, '""');
+                }
+                if (typeof value === 'string' && value.includes(columnDelimiter)) {
+                   value = `"${value}"`;
+                }
+                result += value;
+                ctr++;
+            });
+            result += lineDelimiter;
+        });
+
+        return result;
+    }
+
+    const downloadCSV = (csvStr: string, fileName: string) => {
+        const blob = new Blob([`\uFEFF${csvStr}`], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    const handleExport = () => {
+        if (filteredExpenses.length === 0) {
+            toast({ title: 'No hay datos', description: 'No hay registros para exportar que coincidan con los filtros.', variant: 'destructive' });
+            return;
+        }
+
+        const flattenedExpenses = filteredExpenses.map(expense => ({
+            'ID Transaccion': expense.id,
+            'Fecha': expense.date,
+            'Descripcion': expense.description,
+            'Categoria': expense.category,
+            'Monto': expense.amount,
+        }));
+        const csvString = convertArrayOfObjectsToCSV(flattenedExpenses);
+        downloadCSV(csvString, 'egresos.csv');
+
+        toast({ title: 'Exportación Exitosa', description: 'Tus registros han sido descargados.' });
+    };
+
     const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (expense: Expense) => void }) => {
         const [formData, setFormData] = useState(expense || {
             description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Compra de Material'
@@ -144,7 +205,11 @@ export default function EgresosPage() {
 
     return (
         <div className="space-y-6">
-             <div className="flex justify-end items-start">
+             <div className="flex justify-end items-start gap-2">
+                <Button variant="outline" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar (CSV)
+                </Button>
                 <Button onClick={() => { setEditingExpense(null); setIsDialogOpen(true); }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Egreso

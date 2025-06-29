@@ -26,7 +26,6 @@ import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import type { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Client = {
   id: string;
@@ -392,10 +391,80 @@ export default function IngresosPage() {
             }
         }
       };
+    
+    const convertArrayOfObjectsToCSV = (data: any[]) => {
+        if (data.length === 0) return '';
+        const columnDelimiter = ',';
+        const lineDelimiter = '\n';
+        const keys = Object.keys(data[0]);
+
+        let result = keys.join(columnDelimiter) + lineDelimiter;
+
+        data.forEach(item => {
+            let ctr = 0;
+            keys.forEach(key => {
+                if (ctr > 0) result += columnDelimiter;
+                let value = item[key] ?? '';
+                if (typeof value === 'string' && value.includes('"')) {
+                   value = value.replace(/"/g, '""');
+                }
+                if (typeof value === 'string' && value.includes(columnDelimiter)) {
+                   value = `"${value}"`;
+                }
+                result += value;
+                ctr++;
+            });
+            result += lineDelimiter;
+        });
+
+        return result;
+    }
+
+    const downloadCSV = (csvStr: string, fileName: string) => {
+        const blob = new Blob([`\uFEFF${csvStr}`], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    const handleExport = () => {
+        if (filteredIncomes.length === 0) {
+            toast({ title: 'No hay datos', description: 'No hay registros para exportar que coincidan con los filtros.', variant: 'destructive' });
+            return;
+        }
+
+        const flattenedIncomes = filteredIncomes.flatMap(income => {
+            const client = allClients.find(c => c.id === income.clientId)?.name || 'N/A';
+            return income.products.map(product => ({
+                'ID Transaccion': income.id,
+                'Fecha': income.date,
+                'Cliente': client,
+                'Metodo de Pago': income.paymentMethod,
+                'Producto': product.name,
+                'Cantidad': product.quantity,
+                'Precio Unitario': product.price,
+                'Subtotal Producto': (product.quantity * product.price).toFixed(2),
+                'Total Factura': income.totalAmount.toFixed(2),
+            }));
+        });
+        const csvString = convertArrayOfObjectsToCSV(flattenedIncomes);
+        downloadCSV(csvString, 'ingresos.csv');
+        
+        toast({ title: 'Exportación Exitosa', description: 'Tus registros han sido descargados.' });
+    };
 
     return (
         <div className="space-y-6">
-             <div className="flex justify-end items-start">
+             <div className="flex justify-end items-start gap-2">
+                <Button variant="outline" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar (CSV)
+                </Button>
                 <Button onClick={() => { setEditingIncome(null); setIsDialogOpen(true); }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Ingreso
