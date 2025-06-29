@@ -173,7 +173,7 @@ export default function EgresosPage() {
                     throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
                 }
 
-                const newExpenses: Omit<Expense, 'id'>[] = [];
+                const newExpenses: Expense[] = [];
                 for (let i = 1; i < lines.length; i++) {
                     const values = lines[i].split(',');
                     const expenseData: any = {};
@@ -182,6 +182,7 @@ export default function EgresosPage() {
                     });
 
                     newExpenses.push({
+                        id: expenseData.id || '',
                         description: expenseData.description || 'N/A',
                         amount: parseFloat(expenseData.amount) || 0,
                         date: expenseData.date || new Date().toISOString().split('T')[0],

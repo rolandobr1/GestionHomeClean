@@ -39,7 +39,7 @@ export default function ClientesPage() {
                 throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
             }
 
-            const newClients: Omit<Client, 'id'>[] = [];
+            const newClients: Client[] = [];
             for (let i = 1; i < lines.length; i++) {
                 const values = lines[i].split(',');
                 const clientData: any = {};
@@ -48,6 +48,7 @@ export default function ClientesPage() {
                 });
 
                 newClients.push({
+                    id: clientData.id || '',
                     name: clientData.name || 'N/A',
                     email: clientData.email || 'N/A',
                     phone: clientData.phone || 'N/A',

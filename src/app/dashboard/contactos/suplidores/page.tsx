@@ -39,7 +39,7 @@ export default function SuplidoresPage() {
                 throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
             }
 
-            const newSuppliers: Omit<Supplier, 'id'>[] = [];
+            const newSuppliers: Supplier[] = [];
             for (let i = 1; i < lines.length; i++) {
                 const values = lines[i].split(',');
                 const supplierData: any = {};
@@ -48,6 +48,7 @@ export default function SuplidoresPage() {
                 });
 
                 newSuppliers.push({
+                    id: supplierData.id || '',
                     name: supplierData.name || 'N/A',
                     email: supplierData.email || 'N/A',
                     phone: supplierData.phone || 'N/A',

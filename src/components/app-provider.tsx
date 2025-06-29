@@ -76,7 +76,7 @@ interface AppContextType {
   deleteIncome: (id: string) => void;
   updateIncome: (income: Income) => void;
   addExpense: (expense: Omit<Expense, 'id'>) => void;
-  addMultipleExpenses: (expenses: Omit<Expense, 'id'>[]) => void;
+  addMultipleExpenses: (expenses: Expense[]) => void;
   deleteExpense: (id: string) => void;
   updateExpense: (expense: Expense) => void;
   addProduct: (product: Omit<Product, 'id'>) => void;
@@ -84,11 +84,11 @@ interface AppContextType {
   deleteProduct: (id: string) => void;
   updateProduct: (product: Product) => void;
   addClient: (client: Omit<Client, 'id'>) => void;
-  addMultipleClients: (clients: Omit<Client, 'id'>[]) => void;
+  addMultipleClients: (clients: Client[]) => void;
   updateClient: (client: Client) => void;
   deleteClient: (id: string) => void;
   addSupplier: (supplier: Omit<Supplier, 'id'>) => void;
-  addMultipleSuppliers: (suppliers: Omit<Supplier, 'id'>[]) => void;
+  addMultipleSuppliers: (suppliers: Supplier[]) => void;
   updateSupplier: (supplier: Supplier) => void;
   deleteSupplier: (id: string) => void;
 }
@@ -108,10 +108,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setIncomes(prev => [...prev, { ...income, id: new Date().toISOString() + Math.random() }]);
   };
 
-  const addMultipleIncomes = (newIncomes: Income[]) => {
-    const existingIds = new Set(incomes.map(i => i.id));
-    const uniqueNewIncomes = newIncomes.filter(i => !existingIds.has(i.id));
-    setIncomes(prev => [...prev, ...uniqueNewIncomes]);
+  const addMultipleIncomes = (incomesToUpsert: Income[]) => {
+    setIncomes(prevIncomes => {
+      const incomeMap = new Map(prevIncomes.map(i => [i.id, i]));
+      incomesToUpsert.forEach(income => {
+        if (income.id) {
+            incomeMap.set(income.id, income);
+        }
+      });
+      return Array.from(incomeMap.values());
+    });
   };
 
   const updateIncome = (updatedIncome: Income) => {
@@ -126,9 +132,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setExpenses(prev => [...prev, { ...expense, id: new Date().toISOString() + Math.random() }]);
   };
 
-  const addMultipleExpenses = (newExpenses: Omit<Expense, 'id'>[]) => {
-      const expensesWithId = newExpenses.map(e => ({ ...e, id: new Date().toISOString() + Math.random() }));
-      setExpenses(prev => [...prev, ...expensesWithId]);
+  const addMultipleExpenses = (expensesToUpsert: Expense[]) => {
+      setExpenses(prevExpenses => {
+        const expenseMap = new Map(prevExpenses.map(e => [e.id, e]));
+        expensesToUpsert.forEach(expense => {
+            const id = expense.id || (new Date().toISOString() + Math.random());
+            expenseMap.set(id, { ...expense, id });
+        });
+        return Array.from(expenseMap.values());
+      });
   }
 
   const updateExpense = (updatedExpense: Expense) => {
@@ -143,11 +155,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setProducts(prev => [...prev, { ...product, id: new Date().toISOString() + Math.random() }]);
   }
 
-  const addMultipleProducts = (newProducts: Product[]) => {
-      const productsWithId = newProducts.map(p => ({ ...p, id: p.id || new Date().toISOString() + Math.random() }));
-      const existingIds = new Set(products.map(p => p.id));
-      const uniqueNewProducts = productsWithId.filter(p => !existingIds.has(p.id));
-      setProducts(prev => [...prev, ...uniqueNewProducts]);
+  const addMultipleProducts = (productsToUpsert: Product[]) => {
+    setProducts(prevProducts => {
+      const productMap = new Map(prevProducts.map(p => [p.id, p]));
+      productsToUpsert.forEach(product => {
+        const id = product.id || (new Date().toISOString() + Math.random());
+        productMap.set(id, { ...product, id });
+      });
+      return Array.from(productMap.values());
+    });
   }
 
   const updateProduct = (updatedProduct: Product) => {
@@ -162,9 +178,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setClients(prev => [...prev, { ...client, id: new Date().toISOString() + Math.random() }]);
   };
 
-  const addMultipleClients = (newClients: Omit<Client, 'id'>[]) => {
-    const clientsWithId = newClients.map(c => ({...c, id: new Date().toISOString() + Math.random()}));
-    setClients(prev => [...prev, ...clientsWithId]);
+  const addMultipleClients = (clientsToUpsert: Client[]) => {
+    setClients(prevClients => {
+      const clientMap = new Map(prevClients.map(c => [c.id, c]));
+      clientsToUpsert.forEach(client => {
+        const id = client.id || (new Date().toISOString() + Math.random());
+        clientMap.set(id, { ...client, id });
+      });
+      return Array.from(clientMap.values());
+    });
   };
 
   const updateClient = (updatedClient: Client) => {
@@ -179,9 +201,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setSuppliers(prev => [...prev, { ...supplier, id: new Date().toISOString() + Math.random() }]);
   };
 
-  const addMultipleSuppliers = (newSuppliers: Omit<Supplier, 'id'>[]) => {
-      const suppliersWithId = newSuppliers.map(s => ({...s, id: new Date().toISOString() + Math.random()}));
-      setSuppliers(prev => [...prev, ...suppliersWithId]);
+  const addMultipleSuppliers = (suppliersToUpsert: Supplier[]) => {
+      setSuppliers(prevSuppliers => {
+        const supplierMap = new Map(prevSuppliers.map(s => [s.id, s]));
+        suppliersToUpsert.forEach(supplier => {
+            const id = supplier.id || (new Date().toISOString() + Math.random());
+            supplierMap.set(id, { ...supplier, id });
+        });
+        return Array.from(supplierMap.values());
+      });
   };
 
   const updateSupplier = (updatedSupplier: Supplier) => {
