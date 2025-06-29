@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, isConfigured, firebaseConfig } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { FlaskConical } from "lucide-react";
 import { FirebaseConfigStatus } from "@/components/config-status";
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 export default function SignupPage() {
   const router = useRouter();
@@ -26,12 +28,20 @@ export default function SignupPage() {
   const [email, setEmail] = useState("test@example.com");
   const [password, setPassword] = useState("password123");
   const [loading, setLoading] = useState(false);
+  const [clientAuth, setClientAuth] = useState<{isConfigured: boolean; config: any} | null>(null);
 
   useEffect(() => {
-    console.log("--- Diagnóstico de Configuración de Firebase (Registro) ---");
-    console.log("¿Está la app configurada? (isConfigured):", isConfigured);
-    console.log("Valores de configuración (firebaseConfig):", firebaseConfig);
-    console.log("---------------------------------------------------------");
+    // This check runs only on the client to avoid hydration errors.
+    const config = {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    };
+    const isConfigured = !!(config.apiKey && config.authDomain && config.projectId && config.storageBucket && config.messagingSenderId && config.appId);
+    setClientAuth({ isConfigured, config });
   }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -54,10 +64,8 @@ export default function SignupPage() {
           description = "La contraseña es demasiado débil. Debe tener al menos 6 caracteres.";
           break;
         case "auth/invalid-api-key":
-          description = "La clave de API de Firebase no es válida. Revisa tus credenciales en el archivo .env.local y la consola del navegador para más detalles.";
-          break;
         case "auth/configuration-not-found":
-          description = "La configuración de Firebase no se encontró. Asegúrate de que tu archivo .env.local esté completo y reinicia el servidor. Revisa la consola del navegador para ver los valores que se están usando.";
+          description = "La configuración de Firebase es incorrecta o no se encontró. Asegúrate de que tu archivo .env.local esté completo y reinicia el servidor.";
           break;
         case "auth/network-request-failed":
             description = "Error de red. Por favor, comprueba tu conexión a internet.";
@@ -78,9 +86,27 @@ export default function SignupPage() {
     }
   };
 
-  if (!isConfigured) {
-    return <FirebaseConfigStatus config={firebaseConfig} />;
-  }
+  if (!clientAuth) {
+    return (
+     <div className="flex items-center justify-center min-h-screen bg-background">
+       <Card className="mx-auto max-w-sm w-full p-6">
+           <div className="flex flex-col space-y-4">
+               <Skeleton className="h-8 w-3/4" />
+               <Skeleton className="h-4 w-1/2" />
+               <div className="space-y-6 pt-4">
+                 <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
+                 <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
+                 <Skeleton className="h-10 w-full" />
+               </div>
+           </div>
+       </Card>
+     </div>
+   )
+ }
+
+ if (!clientAuth.isConfigured) {
+   return <FirebaseConfigStatus config={clientAuth.config} />;
+ }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
