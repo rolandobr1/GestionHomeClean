@@ -14,7 +14,6 @@ import { UserNav } from "./user-nav";
 import { navLinks } from "./nav-links";
 import Link from "next/link";
 import { useState } from "react";
-import Image from "next/image";
 
 export function DashboardHeader() {
     const pathname = usePathname();
@@ -39,7 +38,7 @@ export function DashboardHeader() {
             <SheetHeader className="border-b p-4">
                 <SheetTitle>
                     <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setIsSheetOpen(false)}>
-                        <Image src="/logohomeclean.png" alt="QuimioGest Logo" width={120} height={40} className="object-contain" />
+                        <img src="/logohomeclean.png" alt="QuimioGest Logo" width={120} height={40} className="object-contain" />
                     </Link>
                 </SheetTitle>
             </SheetHeader>
