@@ -34,6 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { initialProducts } from './inventario/productos/page';
 import { useFinancialData } from '@/hooks/use-financial-data';
 import type { Income, Expense } from '@/components/financial-provider';
+import { allClients } from './registros/ingresos/page';
 
 const chartData: { month: string, income: number, expense: number }[] = [];
 
@@ -49,20 +50,6 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 const lowStockItems: { name: string, sku: string, stock: number, reorderLevel: number, unit: string }[] = [];
-
-type Client = {
-  id: string;
-  name: string;
-};
-const initialClients: Client[] = [
-  { id: '1', name: 'Laboratorios Alfa' },
-  { id: '2', name: 'Farmacia San José' },
-  { id: '3', name: 'Industrias del Caribe' },
-];
-const allClients = [
-    { id: 'generic', name: 'Cliente Genérico' },
-    ...initialClients
-];
 
 const IncomeForm = ({ onSave }: { onSave: (income: Omit<Income, 'id'>) => void }) => {
     const [formData, setFormData] = useState({
@@ -236,6 +223,7 @@ export default function DashboardPage() {
   
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
+  const [accountsReceivable, setAccountsReceivable] = useState({ total: 0, count: 0 });
 
   useEffect(() => {
     const today = new Date();
@@ -246,6 +234,12 @@ export default function DashboardPage() {
       })
       .reduce((acc, income) => acc + income.amount, 0);
     setTotalIncome(currentMonthIncome);
+
+    const creditIncomes = incomes.filter(i => i.paymentMethod === 'credito');
+    const arTotal = creditIncomes.reduce((acc, income) => acc + income.amount, 0);
+    const arCount = creditIncomes.length;
+    setAccountsReceivable({ total: arTotal, count: arCount });
+
   }, [incomes]);
 
   useEffect(() => {
@@ -336,8 +330,8 @@ export default function DashboardPage() {
             <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RD$0.00</div>
-            <p className="text-xs text-muted-foreground">0 cuentas pendientes</p>
+            <div className="text-2xl font-bold">RD${accountsReceivable.total.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">{accountsReceivable.count} cuentas pendientes</p>
           </CardContent>
         </Card>
       </div>

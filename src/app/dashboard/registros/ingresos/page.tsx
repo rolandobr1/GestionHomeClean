@@ -28,7 +28,7 @@ const initialClients: Client[] = [
   { id: '3', name: 'Industrias del Caribe' },
 ];
 
-const allClients = [
+export const allClients = [
     { id: 'generic', name: 'Cliente Genérico' },
     ...initialClients
 ];
