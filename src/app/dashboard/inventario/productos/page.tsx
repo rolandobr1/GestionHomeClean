@@ -165,7 +165,8 @@ export default function ProductosPage() {
             toast({ title: 'No hay datos', description: 'No hay productos para exportar.', variant: 'destructive' });
             return;
         }
-        const csvString = convertArrayOfObjectsToCSV(products);
+        const dataToExport = products.map(({ id, ...rest }) => rest);
+        const csvString = convertArrayOfObjectsToCSV(dataToExport);
         downloadCSV(csvString, 'productos.csv');
         toast({ title: 'Exportación Exitosa', description: 'Tus productos han sido descargados.' });
     };

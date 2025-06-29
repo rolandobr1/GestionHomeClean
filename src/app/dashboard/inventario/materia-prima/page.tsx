@@ -174,7 +174,8 @@ export default function MateriaPrimaPage() {
             toast({ title: 'No hay datos', description: 'No hay materias primas para exportar.', variant: 'destructive' });
             return;
         }
-        const csvString = convertArrayOfObjectsToCSV(materials);
+        const dataToExport = materials.map(({ id, ...rest }) => rest);
+        const csvString = convertArrayOfObjectsToCSV(dataToExport);
         downloadCSV(csvString, 'materia_prima.csv');
         toast({ title: 'Exportación Exitosa', description: 'Tus materias primas han sido descargadas.' });
     };

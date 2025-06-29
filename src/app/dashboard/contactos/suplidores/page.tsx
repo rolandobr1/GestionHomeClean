@@ -128,7 +128,8 @@ export default function SuplidoresPage() {
             toast({ title: 'No hay datos', description: 'No hay suplidores para exportar.', variant: 'destructive' });
             return;
         }
-        const csvString = convertArrayOfObjectsToCSV(suppliers);
+        const dataToExport = suppliers.map(({ id, ...rest }) => rest);
+        const csvString = convertArrayOfObjectsToCSV(dataToExport);
         downloadCSV(csvString, 'suplidores.csv');
         toast({ title: 'Exportación Exitosa', description: 'Tus suplidores han sido descargados.' });
     };

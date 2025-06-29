@@ -128,7 +128,8 @@ export default function ClientesPage() {
             toast({ title: 'No hay datos', description: 'No hay clientes para exportar.', variant: 'destructive' });
             return;
         }
-        const csvString = convertArrayOfObjectsToCSV(clients);
+        const dataToExport = clients.map(({ id, ...rest }) => rest);
+        const csvString = convertArrayOfObjectsToCSV(dataToExport);
         downloadCSV(csvString, 'clientes.csv');
         toast({ title: 'Exportación Exitosa', description: 'Tus clientes han sido descargados.' });
     };

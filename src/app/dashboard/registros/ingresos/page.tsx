@@ -449,7 +449,6 @@ export default function IngresosPage() {
                 'Precio Unitario': product.price,
                 'Subtotal Producto': (product.quantity * product.price).toFixed(2),
                 'Total Factura': income.totalAmount.toFixed(2),
-                'Registrado Por': income.recordedBy,
             }));
         });
         const csvString = convertArrayOfObjectsToCSV(flattenedIncomes);

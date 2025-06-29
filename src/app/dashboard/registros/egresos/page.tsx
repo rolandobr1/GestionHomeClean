@@ -144,12 +144,10 @@ export default function EgresosPage() {
         }
 
         const flattenedExpenses = filteredExpenses.map(expense => ({
-            'ID Transaccion': expense.id,
-            'Fecha': expense.date,
-            'Descripcion': expense.description,
-            'Categoria': expense.category,
-            'Monto': expense.amount,
-            'Registrado Por': expense.recordedBy,
+            'description': expense.description,
+            'amount': expense.amount,
+            'date': expense.date,
+            'category': expense.category,
         }));
         const csvString = convertArrayOfObjectsToCSV(flattenedExpenses);
         downloadCSV(csvString, 'egresos.csv');
