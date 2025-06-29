@@ -5,16 +5,16 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { CircleDollarSign, CheckCircle, MoreHorizontal } from "lucide-react";
-import { useFinancialData } from '@/hooks/use-financial-data';
+import { useAppData } from '@/hooks/use-app-data';
 import { allClients } from '../registros/ingresos/page';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import type { Income } from '@/components/financial-provider';
+import type { Income } from '@/components/app-provider';
 
 export default function CuentasPage() {
-  const { incomes, updateIncome } = useFinancialData();
+  const { incomes, updateIncome } = useAppData();
 
   const accountsReceivable = incomes.filter(income => income.paymentMethod === 'credito');
 

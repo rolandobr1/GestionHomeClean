@@ -31,9 +31,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
-import { initialProducts } from './inventario/productos/page';
-import { useFinancialData } from '@/hooks/use-financial-data';
-import type { Income, Expense, SoldProduct, Product } from '@/components/financial-provider';
+import { useAppData } from '@/hooks/use-app-data';
+import type { Income, Expense, SoldProduct, Product } from '@/components/app-provider';
 import { allClients } from './registros/ingresos/page';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
@@ -52,6 +51,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) => void, income: Income | null }) => {
+    const { products: allProducts } = useAppData();
     const [clientId, setClientId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -62,7 +62,7 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) =
     const [currentPriceType, setCurrentPriceType] = useState<'retail' | 'wholesale'>('retail');
 
     const handleAddProduct = () => {
-        const product = initialProducts.find(p => p.id === currentProduct);
+        const product = allProducts.find(p => p.id === currentProduct);
         if (!product || currentQuantity <= 0) return;
 
         const price = currentPriceType === 'retail' ? product.salePriceRetail : product.salePriceWholesale;
@@ -115,8 +115,8 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) =
     
     return (
         <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4 py-4 max-h-[65vh] overflow-y-auto pr-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="clientId-dash">Cliente</Label>
                         <Select onValueChange={setClientId} defaultValue={clientId}>
@@ -163,7 +163,7 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) =
                                         <SelectValue placeholder="Selecciona un producto" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {initialProducts.map(product => (
+                                        {allProducts.map(product => (
                                             <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
                                         ))}
                                     </SelectContent>
@@ -240,16 +240,16 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) =
                      </div>
                 )}
             </div>
-            <div className="pt-4 mt-4 border-t">
-                <div className="text-right text-xl font-bold">
+            <DialogFooter className="pt-4 mt-4 border-t flex-col sm:flex-row sm:justify-between sm:items-center">
+                 <div className="text-right sm:text-left text-xl font-bold">
                     Total: RD${totalAmount.toFixed(2)}
                 </div>
-            </div>
-             <DialogFooter className="pt-4">
-                <DialogClose asChild>
-                     <Button type="button" variant="secondary">Cancelar</Button>
-                </DialogClose>
-                <Button type="submit">Guardar</Button>
+                <div className="flex justify-end gap-2">
+                    <DialogClose asChild>
+                         <Button type="button" variant="secondary">Cancelar</Button>
+                    </DialogClose>
+                    <Button type="submit">Guardar</Button>
+                </div>
             </DialogFooter>
         </form>
     );
@@ -318,7 +318,7 @@ const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id'>) => voi
 
 export default function DashboardPage() {
   const { toast } = useToast();
-  const { incomes, expenses, addIncome, addExpense } = useFinancialData();
+  const { incomes, expenses, products, addIncome, addExpense } = useAppData();
 
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
@@ -395,14 +395,14 @@ export default function DashboardPage() {
     setChartData(formattedChartData);
 
     // Inventory calculations
-    const lowStock = initialProducts.filter(p => p.stock <= p.reorderLevel);
+    const lowStock = products.filter(p => p.stock <= p.reorderLevel);
     setLowStockItems(lowStock);
     
     // NOTE: Inventory value calculation is missing product cost.
     // This would require adding a `costPrice` to the Product type.
     // For now, it will remain at 0.
 
-  }, [incomes, expenses]);
+  }, [incomes, expenses, products]);
 
   const handleIncomeSave = (income: Omit<Income, 'id'>) => {
       addIncome(income);

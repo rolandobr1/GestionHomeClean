@@ -15,9 +15,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from '@/components/ui/separator';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { initialProducts } from '../../inventario/productos/page';
-import { useFinancialData } from '@/hooks/use-financial-data';
-import type { Income, SoldProduct } from '@/components/financial-provider';
+import { useAppData } from '@/hooks/use-app-data';
+import type { Income, SoldProduct } from '@/components/app-provider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toJpeg, toBlob } from 'html-to-image';
 import { InvoiceTemplate } from '@/components/invoice-template';
@@ -44,6 +43,7 @@ export const allClients = [
 ];
 
 const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income: Income) => void }) => {
+    const { products: allProducts } = useAppData();
     const [clientId, setClientId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -68,7 +68,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
     }, [income]);
 
     const handleAddProduct = () => {
-        const product = initialProducts.find(p => p.id === currentProduct);
+        const product = allProducts.find(p => p.id === currentProduct);
         if (!product || currentQuantity <= 0) return;
 
         const price = currentPriceType === 'retail' ? product.salePriceRetail : product.salePriceWholesale;
@@ -169,7 +169,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
                                         <SelectValue placeholder="Selecciona un producto" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {initialProducts.map(product => (
+                                        {allProducts.map(product => (
                                             <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
                                         ))}
                                     </SelectContent>
@@ -262,7 +262,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
 };
 
 export default function IngresosPage() {
-    const { incomes, addIncome, deleteIncome, updateIncome } = useFinancialData();
+    const { incomes, addIncome, deleteIncome, updateIncome, products } = useAppData();
     const { toast } = useToast();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingIncome, setEditingIncome] = useState<Income | null>(null);
@@ -270,6 +270,7 @@ export default function IngresosPage() {
     const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
     const [selectedIncomeForInvoice, setSelectedIncomeForInvoice] = useState<Income | null>(null);
     const invoiceRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: subDays(new Date(), 90),
@@ -461,12 +462,13 @@ export default function IngresosPage() {
     const handleImportClick = () => {
         toast({
             title: 'Función no disponible',
-            description: 'La importación de datos no está implementada en este prototipo.',
+            description: 'La importación de ingresos es compleja y no está implementada en este prototipo.',
         });
     };
 
     return (
         <div className="space-y-6">
+            <input type="file" ref={fileInputRef} accept=".csv" className="hidden" />
              <div className="flex justify-end items-start gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />

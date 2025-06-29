@@ -7,7 +7,7 @@ import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { BottomNav } from "@/components/dashboard/bottom-nav";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { FinancialProvider } from "@/components/financial-provider";
+import { AppProvider } from "@/components/app-provider";
 
 export default function DashboardLayout({
   children,
@@ -28,7 +28,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <FinancialProvider>
+    <AppProvider>
       <SidebarProvider>
         <div className="md:flex">
           <div className="hidden md:block">
@@ -43,6 +43,6 @@ export default function DashboardLayout({
           <BottomNav />
         </div>
       </SidebarProvider>
-    </FinancialProvider>
+    </AppProvider>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { PlusCircle, MoreHorizontal, Trash2, Edit, X, Download, Upload } from 'lucide-react';
@@ -13,8 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useFinancialData } from '@/hooks/use-financial-data';
-import type { Expense } from '@/components/financial-provider';
+import { useAppData } from '@/hooks/use-app-data';
+import type { Expense } from '@/components/app-provider';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import type { DateRange } from 'react-day-picker';
 import { useToast } from "@/hooks/use-toast";
@@ -22,10 +22,11 @@ import { useToast } from "@/hooks/use-toast";
 const expenseCategories = ["Compra de Material", "Salarios", "Servicios Públicos", "Mantenimiento", "Otro"];
 
 export default function EgresosPage() {
-    const { expenses, addExpense, deleteExpense, updateExpense } = useFinancialData();
+    const { expenses, addExpense, deleteExpense, updateExpense, addMultipleExpenses } = useAppData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
     const { toast } = useToast();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: subDays(new Date(), 90),
@@ -147,11 +148,68 @@ export default function EgresosPage() {
         toast({ title: 'Exportación Exitosa', description: 'Tus registros han sido descargados.' });
     };
 
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result as string;
+                const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+                if (lines.length < 2) throw new Error("El archivo CSV está vacío o solo contiene la cabecera.");
+
+                const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                const requiredHeaders = ['description', 'amount', 'date', 'category'];
+                const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
+                if (missingHeaders.length > 0) {
+                    throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
+                }
+
+                const newExpenses: Omit<Expense, 'id'>[] = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',');
+                    const expenseData: any = {};
+                    headers.forEach((header, index) => {
+                        expenseData[header] = values[index]?.trim() || '';
+                    });
+
+                    newExpenses.push({
+                        description: expenseData.description || 'N/A',
+                        amount: parseFloat(expenseData.amount) || 0,
+                        date: expenseData.date || new Date().toISOString().split('T')[0],
+                        category: expenseData.category || 'Otro',
+                    });
+                }
+                
+                addMultipleExpenses(newExpenses);
+
+                toast({
+                    title: "Importación Exitosa",
+                    description: `${newExpenses.length} egresos han sido importados.`,
+                });
+            } catch (error: any) {
+                toast({
+                    variant: "destructive",
+                    title: "Error de Importación",
+                    description: error.message || "No se pudo procesar el archivo CSV.",
+                });
+            }
+        };
+        reader.onerror = () => {
+            toast({
+                variant: 'destructive',
+                title: 'Error de Lectura',
+                description: 'No se pudo leer el archivo.',
+            });
+        };
+        reader.readAsText(file);
+
+        if(event.target) event.target.value = '';
+    };
+
     const handleImportClick = () => {
-        toast({
-            title: 'Función no disponible',
-            description: 'La importación de datos no está implementada en este prototipo.',
-        });
+        fileInputRef.current?.click();
     };
 
     const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (expense: Expense) => void }) => {
@@ -212,6 +270,7 @@ export default function EgresosPage() {
 
     return (
         <div className="space-y-6">
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
              <div className="flex justify-end items-start gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />

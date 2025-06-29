@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload } from 'lucide-react';
@@ -42,36 +42,85 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAppData } from '@/hooks/use-app-data';
+import type { Product } from '@/components/app-provider';
 
-type Product = {
-  id: string;
-  name: string;
-  sku: string;
-  unit: string;
-  salePriceRetail: number;
-  salePriceWholesale: number;
-  stock: number;
-  reorderLevel: number;
-};
-
-export const initialProducts: Product[] = [
-  { id: '1', name: 'Ácido Clorhídrico', sku: 'AC-001', unit: 'Litros', salePriceRetail: 10.0, salePriceWholesale: 8.5, stock: 150, reorderLevel: 20 },
-  { id: '2', name: 'Hipoclorito de Sodio', sku: 'HS-002', unit: 'Galones', salePriceRetail: 25.0, salePriceWholesale: 22.0, stock: 80, reorderLevel: 15 },
-  { id: '3', name: 'Sosa Cáustica (Escamas)', sku: 'SC-001', unit: 'Kg', salePriceRetail: 15.5, salePriceWholesale: 13.0, stock: 200, reorderLevel: 50 },
-  { id: '4', name: 'Peróxido de Hidrógeno', sku: 'PH-001', unit: 'Litros', salePriceRetail: 14.0, salePriceWholesale: 12.0, stock: 45, reorderLevel: 30 },
-];
 
 export default function ProductosPage() {
-    const [products, setProducts] = useState<Product[]>(initialProducts);
+    const { products, addProduct, updateProduct, deleteProduct, addMultipleProducts } = useAppData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const { toast } = useToast();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+        try {
+            const text = e.target?.result as string;
+            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+            if (lines.length < 2) throw new Error("El archivo CSV está vacío o solo contiene la cabecera.");
+
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const requiredHeaders = ['name', 'sku', 'unit', 'salepriceretail', 'salepricewholesale', 'stock', 'reorderlevel'];
+            const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh.replace(/\s+/g, '')));
+            if (missingHeaders.length > 0) {
+                throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
+            }
+
+            const newProducts: Product[] = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const productData: any = {};
+                headers.forEach((header, index) => {
+                    productData[header.replace(/\s+/g, '')] = values[index]?.trim() || '';
+                });
+
+                newProducts.push({
+                    id: productData.id || '', // Let provider assign ID
+                    name: productData.name || 'N/A',
+                    sku: productData.sku || 'N/A',
+                    unit: productData.unit || 'N/A',
+                    salePriceRetail: parseFloat(productData.salepriceretail) || 0,
+                    salePriceWholesale: parseFloat(productData.salepricewholesale) || 0,
+                    stock: parseInt(productData.stock, 10) || 0,
+                    reorderLevel: parseInt(productData.reorderlevel, 10) || 0,
+                });
+            }
+            
+            addMultipleProducts(newProducts);
+
+            toast({
+                title: "Importación Exitosa",
+                description: `${newProducts.length} productos han sido importados.`,
+            });
+
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Error de Importación",
+                description: error.message || "No se pudo procesar el archivo CSV.",
+            });
+        }
+        };
+        reader.onerror = () => {
+            toast({
+                variant: 'destructive',
+                title: 'Error de Lectura',
+                description: 'No se pudo leer el archivo.',
+            });
+        };
+        reader.readAsText(file);
+
+        if(event.target) event.target.value = '';
+    };
+
 
     const handleImportClick = () => {
-        toast({
-            title: 'Función no disponible',
-            description: 'La importación de datos no está implementada en este prototipo.',
-        });
+        fileInputRef.current?.click();
     };
 
     const handleEdit = (product: Product) => {
@@ -80,14 +129,15 @@ export default function ProductosPage() {
     };
 
     const handleDelete = (productId: string) => {
-        setProducts(products.filter(p => p.id !== productId));
+        deleteProduct(productId);
     };
 
     const handleSave = (product: Product) => {
         if (editingProduct) {
-            setProducts(products.map(p => p.id === product.id ? product : p));
+            updateProduct(product);
         } else {
-            setProducts([...products, { ...product, id: new Date().toISOString() + Math.random() }]);
+            const { id, ...newProduct } = product;
+            addProduct(newProduct);
         }
         setEditingProduct(null);
         setIsDialogOpen(false);
@@ -156,6 +206,7 @@ export default function ProductosPage() {
 
     return (
         <div className="space-y-6">
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
              <div className="flex justify-end items-start gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />

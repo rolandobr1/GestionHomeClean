@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import type { Income } from '@/components/financial-provider';
+import type { Income } from '@/components/app-provider';
 import { allClients } from '@/app/dashboard/registros/ingresos/page';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';

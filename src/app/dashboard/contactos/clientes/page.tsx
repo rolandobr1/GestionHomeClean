@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload } from 'lucide-react';
@@ -31,12 +31,72 @@ export default function ClientesPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
     const { toast } = useToast();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+        try {
+            const text = e.target?.result as string;
+            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+            if (lines.length < 2) throw new Error("El archivo CSV está vacío o solo contiene la cabecera.");
+
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const requiredHeaders = ['name', 'email', 'phone', 'address'];
+            const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
+            if (missingHeaders.length > 0) {
+                throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
+            }
+
+            const newClients: Client[] = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const clientData: any = {};
+                headers.forEach((header, index) => {
+                    clientData[header] = values[index]?.trim() || '';
+                });
+
+                newClients.push({
+                    id: clientData.id || new Date().toISOString() + Math.random(),
+                    name: clientData.name || 'N/A',
+                    email: clientData.email || 'N/A',
+                    phone: clientData.phone || 'N/A',
+                    address: clientData.address || 'N/A',
+                });
+            }
+            
+            setClients(prev => [...prev, ...newClients]);
+
+            toast({
+            title: "Importación Exitosa",
+            description: `${newClients.length} clientes han sido importados.`,
+            });
+
+        } catch (error: any) {
+            toast({
+            variant: "destructive",
+            title: "Error de Importación",
+            description: error.message || "No se pudo procesar el archivo CSV.",
+            });
+        }
+        };
+        reader.onerror = () => {
+            toast({
+                variant: 'destructive',
+                title: 'Error de Lectura',
+                description: 'No se pudo leer el archivo.',
+            });
+        };
+        reader.readAsText(file);
+
+        if(event.target) event.target.value = '';
+    };
 
     const handleImportClick = () => {
-        toast({
-            title: 'Función no disponible',
-            description: 'La importación de datos no está implementada en este prototipo.',
-        });
+        fileInputRef.current?.click();
     };
 
     const handleEdit = (client: Client) => {
@@ -105,6 +165,7 @@ export default function ClientesPage() {
 
     return (
         <div className="space-y-6">
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
              <div className="flex justify-end items-start gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />
