@@ -228,7 +228,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+       <div className="grid grid-cols-2 gap-4">
             <Button
               size="lg"
               className="w-full bg-green-600 hover:bg-green-700 text-primary-foreground"
