@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, X, Download } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, X, Download, Upload } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -147,6 +147,13 @@ export default function EgresosPage() {
         toast({ title: 'Exportación Exitosa', description: 'Tus registros han sido descargados.' });
     };
 
+    const handleImportClick = () => {
+        toast({
+            title: 'Función no disponible',
+            description: 'La importación de datos no está implementada en este prototipo.',
+        });
+    };
+
     const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (expense: Expense) => void }) => {
         const [formData, setFormData] = useState(expense || {
             description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Compra de Material'
@@ -206,6 +213,10 @@ export default function EgresosPage() {
     return (
         <div className="space-y-6">
              <div className="flex justify-end items-start gap-2">
+                <Button variant="outline" onClick={handleImportClick}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar
+                </Button>
                 <Button variant="outline" onClick={handleExport}>
                     <Download className="mr-2 h-4 w-4" />
                     Exportar (CSV)

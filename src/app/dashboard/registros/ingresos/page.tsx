@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, ChevronsUpDown, Check } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, ChevronsUpDown, Check, Upload } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -458,9 +458,20 @@ export default function IngresosPage() {
         toast({ title: 'Exportación Exitosa', description: 'Tus registros han sido descargados.' });
     };
 
+    const handleImportClick = () => {
+        toast({
+            title: 'Función no disponible',
+            description: 'La importación de datos no está implementada en este prototipo.',
+        });
+    };
+
     return (
         <div className="space-y-6">
              <div className="flex justify-end items-start gap-2">
+                <Button variant="outline" onClick={handleImportClick}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar
+                </Button>
                 <Button variant="outline" onClick={handleExport}>
                     <Download className="mr-2 h-4 w-4" />
                     Exportar (CSV)

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -41,6 +41,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 type Product = {
   id: string;
@@ -64,6 +65,14 @@ export default function ProductosPage() {
     const [products, setProducts] = useState<Product[]>(initialProducts);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const { toast } = useToast();
+
+    const handleImportClick = () => {
+        toast({
+            title: 'Función no disponible',
+            description: 'La importación de datos no está implementada en este prototipo.',
+        });
+    };
 
     const handleEdit = (product: Product) => {
         setEditingProduct(product);
@@ -147,7 +156,11 @@ export default function ProductosPage() {
 
     return (
         <div className="space-y-6">
-             <div className="flex justify-end items-start">
+             <div className="flex justify-end items-start gap-2">
+                <Button variant="outline" onClick={handleImportClick}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar Productos
+                </Button>
                 <Button onClick={() => { setEditingProduct(null); setIsDialogOpen(true); }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Producto

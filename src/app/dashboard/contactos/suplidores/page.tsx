@@ -3,13 +3,14 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 type Supplier = {
   id: string;
@@ -29,6 +30,14 @@ export default function SuplidoresPage() {
     const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+    const { toast } = useToast();
+
+    const handleImportClick = () => {
+        toast({
+            title: 'Función no disponible',
+            description: 'La importación de datos no está implementada en este prototipo.',
+        });
+    };
 
     const handleEdit = (supplier: Supplier) => {
         setEditingSupplier(supplier);
@@ -96,7 +105,11 @@ export default function SuplidoresPage() {
 
     return (
         <div className="space-y-6">
-             <div className="flex justify-end items-start">
+             <div className="flex justify-end items-start gap-2">
+                <Button variant="outline" onClick={handleImportClick}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar Suplidores
+                </Button>
                 <Button onClick={() => { setEditingSupplier(null); setIsDialogOpen(true); }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Suplidor
