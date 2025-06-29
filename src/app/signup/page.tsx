@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, isConfigured } from "@/lib/firebase";
+import { auth, isConfigured, firebaseConfig } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,8 +17,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { FlaskConical, Terminal } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FlaskConical } from "lucide-react";
+import { FirebaseConfigStatus } from "@/components/config-status";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -72,37 +72,7 @@ export default function SignupPage() {
   };
 
   if (!isConfigured) {
-    return (
-        <div className="flex items-center justify-center min-h-screen bg-background p-4">
-             <Card className="mx-auto max-w-md w-full">
-                <CardHeader>
-                    <CardTitle className="text-xl">Configuración Requerida</CardTitle>
-                    <CardDescription>
-                        La aplicación necesita conectarse a Firebase.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Alert variant="destructive">
-                        <Terminal className="h-4 w-4" />
-                        <AlertTitle>¡Acción Requerida!</AlertTitle>
-                        <AlertDescription>
-                            <div className="space-y-2 mt-2">
-                                <p>Sigue estos pasos para configurar la aplicación:</p>
-                                <ul className="list-disc pl-5 mt-2 space-y-1 text-xs">
-                                    <li>Copia tus credenciales del proyecto Firebase.</li>
-                                    <li>Pégalas en el archivo <code>.env.local</code>.</li>
-                                    <li>Guarda el archivo y <strong>reinicia el servidor</strong>.</li>
-                                </ul>
-                                <p className="text-xs text-muted-foreground pt-2">
-                                    Consulta <code>firebase-instructions.md</code> para ver la guía detallada.
-                                </p>
-                            </div>
-                        </AlertDescription>
-                    </Alert>
-                </CardContent>
-             </Card>
-        </div>
-    )
+    return <FirebaseConfigStatus config={firebaseConfig} />;
   }
 
   return (
