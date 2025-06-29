@@ -159,12 +159,12 @@ export default function EgresosPage() {
                 <CardContent>
                     <div className="flex flex-col md:flex-row gap-4">
                         <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
-                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <Select value={categoryFilter || 'all'} onValueChange={(value) => setCategoryFilter(value === 'all' ? '' : value)}>
                             <SelectTrigger className="w-full md:w-[280px]">
                                 <SelectValue placeholder="Filtrar por categoría..." />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">Todas las Categorías</SelectItem>
+                                <SelectItem value="all">Todas las Categorías</SelectItem>
                                 {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                             </SelectContent>
                         </Select>
