@@ -24,7 +24,7 @@ export const InvoiceTemplate = React.forwardRef<HTMLDivElement, InvoiceTemplateP
       <header className="flex justify-between items-start pb-6 border-b-2 border-gray-200">
         <div>
           <div className="mb-2">
-            <img src="https://placehold.co/150x50.png" alt="QuimioGest Logo" width="150" height="50" className="object-contain" />
+            <img src="/logohomeclean.png" alt="QuimioGest Logo" width="150" height="50" className="object-contain" />
           </div>
           <p className="text-sm text-gray-500">{companyAddress}</p>
           <p className="text-sm text-gray-500">RNC: {companyRNC}</p>

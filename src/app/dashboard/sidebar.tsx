@@ -26,10 +26,10 @@ export function DashboardSidebar() {
       <SidebarHeader>
         <Link href="/dashboard" className="flex items-center justify-center h-[40px] px-2">
             <div className="group-data-[state=collapsed]:hidden">
-                <img src="https://placehold.co/120x40.png" alt="QuimioGest Logo" width="120" height="40" className="object-contain" />
+                <img src="/logohomeclean.png" alt="QuimioGest Logo" width="120" height="40" className="object-contain" />
             </div>
             <div className="hidden group-data-[state=collapsed]:block">
-                <img src="https://placehold.co/32x32.png" alt="QuimioGest Logo" width="32" height="32" className="object-contain" />
+                <img src="/logohomeclean.png" alt="QuimioGest Logo" width="32" height="32" className="object-contain" />
             </div>
         </Link>
       </SidebarHeader>

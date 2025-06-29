@@ -113,7 +113,7 @@ export default function SignupPage() {
          <CardHeader>
            <div className="flex justify-center mb-4">
              <Link href="/" className="flex items-center gap-2">
-                <img src="https://placehold.co/180x60.png" alt="QuimioGest Logo" width="180" height="60" className="object-contain" />
+                <img src="/logohomeclean.png" alt="QuimioGest Logo" width="180" height="60" className="object-contain" />
              </Link>
            </div>
           <CardTitle className="text-xl">Regístrate</CardTitle>
