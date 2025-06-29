@@ -489,7 +489,7 @@ export default function IngresosPage() {
                     });
 
                     const transactionId = rowData.idtransaccion;
-                    if (!transactionId) continue; 
+                    if (!transactionId) continue; // Skip rows without transaction ID
 
                     if (!transactionsMap.has(transactionId)) {
                         transactionsMap.set(transactionId, []);
@@ -503,33 +503,44 @@ export default function IngresosPage() {
                 for (const [transactionId, rows] of transactionsMap.entries()) {
                     if (rows.length === 0) continue;
 
+                    // Use first row for transaction-wide data, with defaults for empty values
                     const firstRow = rows[0];
-                    const date = firstRow.fecha;
-                    const clientName = firstRow.cliente;
-                    const paymentMethod = firstRow.metododepago.toLowerCase();
-                    const totalFacturaFromFile = parseFloat(firstRow.totalfactura);
-                    if (isNaN(totalFacturaFromFile)) throw new Error(`El Total Factura para la transacción ${transactionId} no es un número válido.`);
+                    const date = firstRow.fecha || new Date().toISOString().split('T')[0];
+                    const clientName = firstRow.cliente || 'Cliente Genérico';
+                    const paymentMethodRaw = (firstRow.metododepago || 'contado').toLowerCase();
+                    const paymentMethod = (paymentMethodRaw === 'credito' || paymentMethodRaw === 'contado') ? paymentMethodRaw : 'contado';
                     
-                    if (paymentMethod !== 'credito' && paymentMethod !== 'contado') {
-                         throw new Error(`Método de pago '${firstRow.metododepago}' no válido para transacción ${transactionId}. Use 'credito' o 'contado'.`);
+                    // Check if total is provided for validation
+                    const totalFacturaFromFile = firstRow.totalfactura ? parseFloat(firstRow.totalfactura) : null;
+                    if (totalFacturaFromFile !== null && isNaN(totalFacturaFromFile)) {
+                        throw new Error(`El Total Factura para la transacción ${transactionId} no es un número válido.`);
                     }
 
-                    rows.forEach(row => {
-                        if (row.fecha !== date || row.cliente !== clientName || row.metododepago.toLowerCase() !== paymentMethod) {
-                            throw new Error(`Datos inconsistentes para transacción ${transactionId}. Fecha, Cliente y Método de Pago deben ser iguales.`);
-                        }
-                    });
+                    // Validate that transaction-wide data is consistent across all rows for this transaction
+                    for (const row of rows) {
+                        // Only validate if data exists in the row. If it's empty, we assume it's the same as the first row's (or its default).
+                        if (row.fecha && row.fecha !== date) throw new Error(`Fechas inconsistentes para transacción ${transactionId}.`);
+                        if (row.cliente && row.cliente !== clientName) throw new Error(`Clientes inconsistentes para transacción ${transactionId}.`);
+                        if (row.metododepago && row.metododepago.toLowerCase() !== paymentMethod) throw new Error(`Métodos de pago inconsistentes para transacción ${transactionId}.`);
+                    }
                     
                     const client = allClients.find(c => c.name.toLowerCase() === clientName.toLowerCase()) || allClients.find(c => c.id === 'generic');
                     if (!client) {
+                        // This case is unlikely now but good for safety
                         throw new Error(`Cliente '${clientName}' no encontrado para transacción ${transactionId}.`);
                     }
-
+                    
                     const soldProducts: SoldProduct[] = [];
                     let calculatedTotal = 0;
 
                     for (const row of rows) {
                         const productName = row.producto;
+                        
+                        // Skip product row if essential info is missing
+                        if (!productName || !row.cantidad || !row.preciounitario) {
+                            continue; 
+                        }
+
                         const product = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
                         if (!product) {
                             throw new Error(`Producto "${productName}" no encontrado en inventario para transacción ${transactionId}.`);
@@ -537,18 +548,22 @@ export default function IngresosPage() {
 
                         const quantity = parseFloat(row.cantidad);
                         const unitPrice = parseFloat(row.preciounitario);
-                        const subtotalFromFile = parseFloat(row.subtotalproducto);
-
-                        if (isNaN(quantity) || quantity <= 0 || isNaN(unitPrice) || unitPrice < 0) {
-                            throw new Error(`Cantidad o Precio Unitario inválido para "${productName}" en transacción ${transactionId}.`);
-                        }
-                        if (isNaN(subtotalFromFile)) {
-                            throw new Error(`Subtotal inválido para "${productName}" en transacción ${transactionId}.`);
-                        }
                         
-                        const calculatedSubtotal = quantity * unitPrice;
-                        if (Math.abs(calculatedSubtotal - subtotalFromFile) > 0.01) { // Tolerance for floating point
-                           throw new Error(`Subtotal para "${productName}" (${subtotalFromFile.toFixed(2)}) no coincide con el cálculo (${calculatedSubtotal.toFixed(2)}) en transacción ${transactionId}.`);
+                        // Skip if quantity or price are not valid numbers
+                        if (isNaN(quantity) || quantity <= 0 || isNaN(unitPrice) || unitPrice < 0) {
+                            continue;
+                        }
+
+                        // Validate subtotal only if it exists in the CSV
+                        const subtotalFromFile = row.subtotalproducto ? parseFloat(row.subtotalproducto) : null;
+                        if (subtotalFromFile !== null) {
+                            if(isNaN(subtotalFromFile)) {
+                                throw new Error(`Subtotal para "${productName}" en transacción ${transactionId} no es un número válido.`);
+                            }
+                            const calculatedSubtotal = quantity * unitPrice;
+                            if (Math.abs(calculatedSubtotal - subtotalFromFile) > 0.01) {
+                                throw new Error(`Subtotal para "${productName}" (${subtotalFromFile.toFixed(2)}) no coincide con el cálculo (${calculatedSubtotal.toFixed(2)}) en transacción ${transactionId}.`);
+                            }
                         }
 
                         soldProducts.push({
@@ -557,10 +572,16 @@ export default function IngresosPage() {
                             quantity,
                             price: unitPrice,
                         });
-                        calculatedTotal += calculatedSubtotal;
+                        calculatedTotal += (quantity * unitPrice);
+                    }
+                    
+                    // Skip creating income if no valid products were found for this transaction
+                    if (soldProducts.length === 0) {
+                        continue;
                     }
 
-                     if (Math.abs(calculatedTotal - totalFacturaFromFile) > 0.01) {
+                    // Validate total amount only if it exists in the CSV
+                    if (totalFacturaFromFile !== null && Math.abs(calculatedTotal - totalFacturaFromFile) > 0.01) {
                         throw new Error(`Total Factura (${totalFacturaFromFile.toFixed(2)}) no coincide con la suma de subtotales (${calculatedTotal.toFixed(2)}) en transacción ${transactionId}.`);
                     }
 
