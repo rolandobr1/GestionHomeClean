@@ -54,11 +54,7 @@ type Income = {
   productId: string;
 };
 
-const initialIncomes: Income[] = [
-  { id: '1', amount: 100.0, date: '2024-05-20', category: 'Venta de Producto', productId: '1', clientId: '1', paymentMethod: 'contado' },
-  { id: '2', amount: 550.0, date: '2024-05-22', category: 'Servicios', productId: '2', clientId: '2', paymentMethod: 'credito' },
-  { id: '3', amount: 77.5, date: '2024-05-23', category: 'Venta de Producto', productId: '3', clientId: 'generic', paymentMethod: 'contado' },
-];
+const initialIncomes: Income[] = [];
 
 export default function IngresosPage() {
     const [incomes, setIncomes] = useState<Income[]>(initialIncomes);

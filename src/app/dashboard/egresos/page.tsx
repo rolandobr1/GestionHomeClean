@@ -22,11 +22,7 @@ type Expense = {
   category: string;
 };
 
-const initialExpenses: Expense[] = [
-  { id: '1', description: 'Compra de 20kg de Sosa Cáustica', amount: 164.0, date: '2024-05-18', category: 'Compra de Material' },
-  { id: '2', description: 'Pago de factura de electricidad', amount: 250.0, date: '2024-05-25', category: 'Servicios Públicos' },
-  { id: '3', description: 'Salario de empleado', amount: 1200.0, date: '2024-05-30', category: 'Salarios' },
-];
+const initialExpenses: Expense[] = [];
 
 export default function EgresosPage() {
     const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);

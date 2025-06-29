@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -255,9 +255,34 @@ export default function DashboardPage() {
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
+  const [totalIncome, setTotalIncome] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+
+  useEffect(() => {
+    const today = new Date();
+    const currentMonthIncome = incomes
+      .filter(i => {
+        const incomeDate = new Date(i.date);
+        return incomeDate.getUTCMonth() === today.getUTCMonth() && incomeDate.getUTCFullYear() === today.getUTCFullYear();
+      })
+      .reduce((acc, income) => acc + income.amount, 0);
+    setTotalIncome(currentMonthIncome);
+  }, [incomes]);
+
+  useEffect(() => {
+    const today = new Date();
+    const currentMonthExpenses = expenses
+      .filter(e => {
+        const expenseDate = new Date(e.date);
+        return expenseDate.getUTCMonth() === today.getUTCMonth() && expenseDate.getUTCFullYear() === today.getUTCFullYear();
+      })
+      .reduce((acc, expense) => acc + expense.amount, 0);
+    setTotalExpenses(currentMonthExpenses);
+  }, [expenses]);
+
   const handleIncomeSave = (income: Income) => {
       const newIncome = { ...income, id: new Date().toISOString() };
-      setIncomes(prev => [...prev, newIncome]); // Although not displayed, we keep state consistent
+      setIncomes(prev => [...prev, newIncome]);
       setEditingIncome(null);
       setIsIncomeDialogOpen(false);
       toast({
@@ -268,7 +293,7 @@ export default function DashboardPage() {
 
   const handleExpenseSave = (expense: Expense) => {
       const newExpense = { ...expense, id: new Date().toISOString() };
-      setExpenses(prev => [...prev, newExpense]); // Although not displayed, we keep state consistent
+      setExpenses(prev => [...prev, newExpense]);
       setEditingExpense(null);
       setIsExpenseDialogOpen(false);
       toast({
@@ -306,8 +331,8 @@ export default function DashboardPage() {
             <ArrowUpCircle className="h-4 w-4 text-muted-foreground text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RD$0.00</div>
-            <p className="text-xs text-muted-foreground">0.0% desde el mes pasado</p>
+            <div className="text-2xl font-bold">RD${totalIncome.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Total de ingresos este mes</p>
           </CardContent>
         </Card>
         <Card>
@@ -316,8 +341,8 @@ export default function DashboardPage() {
             <ArrowDownCircle className="h-4 w-4 text-muted-foreground text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RD$0.00</div>
-            <p className="text-xs text-muted-foreground">0.0% desde el mes pasado</p>
+            <div className="text-2xl font-bold">RD${totalExpenses.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Total de egresos este mes</p>
           </CardContent>
         </Card>
         <Card>
