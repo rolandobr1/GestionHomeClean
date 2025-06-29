@@ -78,7 +78,7 @@ export default function ProductosPage() {
         if (editingProduct) {
             setProducts(products.map(p => p.id === product.id ? product : p));
         } else {
-            setProducts([...products, { ...product, id: new Date().toISOString() }]);
+            setProducts([...products, { ...product, id: new Date().toISOString() + Math.random() }]);
         }
         setEditingProduct(null);
         setIsDialogOpen(false);
@@ -102,33 +102,37 @@ export default function ProductosPage() {
         return (
             <form onSubmit={handleSubmit}>
                 <div className="grid gap-4 py-4">
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">Nombre</Label>
-                        <Input id="name" value={formData.name} onChange={handleChange} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Nombre</Label>
+                        <Input id="name" value={formData.name} onChange={handleChange} required />
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="sku" className="text-right">SKU</Label>
-                        <Input id="sku" value={formData.sku} onChange={handleChange} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="sku">SKU</Label>
+                        <Input id="sku" value={formData.sku} onChange={handleChange} />
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="stock" className="text-right">Stock</Label>
-                        <Input id="stock" type="number" value={formData.stock} onChange={handleChange} className="col-span-3" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="stock">Stock</Label>
+                            <Input id="stock" type="number" value={formData.stock} onChange={handleChange} required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="unit">Unidad</Label>
+                            <Input id="unit" value={formData.unit} onChange={handleChange} />
+                        </div>
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="unit" className="text-right">Unidad</Label>
-                        <Input id="unit" value={formData.unit} onChange={handleChange} className="col-span-3" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="salePriceRetail">Precio Detalle</Label>
+                            <Input id="salePriceRetail" type="number" value={formData.salePriceRetail} onChange={handleChange} required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="salePriceWholesale">Precio Por Mayor</Label>
+                            <Input id="salePriceWholesale" type="number" value={formData.salePriceWholesale} onChange={handleChange} required />
+                        </div>
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="salePriceRetail" className="text-right">Precio Detalle</Label>
-                        <Input id="salePriceRetail" type="number" value={formData.salePriceRetail} onChange={handleChange} className="col-span-3" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="salePriceWholesale" className="text-right">Precio Por Mayor</Label>
-                        <Input id="salePriceWholesale" type="number" value={formData.salePriceWholesale} onChange={handleChange} className="col-span-3" />
-                    </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="reorderLevel" className="text-right">Nivel Reorden</Label>
-                        <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="reorderLevel">Nivel Reorden</Label>
+                        <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} required/>
                     </div>
                 </div>
                  <DialogFooter>
@@ -160,9 +164,9 @@ export default function ProductosPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Nombre</TableHead>
-                                <TableHead>SKU</TableHead>
+                                <TableHead className="hidden sm:table-cell">SKU</TableHead>
                                 <TableHead className="text-right">Stock</TableHead>
-                                <TableHead className="text-right">Precio Detalle</TableHead>
+                                <TableHead className="text-right hidden md:table-cell">Precio Detalle</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -170,7 +174,7 @@ export default function ProductosPage() {
                             {products.map((product) => (
                                 <TableRow key={product.id}>
                                     <TableCell className="font-medium">{product.name}</TableCell>
-                                    <TableCell>{product.sku}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{product.sku}</TableCell>
                                     <TableCell className="text-right">
                                         {product.stock <= product.reorderLevel ? (
                                             <Badge variant="destructive">{product.stock} {product.unit}</Badge>
@@ -178,7 +182,7 @@ export default function ProductosPage() {
                                             <Badge variant="secondary">{product.stock} {product.unit}</Badge>
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-right">RD${product.salePriceRetail.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right hidden md:table-cell">RD${product.salePriceRetail.toFixed(2)}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <DropdownMenu>

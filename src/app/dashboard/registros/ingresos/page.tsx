@@ -18,6 +18,7 @@ import { es } from 'date-fns/locale';
 import { initialProducts } from '../../inventario/productos/page';
 import { useFinancialData } from '@/hooks/use-financial-data';
 import type { Income, SoldProduct } from '@/components/financial-provider';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Client = {
   id: string;
@@ -114,7 +115,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
     return (
         <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="clientId">Cliente</Label>
                         <Select onValueChange={setClientId} value={clientId}>
@@ -133,7 +134,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
                         <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
                     </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="paymentMethod">Método Pago</Label>
                         <Select onValueChange={(value: 'contado' | 'credito') => setPaymentMethod(value)} value={paymentMethod}>
@@ -188,32 +189,51 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
                         <Label>Productos en la Venta</Label>
                         <Card>
                             <CardContent className="p-0">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Producto</TableHead>
-                                            <TableHead className="text-center">Cant.</TableHead>
-                                            <TableHead className="text-right">Precio</TableHead>
-                                            <TableHead className="text-right">Subtotal</TableHead>
-                                            <TableHead className="w-[50px]"></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {soldProducts.map(p => (
-                                            <TableRow key={p.productId}>
-                                                <TableCell>{p.name}</TableCell>
-                                                <TableCell className="text-center">{p.quantity}</TableCell>
-                                                <TableCell className="text-right">RD${p.price.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">RD${(p.quantity * p.price).toFixed(2)}</TableCell>
-                                                <TableCell>
-                                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(p.productId)}>
-                                                        <Trash2 className="h-4 w-4 text-destructive"/>
-                                                    </Button>
-                                                </TableCell>
+                                <div className="hidden md:block">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Producto</TableHead>
+                                                <TableHead className="text-center">Cant.</TableHead>
+                                                <TableHead className="text-right">Precio</TableHead>
+                                                <TableHead className="text-right">Subtotal</TableHead>
+                                                <TableHead className="w-[50px]"></TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {soldProducts.map(p => (
+                                                <TableRow key={p.productId}>
+                                                    <TableCell>{p.name}</TableCell>
+                                                    <TableCell className="text-center">{p.quantity}</TableCell>
+                                                    <TableCell className="text-right">RD${p.price.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">RD${(p.quantity * p.price).toFixed(2)}</TableCell>
+                                                    <TableCell>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(p.productId)}>
+                                                            <Trash2 className="h-4 w-4 text-destructive"/>
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                <div className="md:hidden space-y-3 p-3">
+                                    {soldProducts.map(p => (
+                                        <div key={p.productId} className="rounded-lg border bg-card text-card-foreground shadow-sm p-3 space-y-2">
+                                            <div className="flex justify-between items-start">
+                                                <p className="font-semibold pr-2">{p.name}</p>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleRemoveProduct(p.productId)}>
+                                                    <Trash2 className="h-4 w-4 text-destructive"/>
+                                                </Button>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm text-muted-foreground">
+                                                <span>Cant: {p.quantity}</span>
+                                                <span>Precio: RD${p.price.toFixed(2)}</span>
+                                                <span className="font-medium text-foreground">RD${(p.quantity * p.price).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </CardContent>
                         </Card>
                      </div>
@@ -278,18 +298,15 @@ export default function IngresosPage() {
                             <TableRow>
                                 <TableHead>Cliente</TableHead>
                                 <TableHead>Productos</TableHead>
-                                <TableHead>Método</TableHead>
+                                <TableHead className="hidden sm:table-cell">Método</TableHead>
                                 <TableHead className="text-right">Monto Total</TableHead>
-                                <TableHead className="text-right">Fecha</TableHead>
+                                <TableHead className="text-right hidden md:table-cell">Fecha</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {incomes.map((income) => {
                                 const client = allClients.find(c => c.id === income.clientId);
-                                const productDetails = income.products.length > 2 
-                                    ? `${income.products.slice(0, 2).map(p => p.name).join(', ')}...`
-                                    : income.products.map(p => p.name).join(', ');
                                 
                                 return (
                                 <TableRow key={income.id}>
@@ -310,9 +327,9 @@ export default function IngresosPage() {
                                             </Tooltip>
                                         </TooltipProvider>
                                     </TableCell>
-                                    <TableCell className="capitalize">{income.paymentMethod}</TableCell>
+                                    <TableCell className="capitalize hidden sm:table-cell">{income.paymentMethod}</TableCell>
                                     <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
-                                    <TableCell className="text-right">{format(new Date(income.date), 'PPP', { locale: es })}</TableCell>
+                                    <TableCell className="text-right hidden md:table-cell">{format(new Date(income.date), 'PPP', { locale: es })}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <DropdownMenu>

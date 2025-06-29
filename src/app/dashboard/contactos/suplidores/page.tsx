@@ -67,21 +67,21 @@ export default function SuplidoresPage() {
         return (
             <form onSubmit={handleSubmit}>
                 <div className="grid gap-4 py-4">
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">Nombre</Label>
-                        <Input id="name" value={formData.name} onChange={handleChange} className="col-span-3" required />
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Nombre</Label>
+                        <Input id="name" value={formData.name} onChange={handleChange} required />
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="email" className="text-right">Correo</Label>
-                        <Input id="email" type="email" value={formData.email} onChange={handleChange} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="email">Correo</Label>
+                        <Input id="email" type="email" value={formData.email} onChange={handleChange} />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="phone" className="text-right">Teléfono</Label>
-                        <Input id="phone" value={formData.phone} onChange={handleChange} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="phone">Teléfono</Label>
+                        <Input id="phone" value={formData.phone} onChange={handleChange} />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="address" className="text-right">Dirección</Label>
-                        <Input id="address" value={formData.address} onChange={handleChange} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="address">Dirección</Label>
+                        <Input id="address" value={formData.address} onChange={handleChange} />
                     </div>
                 </div>
                  <DialogFooter>
@@ -113,8 +113,8 @@ export default function SuplidoresPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Nombre</TableHead>
-                                <TableHead>Correo</TableHead>
-                                <TableHead>Teléfono</TableHead>
+                                <TableHead className="hidden sm:table-cell">Correo</TableHead>
+                                <TableHead className="hidden md:table-cell">Teléfono</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -122,8 +122,8 @@ export default function SuplidoresPage() {
                             {suppliers.map((supplier) => (
                                 <TableRow key={supplier.id}>
                                     <TableCell className="font-medium">{supplier.name}</TableCell>
-                                    <TableCell>{supplier.email}</TableCell>
-                                    <TableCell>{supplier.phone}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{supplier.email}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{supplier.phone}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <DropdownMenu>

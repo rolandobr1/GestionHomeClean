@@ -63,22 +63,22 @@ export default function EgresosPage() {
         return (
             <form onSubmit={handleSubmit}>
                 <div className="grid gap-4 py-4">
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="description" className="text-right">Descripción</Label>
-                        <Input id="description" value={formData.description} onChange={handleChange} className="col-span-3" required />
+                    <div className="space-y-2">
+                        <Label htmlFor="description">Descripción</Label>
+                        <Input id="description" value={formData.description} onChange={handleChange} required />
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="amount" className="text-right">Monto</Label>
-                        <Input id="amount" type="number" value={formData.amount} onChange={handleChange} className="col-span-3" required />
+                     <div className="space-y-2">
+                        <Label htmlFor="amount">Monto</Label>
+                        <Input id="amount" type="number" value={formData.amount} onChange={handleChange} required />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="date" className="text-right">Fecha</Label>
-                        <Input id="date" type="date" value={formData.date} onChange={handleChange} className="col-span-3" required />
+                    <div className="space-y-2">
+                        <Label htmlFor="date">Fecha</Label>
+                        <Input id="date" type="date" value={formData.date} onChange={handleChange} required />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="category" className="text-right">Categoría</Label>
+                    <div className="space-y-2">
+                        <Label htmlFor="category">Categoría</Label>
                         <Select onValueChange={handleSelectChange} defaultValue={formData.category}>
-                            <SelectTrigger className="col-span-3">
+                            <SelectTrigger>
                                 <SelectValue placeholder="Selecciona una categoría" />
                             </SelectTrigger>
                             <SelectContent>
@@ -120,9 +120,9 @@ export default function EgresosPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Descripción</TableHead>
-                                <TableHead>Categoría</TableHead>
+                                <TableHead className="hidden sm:table-cell">Categoría</TableHead>
                                 <TableHead className="text-right">Monto</TableHead>
-                                <TableHead className="text-right">Fecha</TableHead>
+                                <TableHead className="text-right hidden md:table-cell">Fecha</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -130,9 +130,9 @@ export default function EgresosPage() {
                             {expenses.map((expense) => (
                                 <TableRow key={expense.id}>
                                     <TableCell className="font-medium">{expense.description}</TableCell>
-                                    <TableCell>{expense.category}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{expense.category}</TableCell>
                                     <TableCell className="text-right">RD${expense.amount.toFixed(2)}</TableCell>
-                                    <TableCell className="text-right">{format(new Date(expense.date), 'PPP', { locale: es })}</TableCell>
+                                    <TableCell className="text-right hidden md:table-cell">{format(new Date(expense.date), 'PPP', { locale: es })}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <DropdownMenu>
@@ -171,7 +171,7 @@ export default function EgresosPage() {
             </Card>
 
              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>{editingExpense ? 'Editar Egreso' : 'Añadir Egreso'}</DialogTitle>
                         <DialogDescription>

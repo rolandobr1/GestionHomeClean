@@ -77,7 +77,7 @@ export default function MateriaPrimaPage() {
         if (editingMaterial) {
             setMaterials(materials.map(m => m.id === material.id ? material : m));
         } else {
-            setMaterials([...materials, { ...material, id: new Date().toISOString() }]);
+            setMaterials([...materials, { ...material, id: new Date().toISOString() + Math.random() }]);
         }
         setEditingMaterial(null);
         setIsDialogOpen(false);
@@ -90,7 +90,7 @@ export default function MateriaPrimaPage() {
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             const { id, value, type } = e.target;
-            setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) : value }));
+            setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
         };
 
         const handleSubmit = (e: React.FormEvent) => {
@@ -101,33 +101,37 @@ export default function MateriaPrimaPage() {
         return (
             <form onSubmit={handleSubmit}>
                 <div className="grid gap-4 py-4">
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">Nombre</Label>
-                        <Input id="name" value={formData.name} onChange={handleChange} className="col-span-3" required />
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Nombre</Label>
+                        <Input id="name" value={formData.name} onChange={handleChange} required />
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="sku" className="text-right">SKU</Label>
-                        <Input id="sku" value={formData.sku} onChange={handleChange} className="col-span-3" />
+                     <div className="space-y-2">
+                        <Label htmlFor="sku">SKU</Label>
+                        <Input id="sku" value={formData.sku} onChange={handleChange} />
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="stock" className="text-right">Stock</Label>
-                        <Input id="stock" type="number" value={formData.stock} onChange={handleChange} className="col-span-3" required/>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="stock">Stock</Label>
+                            <Input id="stock" type="number" value={formData.stock} onChange={handleChange} required/>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="unit">Unidad</Label>
+                            <Input id="unit" value={formData.unit} onChange={handleChange} />
+                        </div>
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="unit" className="text-right">Unidad</Label>
-                        <Input id="unit" value={formData.unit} onChange={handleChange} className="col-span-3" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="purchasePrice">Precio Compra</Label>
+                            <Input id="purchasePrice" type="number" value={formData.purchasePrice} onChange={handleChange} required/>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="reorderLevel">Nivel Reorden</Label>
+                            <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} required/>
+                        </div>
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="purchasePrice" className="text-right">Precio Compra</Label>
-                        <Input id="purchasePrice" type="number" value={formData.purchasePrice} onChange={handleChange} className="col-span-3" required/>
-                    </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="reorderLevel" className="text-right">Nivel Reorden</Label>
-                        <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} className="col-span-3" required/>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="supplier" className="text-right">Suplidor</Label>
-                        <Input id="supplier" value={formData.supplier} onChange={handleChange} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="supplier">Suplidor</Label>
+                        <Input id="supplier" value={formData.supplier} onChange={handleChange} />
                     </div>
                 </div>
                  <DialogFooter>
@@ -159,9 +163,9 @@ export default function MateriaPrimaPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Nombre</TableHead>
-                                <TableHead>Suplidor</TableHead>
+                                <TableHead className="hidden md:table-cell">Suplidor</TableHead>
                                 <TableHead className="text-right">Stock</TableHead>
-                                <TableHead className="text-right">Precio Compra</TableHead>
+                                <TableHead className="text-right hidden sm:table-cell">Precio Compra</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -169,7 +173,7 @@ export default function MateriaPrimaPage() {
                             {materials.map((material) => (
                                 <TableRow key={material.id}>
                                     <TableCell className="font-medium">{material.name}</TableCell>
-                                    <TableCell>{material.supplier}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{material.supplier}</TableCell>
                                     <TableCell className="text-right">
                                         {material.stock <= material.reorderLevel ? (
                                             <Badge variant="destructive">{material.stock} {material.unit}</Badge>
@@ -177,7 +181,7 @@ export default function MateriaPrimaPage() {
                                             <Badge variant="secondary">{material.stock} {material.unit}</Badge>
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-right">RD${material.purchasePrice.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right hidden sm:table-cell">RD${material.purchasePrice.toFixed(2)}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <DropdownMenu>

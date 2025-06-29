@@ -118,11 +118,11 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) =
     return (
         <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="clientId">Cliente</Label>
+                        <Label htmlFor="clientId-dash">Cliente</Label>
                         <Select onValueChange={setClientId} defaultValue={clientId}>
-                            <SelectTrigger id="clientId">
+                            <SelectTrigger id="clientId-dash">
                                 <SelectValue placeholder="Selecciona un cliente" />
                             </SelectTrigger>
                             <SelectContent>
@@ -133,15 +133,15 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) =
                         </Select>
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="date">Fecha</Label>
-                        <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                        <Label htmlFor="date-dash">Fecha</Label>
+                        <Input id="date-dash" type="date" value={date} onChange={e => setDate(e.target.value)} required />
                     </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="paymentMethod">Método Pago</Label>
+                        <Label htmlFor="paymentMethod-dash">Método Pago</Label>
                         <Select onValueChange={(value: 'contado' | 'credito') => setPaymentMethod(value)} defaultValue={paymentMethod}>
-                            <SelectTrigger id="paymentMethod">
+                            <SelectTrigger id="paymentMethod-dash">
                                 <SelectValue placeholder="Selecciona un método" />
                             </SelectTrigger>
                             <SelectContent>
@@ -159,9 +159,9 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) =
                     <Card className="p-4 space-y-4 bg-muted/50">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                              <div className="space-y-2">
-                                <Label htmlFor="productId">Producto</Label>
+                                <Label htmlFor="productId-dash">Producto</Label>
                                 <Select onValueChange={setCurrentProduct} value={currentProduct}>
-                                    <SelectTrigger id="productId">
+                                    <SelectTrigger id="productId-dash">
                                         <SelectValue placeholder="Selecciona un producto" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -172,8 +172,8 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) =
                                 </Select>
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="quantity">Cantidad</Label>
-                                <Input id="quantity" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" />
+                                <Label htmlFor="quantity-dash">Cantidad</Label>
+                                <Input id="quantity-dash" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" />
                             </div>
                         </div>
                         <div className="space-y-2">
@@ -192,32 +192,51 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) =
                         <Label>Productos en la Venta</Label>
                         <Card>
                             <CardContent className="p-0">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Producto</TableHead>
-                                            <TableHead className="text-center">Cant.</TableHead>
-                                            <TableHead className="text-right">Precio</TableHead>
-                                            <TableHead className="text-right">Subtotal</TableHead>
-                                            <TableHead className="w-[50px]"></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {soldProducts.map(p => (
-                                            <TableRow key={p.productId}>
-                                                <TableCell>{p.name}</TableCell>
-                                                <TableCell className="text-center">{p.quantity}</TableCell>
-                                                <TableCell className="text-right">RD${p.price.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">RD${(p.quantity * p.price).toFixed(2)}</TableCell>
-                                                <TableCell>
-                                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(p.productId)}>
-                                                        <Trash2 className="h-4 w-4 text-destructive"/>
-                                                    </Button>
-                                                </TableCell>
+                                <div className="hidden md:block">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Producto</TableHead>
+                                                <TableHead className="text-center">Cant.</TableHead>
+                                                <TableHead className="text-right">Precio</TableHead>
+                                                <TableHead className="text-right">Subtotal</TableHead>
+                                                <TableHead className="w-[50px]"></TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {soldProducts.map(p => (
+                                                <TableRow key={p.productId}>
+                                                    <TableCell>{p.name}</TableCell>
+                                                    <TableCell className="text-center">{p.quantity}</TableCell>
+                                                    <TableCell className="text-right">RD${p.price.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">RD${(p.quantity * p.price).toFixed(2)}</TableCell>
+                                                    <TableCell>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(p.productId)}>
+                                                            <Trash2 className="h-4 w-4 text-destructive"/>
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                <div className="md:hidden space-y-3 p-3">
+                                    {soldProducts.map(p => (
+                                        <div key={p.productId} className="rounded-lg border bg-card text-card-foreground shadow-sm p-3 space-y-2">
+                                            <div className="flex justify-between items-start">
+                                                <p className="font-semibold pr-2">{p.name}</p>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleRemoveProduct(p.productId)}>
+                                                    <Trash2 className="h-4 w-4 text-destructive"/>
+                                                </Button>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm text-muted-foreground">
+                                                <span>Cant: {p.quantity}</span>
+                                                <span>Precio: RD${p.price.toFixed(2)}</span>
+                                                <span className="font-medium text-foreground">RD${(p.quantity * p.price).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </CardContent>
                         </Card>
                      </div>
@@ -259,22 +278,22 @@ const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id'>) => voi
     return (
         <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="description" className="text-right">Descripción</Label>
-                    <Input id="description" value={formData.description} onChange={handleChange} className="col-span-3" required />
+                <div className="space-y-2">
+                    <Label htmlFor="description-dash">Descripción</Label>
+                    <Input id="description-dash" value={formData.description} onChange={handleChange} required />
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="amount" className="text-right">Monto</Label>
-                    <Input id="amount" type="number" value={formData.amount} onChange={handleChange} className="col-span-3" required />
+                <div className="space-y-2">
+                    <Label htmlFor="amount-dash">Monto</Label>
+                    <Input id="amount-dash" type="number" value={formData.amount} onChange={handleChange} required />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="date" className="text-right">Fecha</Label>
-                    <Input id="date" type="date" value={formData.date} onChange={handleChange} className="col-span-3" required />
+                <div className="space-y-2">
+                    <Label htmlFor="date-exp-dash">Fecha</Label>
+                    <Input id="date-exp-dash" type="date" value={formData.date} onChange={handleChange} required />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="category" className="text-right">Categoría</Label>
-                    <Select onValueChange={handleSelectChange} defaultValue={formData.category}>
-                        <SelectTrigger className="col-span-3">
+                <div className="space-y-2">
+                    <Label htmlFor="category-dash">Categoría</Label>
+                     <Select onValueChange={handleSelectChange} defaultValue={formData.category}>
+                        <SelectTrigger id="category-dash">
                             <SelectValue placeholder="Selecciona una categoría" />
                         </SelectTrigger>
                         <SelectContent>
@@ -360,20 +379,20 @@ export default function DashboardPage() {
        <div className="grid grid-cols-2 gap-4">
             <Button
               size="lg"
-              className="w-full bg-green-600 hover:bg-green-700 text-primary-foreground"
+              className="w-full bg-green-600 hover:bg-green-700 text-primary-foreground h-12 text-base"
               onClick={() => setIsIncomeDialogOpen(true)}
             >
                 <PlusCircle className="mr-2 h-5 w-5"/>
-                Registrar Ingreso
+                <span>Registrar<span className="hidden sm:inline-block ml-1">Ingreso</span></span>
             </Button>
             <Button
               size="lg"
               variant="destructive"
-              className="w-full"
+              className="w-full h-12 text-base"
               onClick={() => setIsExpenseDialogOpen(true)}
             >
                 <PlusCircle className="mr-2 h-5 w-5"/>
-                Registrar Egreso
+                <span>Registrar<span className="hidden sm:inline-block ml-1">Egreso</span></span>
             </Button>
         </div>
 
@@ -455,7 +474,7 @@ export default function DashboardPage() {
                     <TableRow>
                     <TableHead>Producto</TableHead>
                     <TableHead className="text-right">Stock Actual</TableHead>
-                    <TableHead className="text-right">Nivel de Reorden</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">Nivel de Reorden</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -465,7 +484,7 @@ export default function DashboardPage() {
                         <TableCell className="text-right">
                             <Badge variant="destructive">{item.stock} {item.unit}</Badge>
                         </TableCell>
-                        <TableCell className="text-right">{item.reorderLevel} {item.unit}</TableCell>
+                        <TableCell className="text-right hidden sm:table-cell">{item.reorderLevel} {item.unit}</TableCell>
                     </TableRow>
                     ))}
                 </TableBody>
@@ -478,7 +497,7 @@ export default function DashboardPage() {
       </div>
 
       <Dialog open={isIncomeDialogOpen} onOpenChange={setIsIncomeDialogOpen}>
-          <DialogContent className="sm:max-w-xl">
+          <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                   <DialogTitle>Añadir Ingreso</DialogTitle>
                   <DialogDescription>
@@ -490,7 +509,7 @@ export default function DashboardPage() {
       </Dialog>
 
       <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-md">
               <DialogHeader>
                   <DialogTitle>Añadir Egreso</DialogTitle>
                   <DialogDescription>

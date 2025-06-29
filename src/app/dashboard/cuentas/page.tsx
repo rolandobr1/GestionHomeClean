@@ -40,8 +40,8 @@ export default function CuentasPage() {
                   <TableHeader>
                       <TableRow>
                           <TableHead>Cliente</TableHead>
-                          <TableHead>Detalle</TableHead>
-                          <TableHead>Fecha</TableHead>
+                          <TableHead className="hidden sm:table-cell">Detalle</TableHead>
+                          <TableHead className="hidden md:table-cell">Fecha</TableHead>
                           <TableHead className="text-right">Monto</TableHead>
                           <TableHead className="text-right">Acciones</TableHead>
                       </TableRow>
@@ -52,8 +52,8 @@ export default function CuentasPage() {
                           return (
                               <TableRow key={income.id}>
                                   <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
-                                  <TableCell>Venta de {income.products.length} producto(s)</TableCell>
-                                  <TableCell>{format(new Date(income.date), 'PPP', { locale: es })}</TableCell>
+                                  <TableCell className="hidden sm:table-cell">Venta de {income.products.length} producto(s)</TableCell>
+                                  <TableCell className="hidden md:table-cell">{format(new Date(income.date), 'PPP', { locale: es })}</TableCell>
                                   <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
                                   <TableCell className="text-right">
                                     <AlertDialog>
