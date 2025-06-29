@@ -65,13 +65,13 @@ export default function SignupPage() {
           break;
         case "auth/invalid-api-key":
         case "auth/configuration-not-found":
-          description = "La configuración de Firebase es incorrecta o no se encontró. Asegúrate de que tu archivo .env.local esté completo y reinicia el servidor.";
+          description = "La configuración de Firebase es incorrecta. Por favor, revisa estos 3 puntos: 1) Las claves en .env.local son correctas. 2) Has reiniciado el servidor. 3) El proveedor de 'Correo/Contraseña' está HABILITADO en la consola de Firebase.";
           break;
         case "auth/network-request-failed":
             description = "Error de red. Por favor, comprueba tu conexión a internet.";
             break;
         case "auth/operation-not-allowed":
-            description = "El registro por correo y contraseña no está habilitado en tu proyecto de Firebase.";
+            description = "El registro por correo y contraseña no está habilitado en tu proyecto de Firebase. Ve a la consola de Firebase -> Authentication -> Sign-in method y habilítalo.";
             break;
         default:
             console.error("Firebase signup error:", error);

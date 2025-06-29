@@ -49,16 +49,23 @@ Sigue estos pasos:
 
 Si sigues viendo un error de configuración después de añadir las claves, revisa estos puntos:
 
-#### 1. ¡Reinicia el servidor!
+#### 1. ¡Habilita el proveedor de Correo/Contraseña! (¡Muy importante!)
+A menudo, el error `CONFIGURATION_NOT_FOUND` no se debe a que las claves sean incorrectas, sino a que no has activado el método de inicio de sesión en Firebase.
+- **Ve a la Consola de Firebase.**
+- En el menú de la izquierda, ve a **Authentication**.
+- Ve a la pestaña **Sign-in method**.
+- Haz clic en **Correo electrónico/Contraseña** y asegúrate de que esté **Habilitado**.
+
+#### 2. ¡Reinicia el servidor!
 Next.js solo carga el archivo `.env.local` al arrancar. Es el paso más importante y el que más se olvida.
 - **Ve a tu terminal.**
 - **Presiona `Ctrl + C` para detener el servidor.**
 - **Ejecuta `npm run dev` para iniciarlo de nuevo.**
 
-#### 2. No uses comillas
+#### 3. No uses comillas
 En el archivo `.env.local`, los valores deben ir **sin comillas**.
 - ✅ **Correcto:** `NEXT_PUBLIC_FIREBASE_API_KEY=AIza...`
 - ❌ **Incorrecto:** `NEXT_PUBLIC_FIREBASE_API_KEY="AIza..."`
 
-#### 3. Verifica que copiaste todo
+#### 4. Verifica que copiaste todo
 Asegúrate de que la clave completa fue copiada, sin espacios extra al inicio o al final.
