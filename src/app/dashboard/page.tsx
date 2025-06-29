@@ -32,6 +32,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 import { initialProducts } from './inventario/productos/page';
+import { useFinancialData } from '@/hooks/use-financial-data';
+import type { Income, Expense } from '@/components/financial-provider';
 
 const chartData: { month: string, income: number, expense: number }[] = [];
 
@@ -62,31 +64,8 @@ const allClients = [
     ...initialClients
 ];
 
-type Product = {
-  id: string;
-  name: string;
-};
-
-type Income = {
-  id: string;
-  amount: number;
-  date: string;
-  category: string;
-  clientId: string;
-  paymentMethod: 'credito' | 'contado';
-  productId: string;
-};
-
-type Expense = {
-  id: string;
-  description: string;
-  amount: number;
-  date: string;
-  category: string;
-};
-
-const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income: Income) => void }) => {
-    const [formData, setFormData] = useState(income || {
+const IncomeForm = ({ onSave }: { onSave: (income: Omit<Income, 'id'>) => void }) => {
+    const [formData, setFormData] = useState({
         amount: 0, date: new Date().toISOString().split('T')[0], category: 'Venta de Producto',
         clientId: 'generic', paymentMethod: 'contado' as 'credito' | 'contado', productId: ''
     });
@@ -102,7 +81,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ ...formData, id: income?.id || '' });
+        onSave(formData);
     }
     
     return (
@@ -178,8 +157,8 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
     );
 };
 
-const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (expense: Expense) => void }) => {
-    const [formData, setFormData] = useState(expense || {
+const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id'>) => void }) => {
+    const [formData, setFormData] = useState({
         description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Compra de Material'
     });
 
@@ -194,7 +173,7 @@ const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (ex
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ ...formData, id: expense?.id || '' });
+        onSave(formData);
     }
     
     return (
@@ -241,15 +220,11 @@ const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (ex
 
 export default function DashboardPage() {
   const { toast } = useToast();
+  const { incomes, expenses, addIncome, addExpense } = useFinancialData();
 
-  const [incomes, setIncomes] = useState<Income[]>([]);
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
-  const [editingIncome, setEditingIncome] = useState<Income | null>(null);
-
-  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-
+  
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
 
@@ -275,25 +250,21 @@ export default function DashboardPage() {
     setTotalExpenses(currentMonthExpenses);
   }, [expenses]);
 
-  const handleIncomeSave = (income: Income) => {
-      const newIncome = { ...income, id: new Date().toISOString() };
-      setIncomes(prev => [...prev, newIncome]);
-      setEditingIncome(null);
+  const handleIncomeSave = (income: Omit<Income, 'id'>) => {
+      addIncome(income);
       setIsIncomeDialogOpen(false);
       toast({
           title: "Ingreso Registrado",
-          description: `Se ha añadido un ingreso por RD$${newIncome.amount.toFixed(2)}.`,
+          description: `Se ha añadido un ingreso por RD$${income.amount.toFixed(2)}.`,
       });
   };
 
-  const handleExpenseSave = (expense: Expense) => {
-      const newExpense = { ...expense, id: new Date().toISOString() };
-      setExpenses(prev => [...prev, newExpense]);
-      setEditingExpense(null);
+  const handleExpenseSave = (expense: Omit<Expense, 'id'>) => {
+      addExpense(expense);
       setIsExpenseDialogOpen(false);
       toast({
           title: "Egreso Registrado",
-          description: `Se ha añadido un egreso por RD$${newExpense.amount.toFixed(2)}.`,
+          description: `Se ha añadido un egreso por RD$${expense.amount.toFixed(2)}.`,
       });
   };
 
@@ -303,7 +274,7 @@ export default function DashboardPage() {
             <Button
               size="lg"
               className="w-full bg-green-600 hover:bg-green-700 text-primary-foreground"
-              onClick={() => { setEditingIncome(null); setIsIncomeDialogOpen(true); }}
+              onClick={() => setIsIncomeDialogOpen(true)}
             >
                 <PlusCircle className="mr-2 h-5 w-5"/>
                 Registrar Ingreso
@@ -312,7 +283,7 @@ export default function DashboardPage() {
               size="lg"
               variant="destructive"
               className="w-full"
-              onClick={() => { setEditingExpense(null); setIsExpenseDialogOpen(true); }}
+              onClick={() => setIsExpenseDialogOpen(true)}
             >
                 <PlusCircle className="mr-2 h-5 w-5"/>
                 Registrar Egreso
@@ -427,7 +398,7 @@ export default function DashboardPage() {
                       Añade un nuevo ingreso a tus registros.
                   </DialogDescription>
               </DialogHeader>
-              <IncomeForm income={editingIncome} onSave={handleIncomeSave} />
+              <IncomeForm onSave={handleIncomeSave} />
           </DialogContent>
       </Dialog>
 
@@ -439,7 +410,7 @@ export default function DashboardPage() {
                     Añade un nuevo egreso a tus registros.
                   </DialogDescription>
               </DialogHeader>
-              <ExpenseForm expense={editingExpense} onSave={handleExpenseSave} />
+              <ExpenseForm onSave={handleExpenseSave} />
           </DialogContent>
       </Dialog>
     </div>

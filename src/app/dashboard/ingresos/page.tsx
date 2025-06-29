@@ -14,8 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { initialProducts } from '../inventario/productos/page';
+import { useFinancialData } from '@/hooks/use-financial-data';
+import type { Income } from '@/components/financial-provider';
 
-// Data definitions copied from other pages for now
 type Client = {
   id: string;
   name: string;
@@ -32,26 +33,8 @@ const allClients = [
     ...initialClients
 ];
 
-
-type Product = {
-  id: string;
-  name: string;
-};
-
-type Income = {
-  id: string;
-  amount: number;
-  date: string;
-  category: string;
-  clientId: string;
-  paymentMethod: 'credito' | 'contado';
-  productId: string;
-};
-
-const initialIncomes: Income[] = [];
-
 export default function IngresosPage() {
-    const [incomes, setIncomes] = useState<Income[]>(initialIncomes);
+    const { incomes, addIncome, deleteIncome, updateIncome } = useFinancialData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingIncome, setEditingIncome] = useState<Income | null>(null);
 
@@ -61,14 +44,15 @@ export default function IngresosPage() {
     };
 
     const handleDelete = (incomeId: string) => {
-        setIncomes(incomes.filter(i => i.id !== incomeId));
+        deleteIncome(incomeId);
     };
 
     const handleSave = (income: Income) => {
         if (editingIncome) {
-            setIncomes(incomes.map(i => i.id === income.id ? income : i));
+            updateIncome(income);
         } else {
-            setIncomes([...incomes, { ...income, id: new Date().toISOString() }]);
+            const { id, ...newIncomeData } = income;
+            addIncome(newIncomeData);
         }
         setEditingIncome(null);
         setIsDialogOpen(false);

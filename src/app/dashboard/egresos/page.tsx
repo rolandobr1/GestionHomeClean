@@ -13,19 +13,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-
-type Expense = {
-  id: string;
-  description: string;
-  amount: number;
-  date: string;
-  category: string;
-};
-
-const initialExpenses: Expense[] = [];
+import { useFinancialData } from '@/hooks/use-financial-data';
+import type { Expense } from '@/components/financial-provider';
 
 export default function EgresosPage() {
-    const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+    const { expenses, addExpense, deleteExpense, updateExpense } = useFinancialData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
@@ -35,14 +27,15 @@ export default function EgresosPage() {
     };
 
     const handleDelete = (expenseId: string) => {
-        setExpenses(expenses.filter(e => e.id !== expenseId));
+        deleteExpense(expenseId);
     };
 
     const handleSave = (expense: Expense) => {
         if (editingExpense) {
-            setExpenses(expenses.map(e => e.id === expense.id ? expense : e));
+            updateExpense(expense);
         } else {
-            setExpenses([...expenses, { ...expense, id: new Date().toISOString() }]);
+            const { id, ...newExpenseData } = expense;
+            addExpense(newExpenseData);
         }
         setEditingExpense(null);
         setIsDialogOpen(false);
