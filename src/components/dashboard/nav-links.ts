@@ -5,6 +5,7 @@ import {
   ArrowUpCircle,
   CircleDollarSign,
   FileCog,
+  Users,
 } from "lucide-react";
 
 export const navLinks = [
@@ -27,6 +28,11 @@ export const navLinks = [
     href: "/dashboard/inventario",
     label: "Inventario",
     icon: FlaskConical,
+  },
+  {
+    href: "/dashboard/contactos/clientes",
+    label: "Contactos",
+    icon: Users,
   },
   {
     href: "/dashboard/cuentas",
