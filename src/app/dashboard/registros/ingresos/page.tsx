@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -19,6 +19,10 @@ import { initialProducts } from '../../inventario/productos/page';
 import { useFinancialData } from '@/hooks/use-financial-data';
 import type { Income, SoldProduct } from '@/components/financial-provider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { toJpeg, toBlob } from 'html-to-image';
+import { InvoiceTemplate } from '@/components/invoice-template';
+import { useToast } from "@/hooks/use-toast";
+
 
 type Client = {
   id: string;
@@ -255,8 +259,13 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
 
 export default function IngresosPage() {
     const { incomes, addIncome, deleteIncome, updateIncome } = useFinancialData();
+    const { toast } = useToast();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+
+    const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+    const [selectedIncomeForInvoice, setSelectedIncomeForInvoice] = useState<Income | null>(null);
+    const invoiceRef = useRef<HTMLDivElement>(null);
 
     const handleEdit = (income: Income) => {
         setEditingIncome(income);
@@ -277,6 +286,63 @@ export default function IngresosPage() {
         setEditingIncome(null);
         setIsDialogOpen(false);
     };
+
+    const handleGenerateInvoice = (income: Income) => {
+        setSelectedIncomeForInvoice(income);
+        setIsInvoiceOpen(true);
+    };
+
+    const handleDownloadJpg = async () => {
+        if (!invoiceRef.current || !selectedIncomeForInvoice) return;
+
+        try {
+            const dataUrl = await toJpeg(invoiceRef.current, { backgroundColor: 'white', pixelRatio: 2 });
+            const link = document.createElement('a');
+            link.download = `factura-${selectedIncomeForInvoice.id.slice(-6)}.jpg`;
+            link.href = dataUrl;
+            link.click();
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Error al Descargar',
+                description: 'No se pudo generar el archivo JPG.',
+            });
+        }
+    };
+
+    const handleShare = async () => {
+        if (!invoiceRef.current || !selectedIncomeForInvoice) return;
+        if (!navigator.share) {
+          toast({
+            variant: 'destructive',
+            title: 'No Soportado',
+            description: 'Tu navegador no soporta la función de compartir.',
+          });
+          return;
+        }
+    
+        try {
+          const blob = await toBlob(invoiceRef.current, { backgroundColor: 'white', pixelRatio: 2 });
+          if (!blob) {
+            throw new Error('No se pudo generar la imagen.');
+          }
+          const file = new File([blob], `factura-${selectedIncomeForInvoice.id.slice(-6)}.jpg`, { type: 'image/jpeg' });
+          
+          await navigator.share({
+            title: 'Factura QuimioGest',
+            text: `Aquí está tu factura de QuimioGest.`,
+            files: [file],
+          });
+        } catch (error: any) {
+            if (error.name !== 'AbortError') {
+                 toast({
+                    variant: 'destructive',
+                    title: 'Error al Compartir',
+                    description: 'No se pudo compartir la factura.',
+                 });
+            }
+        }
+      };
 
     return (
         <div className="space-y-6">
@@ -340,6 +406,7 @@ export default function IngresosPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleGenerateInvoice(income)}><FileText className="mr-2 h-4 w-4" /> Generar Factura</DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => handleEdit(income)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                                                     <AlertDialogTrigger asChild>
                                                         <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
@@ -376,6 +443,30 @@ export default function IngresosPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <IncomeForm income={editingIncome} onSave={handleSave} />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
+                <DialogContent className="max-w-4xl p-0">
+                    <DialogHeader className="p-6 pb-0">
+                        <DialogTitle>Vista Previa de Factura</DialogTitle>
+                        <DialogDescription>
+                            Puedes descargar la factura como imagen o compartirla directamente.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="max-h-[70vh] overflow-y-auto px-2">
+                       {selectedIncomeForInvoice && <InvoiceTemplate ref={invoiceRef} income={selectedIncomeForInvoice} />}
+                    </div>
+                    <DialogFooter className="p-6 bg-muted/50 flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                        <Button variant="outline" onClick={handleDownloadJpg}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Descargar JPG
+                        </Button>
+                        <Button onClick={handleShare}>
+                            <Share2 className="mr-2 h-4 w-4" />
+                            Compartir
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
