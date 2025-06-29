@@ -11,19 +11,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-
-type Client = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-};
-
-const initialClients: Client[] = [];
+import { useAppData } from '@/hooks/use-app-data';
+import type { Client } from '@/components/app-provider';
 
 export default function ClientesPage() {
-    const [clients, setClients] = useState<Client[]>(initialClients);
+    const { clients, addClient, updateClient, deleteClient, addMultipleClients } = useAppData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
     const { toast } = useToast();
@@ -47,7 +39,7 @@ export default function ClientesPage() {
                 throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
             }
 
-            const newClients: Client[] = [];
+            const newClients: Omit<Client, 'id'>[] = [];
             for (let i = 1; i < lines.length; i++) {
                 const values = lines[i].split(',');
                 const clientData: any = {};
@@ -56,7 +48,6 @@ export default function ClientesPage() {
                 });
 
                 newClients.push({
-                    id: clientData.id || new Date().toISOString() + Math.random(),
                     name: clientData.name || 'N/A',
                     email: clientData.email || 'N/A',
                     phone: clientData.phone || 'N/A',
@@ -64,7 +55,7 @@ export default function ClientesPage() {
                 });
             }
             
-            setClients(prev => [...prev, ...newClients]);
+            addMultipleClients(newClients);
 
             toast({
             title: "Importación Exitosa",
@@ -148,14 +139,15 @@ export default function ClientesPage() {
     };
 
     const handleDelete = (clientId: string) => {
-        setClients(clients.filter(c => c.id !== clientId));
+        deleteClient(clientId);
     };
 
     const handleSave = (client: Client) => {
         if (editingClient) {
-            setClients(clients.map(c => c.id === client.id ? client : c));
+            updateClient(client);
         } else {
-            setClients([...clients, { ...client, id: new Date().toISOString() }]);
+            const { id, ...newClientData } = client;
+            addClient(newClientData);
         }
         setEditingClient(null);
         setIsDialogOpen(false);

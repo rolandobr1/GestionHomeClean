@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -32,8 +32,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 import { useAppData } from '@/hooks/use-app-data';
-import type { Income, Expense, SoldProduct, Product } from '@/components/app-provider';
-import { allClients } from './registros/ingresos/page';
+import type { Income, Expense, SoldProduct, Product, Client } from '@/components/app-provider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { subMonths, format, getMonth, getYear } from 'date-fns';
@@ -51,7 +50,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id' | 'recordedBy'>) => void, income: Income | null }) => {
+const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income, 'id' | 'recordedBy'>) => void, income: Income | null, clients: Client[] }) => {
     const { products: allProducts } = useAppData();
     const [clientId, setClientId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
@@ -125,7 +124,7 @@ const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id' | '
                                 <SelectValue placeholder="Selecciona un cliente" />
                             </SelectTrigger>
                             <SelectContent>
-                                {allClients.map(client => (
+                                {clients.map(client => (
                                     <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
                                 ))}
                             </SelectContent>
@@ -319,7 +318,7 @@ const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id' | 'recor
 
 export default function DashboardPage() {
   const { toast } = useToast();
-  const { incomes, expenses, products, addIncome, addExpense } = useAppData();
+  const { incomes, expenses, products, clients, addIncome, addExpense } = useAppData();
   const { user } = useAuth();
 
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
@@ -331,6 +330,11 @@ export default function DashboardPage() {
   const [inventoryValue, setInventoryValue] = useState(0);
   const [lowStockItems, setLowStockItems] = useState<Product[]>([]);
   const [chartData, setChartData] = useState<{ month: string, income: number, expense: number }[]>([]);
+
+  const allClients = useMemo(() => [
+    { id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' },
+    ...clients
+  ], [clients]);
 
   useEffect(() => {
     // Financial calculations
@@ -554,7 +558,7 @@ export default function DashboardPage() {
                       Añade un nuevo ingreso a tus registros.
                   </DialogDescription>
               </DialogHeader>
-              <IncomeForm onSave={handleIncomeSave} income={null} />
+              <IncomeForm onSave={handleIncomeSave} income={null} clients={allClients} />
           </DialogContent>
       </Dialog>
 

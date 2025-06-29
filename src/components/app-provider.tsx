@@ -41,10 +41,26 @@ export type Product = {
   reorderLevel: number;
 };
 
+export type Client = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+};
+
+export type Supplier = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+};
+
 export const initialProducts: Product[] = [
-  { id: '1', name: 'Jabon de Cuaba', sku: 'JC-001', unit: 'Galones', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
-  { id: '2', name: 'Jabon Lavaplatos', sku: 'JL-001', unit: 'Galones', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
-  { id: '3', name: 'Desinfectante Lavanda', sku: 'DL-001', unit: 'Galones', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
+  { id: '1', name: 'Jabon de Cuaba', sku: 'JC-001', unit: 'Galon', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
+  { id: '2', name: 'Jabon Lavaplatos', sku: 'JL-001', unit: 'Galon', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
+  { id: '3', name: 'Desinfectante Lavanda', sku: 'DL-001', unit: 'Galon', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
 ];
 
 
@@ -53,6 +69,8 @@ interface AppContextType {
   incomes: Income[];
   expenses: Expense[];
   products: Product[];
+  clients: Client[];
+  suppliers: Supplier[];
   addIncome: (income: Omit<Income, 'id'>) => void;
   addMultipleIncomes: (incomes: Income[]) => void;
   deleteIncome: (id: string) => void;
@@ -65,6 +83,14 @@ interface AppContextType {
   addMultipleProducts: (products: Product[]) => void;
   deleteProduct: (id: string) => void;
   updateProduct: (product: Product) => void;
+  addClient: (client: Omit<Client, 'id'>) => void;
+  addMultipleClients: (clients: Omit<Client, 'id'>[]) => void;
+  updateClient: (client: Client) => void;
+  deleteClient: (id: string) => void;
+  addSupplier: (supplier: Omit<Supplier, 'id'>) => void;
+  addMultipleSuppliers: (suppliers: Omit<Supplier, 'id'>[]) => void;
+  updateSupplier: (supplier: Supplier) => void;
+  deleteSupplier: (id: string) => void;
 }
 
 // Create context
@@ -75,6 +101,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   const addIncome = (income: Omit<Income, 'id'>) => {
     setIncomes(prev => [...prev, { ...income, id: new Date().toISOString() + Math.random() }]);
@@ -130,13 +158,49 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setProducts(prev => prev.filter(p => p.id !== id));
   }
 
+  const addClient = (client: Omit<Client, 'id'>) => {
+    setClients(prev => [...prev, { ...client, id: new Date().toISOString() + Math.random() }]);
+  };
+
+  const addMultipleClients = (newClients: Omit<Client, 'id'>[]) => {
+    const clientsWithId = newClients.map(c => ({...c, id: new Date().toISOString() + Math.random()}));
+    setClients(prev => [...prev, ...clientsWithId]);
+  };
+
+  const updateClient = (updatedClient: Client) => {
+    setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
+  };
+
+  const deleteClient = (id: string) => {
+    setClients(prev => prev.filter(c => c.id !== id));
+  };
+
+  const addSupplier = (supplier: Omit<Supplier, 'id'>) => {
+    setSuppliers(prev => [...prev, { ...supplier, id: new Date().toISOString() + Math.random() }]);
+  };
+
+  const addMultipleSuppliers = (newSuppliers: Omit<Supplier, 'id'>[]) => {
+      const suppliersWithId = newSuppliers.map(s => ({...s, id: new Date().toISOString() + Math.random()}));
+      setSuppliers(prev => [...prev, ...suppliersWithId]);
+  };
+
+  const updateSupplier = (updatedSupplier: Supplier) => {
+    setSuppliers(prev => prev.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
+  };
+
+  const deleteSupplier = (id: string) => {
+    setSuppliers(prev => prev.filter(s => s.id !== id));
+  };
+
 
   return (
     <AppContext.Provider value={{
-        incomes, expenses, products,
+        incomes, expenses, products, clients, suppliers,
         addIncome, addMultipleIncomes, deleteIncome, updateIncome,
         addExpense, addMultipleExpenses, deleteExpense, updateExpense,
-        addProduct, addMultipleProducts, deleteProduct, updateProduct
+        addProduct, addMultipleProducts, deleteProduct, updateProduct,
+        addClient, addMultipleClients, updateClient, deleteClient,
+        addSupplier, addMultipleSuppliers, updateSupplier, deleteSupplier
     }}>
       {children}
     </AppContext.Provider>

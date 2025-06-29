@@ -16,7 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppData } from '@/hooks/use-app-data';
-import type { Income, SoldProduct } from '@/components/app-provider';
+import type { Income, SoldProduct, Client } from '@/components/app-provider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toJpeg, toBlob } from 'html-to-image';
 import { InvoiceTemplate } from '@/components/invoice-template';
@@ -27,19 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useAuth } from '@/hooks/use-auth';
 
-type Client = {
-  id: string;
-  name: string;
-};
-
-const initialClients: Client[] = [];
-
-export const allClients = [
-    { id: 'generic', name: 'Cliente Genérico' },
-    ...initialClients
-];
-
-const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income: Income) => void }) => {
+const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave: (income: Income) => void, clients: Client[] }) => {
     const { products: allProducts } = useAppData();
     const [clientId, setClientId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
@@ -128,7 +116,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
                                 <SelectValue placeholder="Selecciona un cliente" />
                             </SelectTrigger>
                             <SelectContent>
-                                {allClients.map(client => (
+                                {clients.map(client => (
                                     <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
                                 ))}
                             </SelectContent>
@@ -260,7 +248,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
 };
 
 export default function IngresosPage() {
-    const { incomes, addIncome, deleteIncome, updateIncome, products, addMultipleIncomes } = useAppData();
+    const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes } = useAppData();
     const { user } = useAuth();
     const { toast } = useToast();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -278,6 +266,11 @@ export default function IngresosPage() {
     const [clientFilter, setClientFilter] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
     const [openClientPopover, setOpenClientPopover] = useState(false);
+
+    const allClients = useMemo(() => [
+        { id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' },
+        ...clients
+    ], [clients]);
 
     const filteredIncomes = useMemo(() => {
         return incomes.filter(income => {
@@ -307,7 +300,7 @@ export default function IngresosPage() {
             
             return true;
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [incomes, dateRange, clientFilter, searchTerm]);
+    }, [incomes, dateRange, clientFilter, searchTerm, allClients]);
 
     const clearFilters = () => {
         setDateRange({ from: undefined, to: undefined });
@@ -795,7 +788,7 @@ export default function IngresosPage() {
                             {editingIncome ? 'Actualiza los detalles de tu ingreso.' : 'Añade un nuevo ingreso a tus registros.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <IncomeForm income={editingIncome} onSave={handleSave} />
+                    <IncomeForm income={editingIncome} onSave={handleSave} clients={allClients} />
                 </DialogContent>
             </Dialog>
 
@@ -808,7 +801,7 @@ export default function IngresosPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="px-2">
-                       {selectedIncomeForInvoice && <InvoiceTemplate ref={invoiceRef} income={selectedIncomeForInvoice} />}
+                       {selectedIncomeForInvoice && <InvoiceTemplate ref={invoiceRef} income={selectedIncomeForInvoice} clients={allClients} />}
                     </div>
                     <DialogFooter className="p-6 bg-muted/50 flex-col-reverse sm:flex-row sm:justify-end gap-2">
                         <Button variant="outline" onClick={handleDownloadJpg}>

@@ -1,18 +1,18 @@
 "use client";
 
 import React from 'react';
-import type { Income } from '@/components/app-provider';
-import { allClients } from '@/app/dashboard/registros/ingresos/page';
+import type { Income, Client } from '@/components/app-provider';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Separator } from './ui/separator';
 
 interface InvoiceTemplateProps {
   income: Income;
+  clients: Client[];
 }
 
-export const InvoiceTemplate = React.forwardRef<HTMLDivElement, InvoiceTemplateProps>(({ income }, ref) => {
-  const client = allClients.find(c => c.id === income.clientId);
+export const InvoiceTemplate = React.forwardRef<HTMLDivElement, InvoiceTemplateProps>(({ income, clients }, ref) => {
+  const client = clients.find(c => c.id === income.clientId);
   const companyName = "QuimioGest S.R.L.";
   const companyAddress = "Calle Ficticia 123, Santo Domingo";
   const companyRNC = "1-2345678-9";

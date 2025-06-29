@@ -11,19 +11,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-
-type Supplier = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-};
-
-const initialSuppliers: Supplier[] = [];
+import { useAppData } from '@/hooks/use-app-data';
+import type { Supplier } from '@/components/app-provider';
 
 export default function SuplidoresPage() {
-    const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
+    const { suppliers, addSupplier, updateSupplier, deleteSupplier, addMultipleSuppliers } = useAppData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
     const { toast } = useToast();
@@ -47,7 +39,7 @@ export default function SuplidoresPage() {
                 throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
             }
 
-            const newSuppliers: Supplier[] = [];
+            const newSuppliers: Omit<Supplier, 'id'>[] = [];
             for (let i = 1; i < lines.length; i++) {
                 const values = lines[i].split(',');
                 const supplierData: any = {};
@@ -56,7 +48,6 @@ export default function SuplidoresPage() {
                 });
 
                 newSuppliers.push({
-                    id: supplierData.id || new Date().toISOString() + Math.random(),
                     name: supplierData.name || 'N/A',
                     email: supplierData.email || 'N/A',
                     phone: supplierData.phone || 'N/A',
@@ -64,7 +55,7 @@ export default function SuplidoresPage() {
                 });
             }
             
-            setSuppliers(prev => [...prev, ...newSuppliers]);
+            addMultipleSuppliers(newSuppliers);
 
             toast({
             title: "Importación Exitosa",
@@ -148,14 +139,15 @@ export default function SuplidoresPage() {
     };
 
     const handleDelete = (supplierId: string) => {
-        setSuppliers(suppliers.filter(s => s.id !== supplierId));
+        deleteSupplier(supplierId);
     };
 
     const handleSave = (supplier: Supplier) => {
         if (editingSupplier) {
-            setSuppliers(suppliers.map(s => s.id === supplier.id ? supplier : s));
+            updateSupplier(supplier);
         } else {
-            setSuppliers([...suppliers, { ...supplier, id: new Date().toISOString() }]);
+            const { id, ...newSupplierData } = supplier;
+            addSupplier(newSupplierData);
         }
         setEditingSupplier(null);
         setIsDialogOpen(false);
