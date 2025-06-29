@@ -6,7 +6,7 @@ import { allClients } from '@/app/dashboard/registros/ingresos/page';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Separator } from './ui/separator';
-import { FlaskConical } from 'lucide-react';
+import Image from 'next/image';
 
 interface InvoiceTemplateProps {
   income: Income;
@@ -24,9 +24,8 @@ export const InvoiceTemplate = React.forwardRef<HTMLDivElement, InvoiceTemplateP
     <div ref={ref} className="bg-white text-black p-8 font-sans w-[800px] mx-auto">
       <header className="flex justify-between items-start pb-6 border-b-2 border-gray-200">
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <FlaskConical className="h-8 w-8 text-indigo-600" />
-            <h1 className="text-3xl font-bold text-gray-800">{companyName}</h1>
+          <div className="mb-2">
+            <Image src="/logohomeclean.png" alt="QuimioGest Logo" width={150} height={50} className="object-contain" />
           </div>
           <p className="text-sm text-gray-500">{companyAddress}</p>
           <p className="text-sm text-gray-500">RNC: {companyRNC}</p>

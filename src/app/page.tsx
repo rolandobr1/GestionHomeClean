@@ -1,24 +1,23 @@
 import { Button } from "@/components/ui/button";
-import { FlaskConical, LogIn } from "lucide-react";
+import { LogIn } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       <header className="px-4 lg:px-6 h-14 flex items-center">
         <Link href="#" className="flex items-center justify-center" prefetch={false}>
-          <FlaskConical className="h-6 w-6 text-primary" />
+          <Image src="/logohomeclean.png" alt="QuimioGest Logo" width={120} height={40} className="object-contain" />
           <span className="sr-only">QuimioGest</span>
         </Link>
       </header>
       <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
-        <div className="space-y-4 max-w-2xl">
+        <div className="space-y-4 max-w-2xl flex flex-col items-center">
           <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm">
             Gestión de Inventario y Finanzas
           </div>
-          <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl text-primary font-headline">
-            QuimioGest
-          </h1>
+          <Image src="/logohomeclean.png" alt="QuimioGest Logo" width={300} height={100} className="object-contain" />
           <p className="text-lg text-muted-foreground md:text-xl">
             La solución todo-en-uno para administrar eficientemente tu negocio de productos químicos. Controla tu inventario, ingresos, egresos y cuentas por cobrar desde un solo lugar.
           </p>

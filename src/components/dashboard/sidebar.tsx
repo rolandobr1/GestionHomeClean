@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FlaskConical } from "lucide-react";
+import Image from "next/image";
 
 import { cn } from "@/lib/utils";
 import {
@@ -25,11 +25,13 @@ export function DashboardSidebar() {
       variant="sidebar"
     >
       <SidebarHeader>
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <FlaskConical className="size-6 text-primary" />
-          <h1 className="text-lg font-semibold text-primary font-headline">
-            QuimioGest
-          </h1>
+        <Link href="/dashboard" className="flex items-center justify-center h-[40px] px-2">
+            <div className="group-data-[state=collapsed]:hidden">
+                <Image src="/logohomeclean.png" alt="QuimioGest Logo" width={120} height={40} className="object-contain" />
+            </div>
+            <div className="hidden group-data-[state=collapsed]:block">
+                <Image src="/logohomeclean.png" alt="QuimioGest Logo" width={32} height={32} className="object-contain" />
+            </div>
         </Link>
       </SidebarHeader>
       <SidebarContent>

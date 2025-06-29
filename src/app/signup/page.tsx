@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +18,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { FlaskConical } from "lucide-react";
 import { FirebaseConfigStatus } from "@/components/config-status";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -114,8 +114,7 @@ export default function SignupPage() {
          <CardHeader>
            <div className="flex justify-center mb-4">
              <Link href="/" className="flex items-center gap-2">
-                <FlaskConical className="h-8 w-8 text-primary" />
-                <span className="text-2xl font-bold text-primary font-headline">QuimioGest</span>
+                <Image src="/logohomeclean.png" alt="QuimioGest Logo" width={180} height={60} className="object-contain" />
              </Link>
            </div>
           <CardTitle className="text-xl">Regístrate</CardTitle>

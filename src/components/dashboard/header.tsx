@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Menu, FlaskConical } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -14,6 +14,7 @@ import { UserNav } from "./user-nav";
 import { navLinks } from "./nav-links";
 import Link from "next/link";
 import { useState } from "react";
+import Image from "next/image";
 
 export function DashboardHeader() {
     const pathname = usePathname();
@@ -38,10 +39,7 @@ export function DashboardHeader() {
             <SheetHeader className="border-b p-4">
                 <SheetTitle>
                     <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setIsSheetOpen(false)}>
-                        <FlaskConical className="h-6 w-6 text-primary" />
-                        <span className="text-lg font-semibold text-primary font-headline">
-                            QuimioGest
-                        </span>
+                        <Image src="/logohomeclean.png" alt="QuimioGest Logo" width={120} height={40} className="object-contain" />
                     </Link>
                 </SheetTitle>
             </SheetHeader>
