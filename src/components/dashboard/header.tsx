@@ -13,15 +13,17 @@ import {
 import { UserNav } from "./user-nav";
 import { navLinks } from "./nav-links";
 import Link from "next/link";
+import { useState } from "react";
 
 export function DashboardHeader() {
     const pathname = usePathname();
     const currentLink = navLinks.find(link => link.href === pathname);
     const pageTitle = currentLink ? currentLink.label : "Dashboard";
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
-        <Sheet>
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
           <SheetTrigger asChild>
             <Button
               variant="outline"
@@ -35,7 +37,7 @@ export function DashboardHeader() {
           <SheetContent side="left" className="flex flex-col p-0">
             <SheetHeader className="border-b p-4">
                 <SheetTitle>
-                    <Link href="/dashboard" className="flex items-center gap-2">
+                    <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setIsSheetOpen(false)}>
                         <FlaskConical className="h-6 w-6 text-primary" />
                         <span className="text-lg font-semibold text-primary font-headline">
                             QuimioGest
@@ -49,6 +51,7 @@ export function DashboardHeader() {
                     key={link.href}
                     href={link.href}
                     className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                    onClick={() => setIsSheetOpen(false)}
                  >
                     <link.icon className="h-4 w-4" />
                     {link.label}
