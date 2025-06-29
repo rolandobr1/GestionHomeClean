@@ -32,14 +32,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 
-const chartData = [
-  { month: "Ene", income: 1860, expense: 800 },
-  { month: "Feb", income: 3050, expense: 2000 },
-  { month: "Mar", income: 2370, expense: 1200 },
-  { month: "Abr", income: 730, expense: 1900 },
-  { month: "May", income: 2090, expense: 1300 },
-  { month: "Jun", income: 2140, expense: 1100 },
-];
+const chartData: { month: string, income: number, expense: number }[] = [];
 
 const chartConfig = {
   income: {
@@ -52,11 +45,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const lowStockItems = [
-    { name: "Ácido Sulfúrico", sku: "AS-001", stock: 5, reorderLevel: 10, unit: "Litros" },
-    { name: "Sosa Cáustica", sku: "SC-002", stock: 8, reorderLevel: 15, unit: "Kg" },
-    { name: "Cloro Granulado", sku: "CG-003", stock: 12, reorderLevel: 20, unit: "Kg" },
-];
+const lowStockItems: { name: string, sku: string, stock: number, reorderLevel: number, unit: string }[] = [];
 
 type Client = {
   id: string;
@@ -317,8 +306,8 @@ export default function DashboardPage() {
             <ArrowUpCircle className="h-4 w-4 text-muted-foreground text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RD$45,231.89</div>
-            <p className="text-xs text-muted-foreground">+20.1% desde el mes pasado</p>
+            <div className="text-2xl font-bold">RD$0.00</div>
+            <p className="text-xs text-muted-foreground">0.0% desde el mes pasado</p>
           </CardContent>
         </Card>
         <Card>
@@ -327,8 +316,8 @@ export default function DashboardPage() {
             <ArrowDownCircle className="h-4 w-4 text-muted-foreground text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RD$12,105.43</div>
-            <p className="text-xs text-muted-foreground">+5.2% desde el mes pasado</p>
+            <div className="text-2xl font-bold">RD$0.00</div>
+            <p className="text-xs text-muted-foreground">0.0% desde el mes pasado</p>
           </CardContent>
         </Card>
         <Card>
@@ -337,7 +326,7 @@ export default function DashboardPage() {
             <FlaskConical className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RD$89,540.00</div>
+            <div className="text-2xl font-bold">RD$0.00</div>
             <p className="text-xs text-muted-foreground">Valor de costo total</p>
           </CardContent>
         </Card>
@@ -347,8 +336,8 @@ export default function DashboardPage() {
             <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RD$8,750.50</div>
-            <p className="text-xs text-muted-foreground">5 cuentas pendientes</p>
+            <div className="text-2xl font-bold">RD$0.00</div>
+            <p className="text-xs text-muted-foreground">0 cuentas pendientes</p>
           </CardContent>
         </Card>
       </div>
@@ -382,26 +371,30 @@ export default function DashboardPage() {
             <CardDescription>Productos con bajo nivel de stock que requieren atención.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Producto</TableHead>
-                  <TableHead className="text-right">Stock Actual</TableHead>
-                  <TableHead className="text-right">Nivel de Reorden</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lowStockItems.map((item) => (
-                  <TableRow key={item.sku}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-right">
-                        <Badge variant="destructive">{item.stock} {item.unit}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{item.reorderLevel} {item.unit}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            {lowStockItems.length > 0 ? (
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Producto</TableHead>
+                    <TableHead className="text-right">Stock Actual</TableHead>
+                    <TableHead className="text-right">Nivel de Reorden</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {lowStockItems.map((item) => (
+                    <TableRow key={item.sku}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="text-right">
+                            <Badge variant="destructive">{item.stock} {item.unit}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{item.reorderLevel} {item.unit}</TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No hay alertas de inventario.</p>
+            )}
           </CardContent>
         </Card>
       </div>
