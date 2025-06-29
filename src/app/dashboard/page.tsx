@@ -23,7 +23,7 @@ import {
   ChartTooltipContent,
   ChartConfig,
 } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ArrowUpCircle, ArrowDownCircle, CircleDollarSign, FlaskConical, AlertTriangle, PlusCircle, Trash2 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -33,12 +33,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from "@/hooks/use-toast";
 import { initialProducts } from './inventario/productos/page';
 import { useFinancialData } from '@/hooks/use-financial-data';
-import type { Income, Expense, SoldProduct } from '@/components/financial-provider';
+import type { Income, Expense, SoldProduct, Product } from '@/components/financial-provider';
 import { allClients } from './registros/ingresos/page';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-
-const chartData: { month: string, income: number, expense: number }[] = [];
+import { subMonths, format, getMonth, getYear } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const chartConfig = {
   income: {
@@ -50,8 +50,6 @@ const chartConfig = {
     color: "hsl(var(--chart-2))",
   },
 } satisfies ChartConfig;
-
-const lowStockItems: { name: string, sku: string, stock: number, reorderLevel: number, unit: string }[] = [];
 
 const IncomeForm = ({ onSave, income }: { onSave: (income: Omit<Income, 'id'>) => void, income: Income | null }) => {
     const [clientId, setClientId] = useState('generic');
@@ -327,9 +325,14 @@ export default function DashboardPage() {
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [accountsReceivable, setAccountsReceivable] = useState({ total: 0, count: 0 });
+  const [inventoryValue, setInventoryValue] = useState(0);
+  const [lowStockItems, setLowStockItems] = useState<Product[]>([]);
+  const [chartData, setChartData] = useState<{ month: string, income: number, expense: number }[]>([]);
 
   useEffect(() => {
+    // Financial calculations
     const today = new Date();
+    
     const currentMonthIncome = incomes
       .filter(i => {
         const incomeDate = new Date(i.date);
@@ -340,13 +343,8 @@ export default function DashboardPage() {
 
     const creditIncomes = incomes.filter(i => i.paymentMethod === 'credito');
     const arTotal = creditIncomes.reduce((acc, income) => acc + income.totalAmount, 0);
-    const arCount = creditIncomes.length;
-    setAccountsReceivable({ total: arTotal, count: arCount });
+    setAccountsReceivable({ total: arTotal, count: creditIncomes.length });
 
-  }, [incomes]);
-
-  useEffect(() => {
-    const today = new Date();
     const currentMonthExpenses = expenses
       .filter(e => {
         const expenseDate = new Date(e.date);
@@ -354,7 +352,56 @@ export default function DashboardPage() {
       })
       .reduce((acc, expense) => acc + expense.amount, 0);
     setTotalExpenses(currentMonthExpenses);
-  }, [expenses]);
+
+    // Chart data calculation
+    const monthlyData: { [key: string]: { income: number, expense: number } } = {};
+    const monthLabels: { [key: string]: string } = {};
+
+    for (let i = 5; i >= 0; i--) {
+      const d = subMonths(today, i);
+      const year = getYear(d);
+      const month = getMonth(d);
+      const key = `${year}-${month}`;
+      monthlyData[key] = { income: 0, expense: 0 };
+      monthLabels[key] = format(d, 'MMM', { locale: es });
+    }
+
+    incomes.forEach(income => {
+      const incomeDate = new Date(income.date);
+      const year = getYear(incomeDate);
+      const month = getMonth(incomeDate);
+      const key = `${year}-${month}`;
+      if (monthlyData[key]) {
+        monthlyData[key].income += income.totalAmount;
+      }
+    });
+
+    expenses.forEach(expense => {
+      const expenseDate = new Date(expense.date);
+      const year = getYear(expenseDate);
+      const month = getMonth(expenseDate);
+      const key = `${year}-${month}`;
+      if (monthlyData[key]) {
+        monthlyData[key].expense += expense.amount;
+      }
+    });
+    
+    const formattedChartData = Object.keys(monthLabels).map(key => ({
+      month: monthLabels[key].charAt(0).toUpperCase() + monthLabels[key].slice(1),
+      ...monthlyData[key],
+    }));
+
+    setChartData(formattedChartData);
+
+    // Inventory calculations
+    const lowStock = initialProducts.filter(p => p.stock <= p.reorderLevel);
+    setLowStockItems(lowStock);
+    
+    // NOTE: Inventory value calculation is missing product cost.
+    // This would require adding a `costPrice` to the Product type.
+    // For now, it will remain at 0.
+
+  }, [incomes, expenses]);
 
   const handleIncomeSave = (income: Omit<Income, 'id'>) => {
       addIncome(income);
@@ -423,7 +470,7 @@ export default function DashboardPage() {
             <FlaskConical className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RD$0.00</div>
+            <div className="text-2xl font-bold">RD${inventoryValue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Valor de costo total</p>
           </CardContent>
         </Card>
@@ -445,18 +492,16 @@ export default function DashboardPage() {
             <CardTitle>Rendimiento Financiero</CardTitle>
             <CardDescription>Ingresos vs. Egresos en los últimos 6 meses.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pl-2">
              <ChartContainer config={chartConfig} className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 20, right: 20, bottom: 5, left: 0 }}>
+                <BarChart data={chartData} margin={{ top: 20, right: 20, bottom: 5, left: 20 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
-                    <YAxis tickLine={false} axisLine={false} tickMargin={10} />
-                    <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                    <YAxis tickLine={false} axisLine={false} tickMargin={10} tickFormatter={(value) => `RD$${value / 1000}k`} />
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                     <Bar dataKey="income" fill="var(--color-income)" radius={4} />
                     <Bar dataKey="expense" fill="var(--color-expense)" radius={4} />
-                  </BarChart>
-              </ResponsiveContainer>
+                </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>

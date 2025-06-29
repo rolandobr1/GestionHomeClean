@@ -28,6 +28,18 @@ export type Expense = {
   category: string;
 };
 
+export type Product = {
+    id: string;
+    name: string;
+    sku: string;
+    unit: string;
+    salePriceRetail: number;
+    salePriceWholesale: number;
+    stock: number;
+    reorderLevel: number;
+};
+
+
 // Context interface
 interface FinancialContextType {
   incomes: Income[];
