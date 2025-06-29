@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -27,6 +27,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("password123");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    console.log("--- Diagnóstico de Configuración de Firebase (Login) ---");
+    console.log("¿Está la app configurada? (isConfigured):", isConfigured);
+    console.log("Valores de configuración (firebaseConfig):", firebaseConfig);
+    console.log("-------------------------------------------------------");
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -46,10 +53,10 @@ export default function LoginPage() {
           description = "Credenciales incorrectas. Por favor, verifica tu correo y contraseña.";
           break;
         case "auth/invalid-api-key":
-          description = "La clave de API de Firebase no es válida. Revisa tus credenciales en el archivo .env.local.";
+          description = "La clave de API de Firebase no es válida. Revisa tus credenciales en el archivo .env.local y la consola del navegador para más detalles.";
           break;
         case "auth/configuration-not-found":
-          description = "La configuración de Firebase no se encontró. Asegúrate de que tu archivo .env.local esté completo y reinicia el servidor.";
+          description = "La configuración de Firebase no se encontró. Asegúrate de que tu archivo .env.local esté completo y reinicia el servidor. Revisa la consola del navegador para ver los valores que se están usando.";
           break;
         case "auth/network-request-failed":
           description = "Error de red. Por favor, comprueba tu conexión a internet.";
