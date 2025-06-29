@@ -77,14 +77,14 @@ export default function MateriaPrimaPage() {
         if (editingMaterial) {
             setMaterials(materials.map(m => m.id === material.id ? material : m));
         } else {
-            setMaterials([...materials, { ...material, id: (materials.length + 1).toString() }]);
+            setMaterials([...materials, { ...material, id: new Date().toISOString() }]);
         }
         setEditingMaterial(null);
         setIsDialogOpen(false);
     };
 
     const MaterialForm = ({ material, onSave }: { material: RawMaterial | null, onSave: (material: RawMaterial) => void }) => {
-        const [formData, setFormData] = useState<Omit<RawMaterial, 'id'>>(material || {
+        const [formData, setFormData] = useState(material || {
             name: '', sku: '', unit: '', purchasePrice: 0, stock: 0, reorderLevel: 0, supplier: ''
         });
 

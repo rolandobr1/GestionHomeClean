@@ -78,14 +78,14 @@ export default function ProductosPage() {
         if (editingProduct) {
             setProducts(products.map(p => p.id === product.id ? product : p));
         } else {
-            setProducts([...products, { ...product, id: (products.length + 1).toString() }]);
+            setProducts([...products, { ...product, id: new Date().toISOString() }]);
         }
         setEditingProduct(null);
         setIsDialogOpen(false);
     };
 
     const ProductForm = ({ product, onSave }: { product: Product | null, onSave: (product: Product) => void }) => {
-        const [formData, setFormData] = useState<Omit<Product, 'id'>>(product || {
+        const [formData, setFormData] = useState(product || {
             name: '', sku: '', unit: '', purchasePrice: 0, salePrice: 0, stock: 0, reorderLevel: 0
         });
 
