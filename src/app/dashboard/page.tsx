@@ -58,12 +58,39 @@ const lowStockItems = [
     { name: "Cloro Granulado", sku: "CG-003", stock: 12, reorderLevel: 20, unit: "Kg" },
 ];
 
+type Client = {
+  id: string;
+  name: string;
+};
+const initialClients: Client[] = [
+  { id: '1', name: 'Laboratorios Alfa' },
+  { id: '2', name: 'Farmacia San José' },
+  { id: '3', name: 'Industrias del Caribe' },
+];
+const allClients = [
+    { id: 'generic', name: 'Cliente Genérico' },
+    ...initialClients
+];
+
+type Product = {
+  id: string;
+  name: string;
+};
+const initialProducts: Product[] = [
+  { id: '1', name: 'Ácido Clorhídrico' },
+  { id: '2', name: 'Hipoclorito de Sodio' },
+  { id: '3', name: 'Sosa Cáustica (Escamas)' },
+  { id: '4', name: 'Peróxido de Hidrógeno' },
+];
+
 type Income = {
   id: string;
-  description: string;
   amount: number;
   date: string;
   category: string;
+  clientId: string;
+  paymentMethod: 'credito' | 'contado';
+  productId: string;
 };
 
 type Expense = {
@@ -76,7 +103,8 @@ type Expense = {
 
 const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income: Income) => void }) => {
     const [formData, setFormData] = useState(income || {
-        description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Venta de Producto'
+        amount: 0, date: new Date().toISOString().split('T')[0], category: 'Venta de Producto',
+        clientId: 'generic', paymentMethod: 'contado' as 'credito' | 'contado', productId: ''
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,8 +112,8 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
         setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
     };
 
-    const handleSelectChange = (value: string) => {
-        setFormData(prev => ({ ...prev, category: value }));
+    const handleSelectChange = (field: keyof typeof formData) => (value: string) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -97,8 +125,42 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
         <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="description" className="text-right">Descripción</Label>
-                    <Input id="description" value={formData.description} onChange={handleChange} className="col-span-3" required />
+                    <Label htmlFor="productId" className="text-right">Producto</Label>
+                    <Select onValueChange={handleSelectChange('productId')} defaultValue={formData.productId} required>
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Selecciona un producto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {initialProducts.map(product => (
+                                <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="clientId" className="text-right">Cliente</Label>
+                    <Select onValueChange={handleSelectChange('clientId')} defaultValue={formData.clientId}>
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Selecciona un cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {allClients.map(client => (
+                                <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="paymentMethod" className="text-right">Método Pago</Label>
+                    <Select onValueChange={handleSelectChange('paymentMethod')} defaultValue={formData.paymentMethod}>
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Selecciona un método" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="contado">Contado</SelectItem>
+                            <SelectItem value="credito">Crédito</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="amount" className="text-right">Monto</Label>
@@ -110,7 +172,7 @@ const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="category" className="text-right">Categoría</Label>
-                    <Select onValueChange={handleSelectChange} defaultValue={formData.category}>
+                    <Select onValueChange={handleSelectChange('category')} defaultValue={formData.category}>
                         <SelectTrigger className="col-span-3">
                             <SelectValue placeholder="Selecciona una categoría" />
                         </SelectTrigger>

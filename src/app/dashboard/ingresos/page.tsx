@@ -14,19 +14,50 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+// Data definitions copied from other pages for now
+type Client = {
+  id: string;
+  name: string;
+};
+
+const initialClients: Client[] = [
+  { id: '1', name: 'Laboratorios Alfa' },
+  { id: '2', name: 'Farmacia San José' },
+  { id: '3', name: 'Industrias del Caribe' },
+];
+
+const allClients = [
+    { id: 'generic', name: 'Cliente Genérico' },
+    ...initialClients
+];
+
+
+type Product = {
+  id: string;
+  name: string;
+};
+
+const initialProducts: Product[] = [
+  { id: '1', name: 'Ácido Clorhídrico' },
+  { id: '2', name: 'Hipoclorito de Sodio' },
+  { id: '3', name: 'Sosa Cáustica (Escamas)' },
+  { id: '4', name: 'Peróxido de Hidrógeno' },
+];
 
 type Income = {
   id: string;
-  description: string;
   amount: number;
   date: string;
   category: string;
+  clientId: string;
+  paymentMethod: 'credito' | 'contado';
+  productId: string;
 };
 
 const initialIncomes: Income[] = [
-  { id: '1', description: 'Venta de 10L de Ácido Clorhídrico', amount: 100.0, date: '2024-05-20', category: 'Venta de Producto' },
-  { id: '2', description: 'Servicio de consultoría química', amount: 550.0, date: '2024-05-22', category: 'Servicios' },
-  { id: '3', description: 'Venta de 5kg de Sosa Cáustica', amount: 77.5, date: '2024-05-23', category: 'Venta de Producto' },
+  { id: '1', amount: 100.0, date: '2024-05-20', category: 'Venta de Producto', productId: '1', clientId: '1', paymentMethod: 'contado' },
+  { id: '2', amount: 550.0, date: '2024-05-22', category: 'Servicios', productId: '2', clientId: '2', paymentMethod: 'credito' },
+  { id: '3', amount: 77.5, date: '2024-05-23', category: 'Venta de Producto', productId: '3', clientId: 'generic', paymentMethod: 'contado' },
 ];
 
 export default function IngresosPage() {
@@ -55,7 +86,8 @@ export default function IngresosPage() {
 
     const IncomeForm = ({ income, onSave }: { income: Income | null, onSave: (income: Income) => void }) => {
         const [formData, setFormData] = useState(income || {
-            description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Venta de Producto'
+            amount: 0, date: new Date().toISOString().split('T')[0], category: 'Venta de Producto',
+            clientId: 'generic', paymentMethod: 'contado' as 'credito' | 'contado', productId: ''
         });
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,8 +95,8 @@ export default function IngresosPage() {
             setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
         };
 
-        const handleSelectChange = (value: string) => {
-            setFormData(prev => ({ ...prev, category: value }));
+        const handleSelectChange = (field: keyof typeof formData) => (value: string) => {
+            setFormData(prev => ({ ...prev, [field]: value }));
         };
 
         const handleSubmit = (e: React.FormEvent) => {
@@ -76,8 +108,42 @@ export default function IngresosPage() {
             <form onSubmit={handleSubmit}>
                 <div className="grid gap-4 py-4">
                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="description" className="text-right">Descripción</Label>
-                        <Input id="description" value={formData.description} onChange={handleChange} className="col-span-3" required />
+                        <Label htmlFor="productId" className="text-right">Producto</Label>
+                        <Select onValueChange={handleSelectChange('productId')} defaultValue={formData.productId} required>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Selecciona un producto" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {initialProducts.map(product => (
+                                    <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="clientId" className="text-right">Cliente</Label>
+                        <Select onValueChange={handleSelectChange('clientId')} defaultValue={formData.clientId}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Selecciona un cliente" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {allClients.map(client => (
+                                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="paymentMethod" className="text-right">Método Pago</Label>
+                        <Select onValueChange={handleSelectChange('paymentMethod')} defaultValue={formData.paymentMethod}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Selecciona un método" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="contado">Contado</SelectItem>
+                                <SelectItem value="credito">Crédito</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                      <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="amount" className="text-right">Monto</Label>
@@ -89,7 +155,7 @@ export default function IngresosPage() {
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="category" className="text-right">Categoría</Label>
-                        <Select onValueChange={handleSelectChange} defaultValue={formData.category}>
+                        <Select onValueChange={handleSelectChange('category')} defaultValue={formData.category}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Selecciona una categoría" />
                             </SelectTrigger>
@@ -133,18 +199,23 @@ export default function IngresosPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Descripción</TableHead>
-                                <TableHead>Categoría</TableHead>
+                                <TableHead>Producto</TableHead>
+                                <TableHead>Cliente</TableHead>
+                                <TableHead>Método</TableHead>
                                 <TableHead className="text-right">Monto</TableHead>
                                 <TableHead className="text-right">Fecha</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {incomes.map((income) => (
+                            {incomes.map((income) => {
+                                const product = initialProducts.find(p => p.id === income.productId);
+                                const client = allClients.find(c => c.id === income.clientId);
+                                return (
                                 <TableRow key={income.id}>
-                                    <TableCell className="font-medium">{income.description}</TableCell>
-                                    <TableCell>{income.category}</TableCell>
+                                    <TableCell className="font-medium">{product?.name || 'N/A'}</TableCell>
+                                    <TableCell>{client?.name || 'N/A'}</TableCell>
+                                    <TableCell className="capitalize">{income.paymentMethod}</TableCell>
                                     <TableCell className="text-right">RD${income.amount.toFixed(2)}</TableCell>
                                     <TableCell className="text-right">{format(new Date(income.date), 'PPP', { locale: es })}</TableCell>
                                     <TableCell className="text-right">
@@ -178,7 +249,7 @@ export default function IngresosPage() {
                                         </AlertDialog>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )})}
                         </TableBody>
                     </Table>
                 </CardContent>
