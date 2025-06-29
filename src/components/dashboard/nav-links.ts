@@ -1,11 +1,10 @@
 import {
   LayoutDashboard,
   FlaskConical,
-  ArrowDownCircle,
-  ArrowUpCircle,
   CircleDollarSign,
   FileCog,
   Users,
+  ClipboardList,
 } from "lucide-react";
 
 export const navLinks = [
@@ -15,14 +14,9 @@ export const navLinks = [
     icon: LayoutDashboard,
   },
   {
-    href: "/dashboard/ingresos",
-    label: "Ingresos",
-    icon: ArrowUpCircle,
-  },
-  {
-    href: "/dashboard/egresos",
-    label: "Egresos",
-    icon: ArrowDownCircle,
+    href: "/dashboard/registros/ingresos",
+    label: "Registros",
+    icon: ClipboardList,
   },
   {
     href: "/dashboard/inventario/productos",
