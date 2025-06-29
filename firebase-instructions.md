@@ -45,7 +45,20 @@ Sigue estos pasos:
     NEXT_PUBLIC_FIREBASE_APP_ID=1:1234567890:web:...
     ```
 
-7.  **Reinicia el Servidor de Desarrollo:**
-    Después de guardar los cambios en `.env.local`, es **muy importante** que detengas tu servidor de desarrollo (si está corriendo) y lo vuelvas a iniciar. Next.js solo carga las variables de entorno al iniciar.
+## Solución de Problemas Comunes
 
-¡Y eso es todo! La aplicación ahora debería poder conectarse a Firebase sin problemas.
+Si sigues viendo un error de configuración después de añadir las claves, revisa estos puntos:
+
+#### 1. ¡Reinicia el servidor!
+Next.js solo carga el archivo `.env.local` al arrancar. Es el paso más importante y el que más se olvida.
+- **Ve a tu terminal.**
+- **Presiona `Ctrl + C` para detener el servidor.**
+- **Ejecuta `npm run dev` para iniciarlo de nuevo.**
+
+#### 2. No uses comillas
+En el archivo `.env.local`, los valores deben ir **sin comillas**.
+- ✅ **Correcto:** `NEXT_PUBLIC_FIREBASE_API_KEY=AIza...`
+- ❌ **Incorrecto:** `NEXT_PUBLIC_FIREBASE_API_KEY="AIza..."`
+
+#### 3. Verifica que copiaste todo
+Asegúrate de que la clave completa fue copiada, sin espacios extra al inicio o al final.

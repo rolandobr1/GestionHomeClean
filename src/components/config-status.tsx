@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, CheckCircle, XCircle } from "lucide-react";
+import { Terminal, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import React from 'react';
 
 type ConfigKeys =
@@ -31,12 +31,12 @@ interface FirebaseConfigStatusProps {
 export function FirebaseConfigStatus({ config }: FirebaseConfigStatusProps) {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
-      <Card className="mx-auto max-w-lg w-full">
+      <Card className="mx-auto max-w-2xl w-full">
         <CardHeader>
           <CardTitle className="text-xl">Configuración de Firebase Incompleta</CardTitle>
           <CardDescription>
             La aplicación no puede conectar con Firebase porque faltan algunas
-            credenciales.
+            credenciales o no se han cargado correctamente.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -45,11 +45,10 @@ export function FirebaseConfigStatus({ config }: FirebaseConfigStatusProps) {
             <AlertTitle>¡Acción Requerida!</AlertTitle>
             <AlertDescription>
               <p className="mt-2">
-                Por favor, revisa tu archivo <code>.env.local</code> y asegúrate de que
-                contenga todas las siguientes variables. Después, <strong>reinicia el servidor</strong>.
+                Por favor, revisa tu archivo <code>.env.local</code> y sigue los pasos de la guía de solución de problemas a continuación.
               </p>
               <p className="text-xs text-muted-foreground pt-2">
-                Consulta <code>firebase-instructions.md</code> para ver la guía detallada.
+                Consulta <code>firebase-instructions.md</code> para ver la guía detallada de cómo obtener las claves.
               </p>
             </AlertDescription>
           </Alert>
@@ -70,6 +69,39 @@ export function FirebaseConfigStatus({ config }: FirebaseConfigStatusProps) {
                 </div>
              ))}
           </div>
+
+          <Card className="mt-4 bg-amber-50 border-amber-200">
+            <CardHeader className="pb-4">
+                <CardTitle className="text-lg flex items-center gap-2 text-amber-800">
+                    <AlertCircle className="h-5 w-5" />
+                    Guía de Solución de Problemas
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-amber-900 space-y-4">
+                <div className="space-y-1">
+                    <h4 className="font-semibold">1. ¿Reiniciaste el servidor?</h4>
+                    <p>
+                        Next.js solo carga el archivo <code>.env.local</code> al iniciar. Si has modificado las claves, detén el servidor (con <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Ctrl</kbd> + <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">C</kbd>) y vuelve a ejecutar <code>npm run dev</code>.
+                    </p>
+                </div>
+                <div className="space-y-1">
+                    <h4 className="font-semibold">2. ¿Usaste comillas en el archivo?</h4>
+                    <p>
+                        Los valores en <code>.env.local</code> <strong>no</strong> deben llevar comillas.
+                    </p>
+                    <div className="font-mono text-xs bg-gray-100 p-2 rounded-md space-y-1">
+                        <div><span className="font-bold text-green-700 mr-2">✅ Correcto:</span><span className="text-gray-600">NEXT_PUBLIC_...=AIza...</span></div>
+                        <div><span className="font-bold text-red-700 mr-2">❌ Incorrecto:</span><span className="text-gray-600">NEXT_PUBLIC_...="AIza..."</span></div>
+                    </div>
+                </div>
+                <div className="space-y-1">
+                    <h4 className="font-semibold">3. ¿Copiaste bien las claves?</h4>
+                    <p>
+                        Asegúrate de haber copiado el valor completo de cada clave, sin espacios extra al principio o al final.
+                    </p>
+                </div>
+            </CardContent>
+          </Card>
         </CardContent>
       </Card>
     </div>
