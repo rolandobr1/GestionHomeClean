@@ -211,7 +211,7 @@ export default function DashboardPage() {
       setIsIncomeDialogOpen(false);
       toast({
           title: "Ingreso Registrado",
-          description: `Se ha añadido un ingreso por $${newIncome.amount.toFixed(2)}.`,
+          description: `Se ha añadido un ingreso por RD$${newIncome.amount.toFixed(2)}.`,
       });
   };
 
@@ -222,7 +222,7 @@ export default function DashboardPage() {
       setIsExpenseDialogOpen(false);
       toast({
           title: "Egreso Registrado",
-          description: `Se ha añadido un egreso por $${newExpense.amount.toFixed(2)}.`,
+          description: `Se ha añadido un egreso por RD$${newExpense.amount.toFixed(2)}.`,
       });
   };
 
@@ -255,7 +255,7 @@ export default function DashboardPage() {
             <ArrowUpCircle className="h-4 w-4 text-muted-foreground text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$45,231.89</div>
+            <div className="text-2xl font-bold">RD$45,231.89</div>
             <p className="text-xs text-muted-foreground">+20.1% desde el mes pasado</p>
           </CardContent>
         </Card>
@@ -265,7 +265,7 @@ export default function DashboardPage() {
             <ArrowDownCircle className="h-4 w-4 text-muted-foreground text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$12,105.43</div>
+            <div className="text-2xl font-bold">RD$12,105.43</div>
             <p className="text-xs text-muted-foreground">+5.2% desde el mes pasado</p>
           </CardContent>
         </Card>
@@ -275,7 +275,7 @@ export default function DashboardPage() {
             <FlaskConical className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$89,540.00</div>
+            <div className="text-2xl font-bold">RD$89,540.00</div>
             <p className="text-xs text-muted-foreground">Valor de costo total</p>
           </CardContent>
         </Card>
@@ -285,7 +285,7 @@ export default function DashboardPage() {
             <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$8,750.50</div>
+            <div className="text-2xl font-bold">RD$8,750.50</div>
             <p className="text-xs text-muted-foreground">5 cuentas pendientes</p>
           </CardContent>
         </Card>

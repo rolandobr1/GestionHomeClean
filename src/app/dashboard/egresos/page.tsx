@@ -146,7 +146,7 @@ export default function EgresosPage() {
                                 <TableRow key={expense.id}>
                                     <TableCell className="font-medium">{expense.description}</TableCell>
                                     <TableCell>{expense.category}</TableCell>
-                                    <TableCell className="text-right">${expense.amount.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">RD${expense.amount.toFixed(2)}</TableCell>
                                     <TableCell className="text-right">{format(new Date(expense.date), 'PPP', { locale: es })}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>

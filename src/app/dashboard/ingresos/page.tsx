@@ -145,7 +145,7 @@ export default function IngresosPage() {
                                 <TableRow key={income.id}>
                                     <TableCell className="font-medium">{income.description}</TableCell>
                                     <TableCell>{income.category}</TableCell>
-                                    <TableCell className="text-right">${income.amount.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">RD${income.amount.toFixed(2)}</TableCell>
                                     <TableCell className="text-right">{format(new Date(income.date), 'PPP', { locale: es })}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>

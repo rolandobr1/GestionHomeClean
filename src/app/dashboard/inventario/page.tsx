@@ -178,7 +178,7 @@ export default function InventoryPage() {
                                             <Badge variant="secondary">{product.stock} {product.unit}</Badge>
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-right">${product.salePrice.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">RD${product.salePrice.toFixed(2)}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <DropdownMenu>
