@@ -1,7 +1,3 @@
-# Settings to manage and configure a Firebase App Hosting backend.
-# https://firebase.google.com/docs/app-hosting/configure
-
-runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
-  maxInstances: 1
+# This file has been intentionally left blank to switch to Firebase Static Hosting.
+# The previous App Hosting configuration required a local CLI experiment to be enabled.
+# This new setup builds the app as a static site, which is more broadly compatible.
