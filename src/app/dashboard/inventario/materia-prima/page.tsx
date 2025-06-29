@@ -54,11 +54,7 @@ type RawMaterial = {
   supplier: string;
 };
 
-const initialRawMaterials: RawMaterial[] = [
-  { id: '1', name: 'Envase Plástico 1L', sku: 'ENV-001', unit: 'Unidades', purchasePrice: 0.75, stock: 500, reorderLevel: 100, supplier: 'Plásticos del Caribe' },
-  { id: '2', name: 'Etiqueta Adhesiva', sku: 'ETQ-001', unit: 'Unidades', purchasePrice: 0.10, stock: 2000, reorderLevel: 500, supplier: 'Impresos Rápidos' },
-  { id: '3', name: 'Caja de Cartón Grande', sku: 'CAJ-001', unit: 'Unidades', purchasePrice: 1.20, stock: 150, reorderLevel: 40, supplier: 'Empaques Nacionales' },
-];
+const initialRawMaterials: RawMaterial[] = [];
 
 export default function MateriaPrimaPage() {
     const [materials, setMaterials] = useState<RawMaterial[]>(initialRawMaterials);

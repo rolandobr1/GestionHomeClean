@@ -40,10 +40,9 @@ export type Product = {
 };
 
 export const initialProducts: Product[] = [
-  { id: '1', name: 'Ácido Clorhídrico', sku: 'AC-001', unit: 'Litros', salePriceRetail: 10.0, salePriceWholesale: 8.5, stock: 150, reorderLevel: 20 },
-  { id: '2', name: 'Hipoclorito de Sodio', sku: 'HS-002', unit: 'Galones', salePriceRetail: 25.0, salePriceWholesale: 22.0, stock: 80, reorderLevel: 15 },
-  { id: '3', name: 'Sosa Cáustica (Escamas)', sku: 'SC-001', unit: 'Kg', salePriceRetail: 15.5, salePriceWholesale: 13.0, stock: 200, reorderLevel: 50 },
-  { id: '4', name: 'Peróxido de Hidrógeno', sku: 'PH-001', unit: 'Litros', salePriceRetail: 14.0, salePriceWholesale: 12.0, stock: 45, reorderLevel: 30 },
+  { id: '1', name: 'Jabon de Cuaba', sku: 'JC-001', unit: 'Galones', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
+  { id: '2', name: 'Jabon Lavaplatos', sku: 'JL-001', unit: 'Galones', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
+  { id: '3', name: 'Desinfectante Lavanda', sku: 'DL-001', unit: 'Galones', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
 ];
 
 
