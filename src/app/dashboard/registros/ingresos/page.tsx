@@ -16,7 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppData } from '@/hooks/use-app-data';
-import type { Income, SoldProduct, Client } from '@/components/app-provider';
+import type { Income, SoldProduct, Client, InvoiceSettings } from '@/components/app-provider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toJpeg, toBlob } from 'html-to-image';
 import { InvoiceTemplate } from '@/components/invoice-template';
@@ -248,7 +248,7 @@ const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave
 };
 
 export default function IngresosPage() {
-    const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes } = useAppData();
+    const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes, invoiceSettings } = useAppData();
     const { user } = useAuth();
     const { toast } = useToast();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -812,7 +812,7 @@ export default function IngresosPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="px-2">
-                       {selectedIncomeForInvoice && <InvoiceTemplate ref={invoiceRef} income={selectedIncomeForInvoice} clients={allClients} />}
+                       {selectedIncomeForInvoice && <InvoiceTemplate ref={invoiceRef} income={selectedIncomeForInvoice} clients={allClients} invoiceSettings={invoiceSettings} />}
                     </div>
                     <DialogFooter className="p-6 bg-muted/50 flex-col-reverse sm:flex-row sm:justify-end gap-2">
                         <Button variant="outline" onClick={handleDownloadJpg}>

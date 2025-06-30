@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import type { Income, Client } from '@/components/app-provider';
+import type { Income, Client, InvoiceSettings } from '@/components/app-provider';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Separator } from './ui/separator';
@@ -9,13 +9,11 @@ import { Separator } from './ui/separator';
 interface InvoiceTemplateProps {
   income: Income;
   clients: Client[];
+  invoiceSettings: InvoiceSettings;
 }
 
-export const InvoiceTemplate = React.forwardRef<HTMLDivElement, InvoiceTemplateProps>(({ income, clients }, ref) => {
+export const InvoiceTemplate = React.forwardRef<HTMLDivElement, InvoiceTemplateProps>(({ income, clients, invoiceSettings }, ref) => {
   const client = clients.find(c => c.id === income.clientId);
-  const companyName = "QuimioGest S.R.L.";
-  const companyAddress = "Calle Ficticia 123, Santo Domingo";
-  const companyRNC = "1-2345678-9";
 
   if (!income) return null;
 
@@ -24,10 +22,10 @@ export const InvoiceTemplate = React.forwardRef<HTMLDivElement, InvoiceTemplateP
       <header className="flex justify-between items-start pb-6 border-b-2 border-gray-200">
         <div>
           <div className="mb-2">
-            <img src="/logohomeclean.png" alt="QuimioGest Logo" width="150" height="50" className="object-contain" />
+            <img src={invoiceSettings.companyLogo} alt="Logo de la empresa" width="150" height="50" className="object-contain" />
           </div>
-          <p className="text-sm text-gray-500">{companyAddress}</p>
-          <p className="text-sm text-gray-500">RNC: {companyRNC}</p>
+          <p className="text-sm text-gray-500">{invoiceSettings.companyAddress}</p>
+          <p className="text-sm text-gray-500">RNC: {invoiceSettings.companyRNC}</p>
         </div>
         <div className="text-right">
           <h2 className="text-2xl font-semibold uppercase text-gray-600">Factura</h2>

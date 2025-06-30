@@ -58,6 +58,13 @@ export type Supplier = {
   address: string;
 };
 
+export type InvoiceSettings = {
+  companyName: string;
+  companyAddress: string;
+  companyRNC: string;
+  companyLogo: string;
+};
+
 export const initialProducts: Product[] = [
   { id: '1', name: 'Jabon de Cuaba', sku: 'JC-001', unit: 'Galon', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
   { id: '2', name: 'Jabon Lavaplatos', sku: 'JL-001', unit: 'Galon', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
@@ -72,6 +79,7 @@ interface AppContextType {
   products: Product[];
   clients: Client[];
   suppliers: Supplier[];
+  invoiceSettings: InvoiceSettings;
   addIncome: (income: Omit<Income, 'id'>) => void;
   addMultipleIncomes: (incomes: Income[]) => void;
   deleteIncome: (id: string) => void;
@@ -92,6 +100,7 @@ interface AppContextType {
   addMultipleSuppliers: (suppliers: Supplier[]) => void;
   updateSupplier: (supplier: Supplier) => void;
   deleteSupplier: (id: string) => void;
+  updateInvoiceSettings: (settings: Partial<InvoiceSettings>) => void;
 }
 
 // Create context
@@ -104,6 +113,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [clients, setClients] = useState<Client[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
+    companyName: "QuimioGest S.R.L.",
+    companyAddress: "Calle Ficticia 123, Santo Domingo",
+    companyRNC: "1-2345678-9",
+    companyLogo: "/logohomeclean.png",
+  });
+
+  const updateInvoiceSettings = (settings: Partial<InvoiceSettings>) => {
+    setInvoiceSettings(prev => ({ ...prev, ...settings }));
+  };
 
   const addIncome = (income: Omit<Income, 'id'>) => {
     const quantitySoldMap = new Map<string, number>();
@@ -304,12 +323,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AppContext.Provider value={{
-        incomes, expenses, products, clients, suppliers,
+        incomes, expenses, products, clients, suppliers, invoiceSettings,
         addIncome, addMultipleIncomes, deleteIncome, updateIncome,
         addExpense, addMultipleExpenses, deleteExpense, updateExpense,
         addProduct, addMultipleProducts, deleteProduct, updateProduct,
         addClient, addMultipleClients, updateClient, deleteClient,
-        addSupplier, addMultipleSuppliers, updateSupplier, deleteSupplier
+        addSupplier, addMultipleSuppliers, updateSupplier, deleteSupplier,
+        updateInvoiceSettings
     }}>
       {children}
     </AppContext.Provider>
