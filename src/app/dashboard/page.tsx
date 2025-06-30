@@ -257,7 +257,7 @@ const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income,
 
 const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id' | 'recordedBy'>) => void }) => {
     const [formData, setFormData] = useState({
-        description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Compra de Material'
+        description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Materia Prima'
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -296,10 +296,11 @@ const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id' | 'recor
                             <SelectValue placeholder="Selecciona una categoría" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="Compra de Material">Compra de Material</SelectItem>
-                            <SelectItem value="Salarios">Salarios</SelectItem>
-                            <SelectItem value="Servicios Públicos">Servicios Públicos</SelectItem>
-                            <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
+                            <SelectItem value="Materia Prima">Materia Prima</SelectItem>
+                            <SelectItem value="Envases">Envases</SelectItem>
+                            <SelectItem value="Etiquetas">Etiquetas</SelectItem>
+                            <SelectItem value="Transportación">Transportación</SelectItem>
+                            <SelectItem value="Maquinarias y Herramientas">Maquinarias y Herramientas</SelectItem>
                             <SelectItem value="Otro">Otro</SelectItem>
                         </SelectContent>
                     </Select>

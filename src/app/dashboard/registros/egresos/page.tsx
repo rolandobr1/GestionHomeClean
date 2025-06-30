@@ -20,13 +20,13 @@ import type { DateRange } from 'react-day-picker';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
 
-const expenseCategories = ["Compra de Material", "Salarios", "Servicios Públicos", "Mantenimiento", "Otro"];
+const expenseCategories = ["Materia Prima", "Envases", "Etiquetas", "Transportación", "Maquinarias y Herramientas", "Otro"];
 
 const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (expense: Expense) => void }) => {
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState(0);
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [category, setCategory] = useState('Compra de Material');
+    const [category, setCategory] = useState('Materia Prima');
 
     useEffect(() => {
         if (expense) {
@@ -38,7 +38,7 @@ const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (ex
             setDescription('');
             setAmount(0);
             setDate(new Date().toISOString().split('T')[0]);
-            setCategory('Compra de Material');
+            setCategory('Materia Prima');
         }
     }, [expense]);
 
