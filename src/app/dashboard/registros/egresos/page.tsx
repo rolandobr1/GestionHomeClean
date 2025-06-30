@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { PlusCircle, MoreHorizontal, Trash2, Edit, X, Download, Upload } from 'lucide-react';
@@ -21,6 +21,76 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
 
 const expenseCategories = ["Compra de Material", "Salarios", "Servicios Públicos", "Mantenimiento", "Otro"];
+
+const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (expense: Expense) => void }) => {
+    const [description, setDescription] = useState('');
+    const [amount, setAmount] = useState(0);
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [category, setCategory] = useState('Compra de Material');
+
+    useEffect(() => {
+        if (expense) {
+            setDescription(expense.description);
+            setAmount(expense.amount);
+            setDate(format(new Date(expense.date), 'yyyy-MM-dd'));
+            setCategory(expense.category);
+        } else {
+            setDescription('');
+            setAmount(0);
+            setDate(new Date().toISOString().split('T')[0]);
+            setCategory('Compra de Material');
+        }
+    }, [expense]);
+
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({
+            id: expense?.id || '',
+            description,
+            amount,
+            date,
+            category,
+            recordedBy: expense?.recordedBy || ''
+        });
+    }
+    
+    return (
+        <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                    <Label htmlFor="description">Descripción</Label>
+                    <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} required />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="amount">Monto</Label>
+                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value) || 0)} required />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="date">Fecha</Label>
+                    <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="category">Categoría</Label>
+                    <Select onValueChange={setCategory} value={category}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecciona una categoría" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+             <DialogFooter>
+                <DialogClose asChild>
+                     <Button type="button" variant="secondary">Cancelar</Button>
+                </DialogClose>
+                <Button type="submit">Guardar</Button>
+            </DialogFooter>
+        </form>
+    );
+};
 
 export default function EgresosPage() {
     const { expenses, addExpense, deleteExpense, updateExpense, addMultipleExpenses } = useAppData();
@@ -85,11 +155,11 @@ export default function EgresosPage() {
             toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
             return;
         }
-        const expenseToSave: Expense = { ...expense, recordedBy: user.name };
-
+        
         if (editingExpense) {
-            updateExpense(expenseToSave);
+            updateExpense(expense);
         } else {
+            const expenseToSave = { ...expense, recordedBy: user.name };
             const { id, ...newExpenseData } = expenseToSave;
             addExpense(newExpenseData);
         }
@@ -219,62 +289,6 @@ export default function EgresosPage() {
 
     const handleImportClick = () => {
         fileInputRef.current?.click();
-    };
-
-    const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (expense: Expense) => void }) => {
-        const [formData, setFormData] = useState(expense || {
-            description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Compra de Material', recordedBy: ''
-        });
-
-        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const { id, value, type } = e.target;
-            setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
-        };
-
-        const handleSelectChange = (value: string) => {
-            setFormData(prev => ({ ...prev, category: value }));
-        };
-
-        const handleSubmit = (e: React.FormEvent) => {
-            e.preventDefault();
-            onSave({ ...formData, id: expense?.id || '' });
-        }
-        
-        return (
-            <form onSubmit={handleSubmit}>
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="description">Descripción</Label>
-                        <Input id="description" value={formData.description} onChange={handleChange} required />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="amount">Monto</Label>
-                        <Input id="amount" type="number" value={formData.amount} onChange={handleChange} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="date">Fecha</Label>
-                        <Input id="date" type="date" value={formData.date} onChange={handleChange} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="category">Categoría</Label>
-                        <Select onValueChange={handleSelectChange} defaultValue={formData.category}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecciona una categoría" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-                 <DialogFooter>
-                    <DialogClose asChild>
-                         <Button type="button" variant="secondary">Cancelar</Button>
-                    </DialogClose>
-                    <Button type="submit">Guardar</Button>
-                </DialogFooter>
-            </form>
-        );
     };
 
     return (
