@@ -278,21 +278,21 @@ const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id' | 'recor
         <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                    <Label htmlFor="description-dash">Descripción</Label>
-                    <Input id="description-dash" value={formData.description} onChange={handleChange} required />
+                    <Label htmlFor="description">Descripción</Label>
+                    <Input id="description" value={formData.description} onChange={handleChange} required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="amount-dash">Monto</Label>
-                    <Input id="amount-dash" type="number" value={formData.amount} onChange={handleChange} required />
+                    <Label htmlFor="amount">Monto</Label>
+                    <Input id="amount" type="number" value={formData.amount} onChange={handleChange} required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="date-exp-dash">Fecha</Label>
-                    <Input id="date-exp-dash" type="date" value={formData.date} onChange={handleChange} required />
+                    <Label htmlFor="date">Fecha</Label>
+                    <Input id="date" type="date" value={formData.date} onChange={handleChange} required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="category-dash">Categoría</Label>
+                    <Label htmlFor="category">Categoría</Label>
                      <Select onValueChange={handleSelectChange} defaultValue={formData.category}>
-                        <SelectTrigger id="category-dash">
+                        <SelectTrigger id="category">
                             <SelectValue placeholder="Selecciona una categoría" />
                         </SelectTrigger>
                         <SelectContent>
