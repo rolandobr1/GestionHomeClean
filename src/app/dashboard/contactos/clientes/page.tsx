@@ -15,7 +15,7 @@ import { useAppData } from '@/hooks/use-app-data';
 import type { Client } from '@/components/app-provider';
 
 export default function ClientesPage() {
-    const { clients, addClient, updateClient, deleteClient, addMultipleClients } = useAppData();
+    const { clients, addClient, updateClient, deleteClient, addMultipleClients } from useAppData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
     const { toast } = useToast();
@@ -203,7 +203,7 @@ export default function ClientesPage() {
     return (
         <div className="space-y-6">
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
-             <div className="flex justify-end items-start gap-2">
+             <div className="flex flex-col sm:flex-row items-end sm:items-start sm:justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />
                     Importar

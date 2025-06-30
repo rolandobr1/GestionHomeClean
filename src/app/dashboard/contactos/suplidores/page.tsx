@@ -15,7 +15,7 @@ import { useAppData } from '@/hooks/use-app-data';
 import type { Supplier } from '@/components/app-provider';
 
 export default function SuplidoresPage() {
-    const { suppliers, addSupplier, updateSupplier, deleteSupplier, addMultipleSuppliers } = useAppData();
+    const { suppliers, addSupplier, updateSupplier, deleteSupplier, addMultipleSuppliers } from useAppData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
     const { toast } = useToast();
@@ -203,7 +203,7 @@ export default function SuplidoresPage() {
     return (
         <div className="space-y-6">
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
-             <div className="flex justify-end items-start gap-2">
+             <div className="flex flex-col sm:flex-row items-end sm:items-start sm:justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />
                     Importar
