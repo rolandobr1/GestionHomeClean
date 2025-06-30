@@ -2,20 +2,21 @@
   "name": "QuimioGest",
   "short_name": "QuimioGest",
   "description": "Gestión inteligente para tu negocio de productos químicos.",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#E3F2FD",
-  "theme_color": "#3F51B5",
   "icons": [
     {
-      "src": "/icon-192x192.png",
-      "type": "image/png",
-      "sizes": "192x192"
+      "src": "/logohomeclean.png",
+      "sizes": "192x192",
+      "type": "image/png"
     },
     {
-      "src": "/icon-512x512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "/logohomeclean.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
-  ]
+  ],
+  "theme_color": "#3F51B5",
+  "background_color": "#E3F2FD",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait"
 }

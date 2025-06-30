@@ -10,9 +10,15 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 export const metadata: Metadata = {
   title: "QuimioGest",
   description: "Gestión inteligente para tu negocio de productos químicos.",
+  manifest: "/manifest.json",
   viewport: {
     width: "device-width",
     initialScale: 1,
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "QuimioGest",
   },
   themeColor: "#3F51B5",
 };
