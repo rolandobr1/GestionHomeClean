@@ -55,11 +55,9 @@ export default function DashboardLayout({
   return (
     <AppProvider>
       <SidebarProvider>
-        <div className="md:flex">
-          <div className="hidden md:block">
-            <DashboardSidebar />
-          </div>
-          <main className="flex-1 md:ml-[58px] lg:ml-0 flex flex-col min-h-screen pb-16 md:pb-0">
+        <div className="flex min-h-screen">
+          <DashboardSidebar />
+          <main className="flex-1 flex flex-col min-h-screen pb-16 md:pb-0">
               <DashboardHeader />
               <div className="flex-grow p-4 md:p-6 lg:p-8 bg-background">
                   {children}

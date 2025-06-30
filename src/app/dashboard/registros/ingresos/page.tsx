@@ -811,7 +811,7 @@ export default function IngresosPage() {
                             Puedes descargar la factura como imagen o compartirla directamente.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="px-2">
+                    <div className="p-4 sm:p-6 overflow-auto">
                        {selectedIncomeForInvoice && <InvoiceTemplate ref={invoiceRef} income={selectedIncomeForInvoice} clients={allClients} invoiceSettings={invoiceSettings} />}
                     </div>
                     <DialogFooter className="p-6 bg-muted/50 flex-col-reverse sm:flex-row sm:justify-end gap-2">
