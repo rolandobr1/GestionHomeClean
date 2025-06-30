@@ -81,4 +81,7 @@
   body {
     @apply bg-background text-foreground;
   }
+  button, label {
+    @apply select-none;
+  }
 }
