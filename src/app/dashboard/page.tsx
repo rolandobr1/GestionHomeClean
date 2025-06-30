@@ -450,21 +450,20 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+       <div className="grid grid-cols-2 gap-2">
             <Button
-              className="w-full bg-green-600 hover:bg-green-700 text-primary-foreground h-12 text-base"
+              className="bg-green-600 hover:bg-green-700 text-primary-foreground"
               onClick={() => setIsIncomeDialogOpen(true)}
             >
                 <PlusCircle className="mr-2 h-5 w-5"/>
-                Registrar Ingreso
+                Ingreso
             </Button>
             <Button
               variant="destructive"
-              className="w-full h-12 text-base"
               onClick={() => setIsExpenseDialogOpen(true)}
             >
                 <PlusCircle className="mr-2 h-5 w-5"/>
-                Registrar Egreso
+                Egreso
             </Button>
         </div>
 
