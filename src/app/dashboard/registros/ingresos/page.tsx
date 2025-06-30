@@ -163,7 +163,7 @@ const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="quantity">Cantidad</Label>
-                                <Input id="quantity" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" />
+                                <Input id="quantity" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" inputMode="decimal" onFocus={(e) => e.target.select()} />
                             </div>
                         </div>
                         <div className="space-y-2">

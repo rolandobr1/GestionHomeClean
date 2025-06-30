@@ -171,7 +171,7 @@ const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income,
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="quantity-dash">Cantidad</Label>
-                                <Input id="quantity-dash" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" />
+                                <Input id="quantity-dash" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" inputMode="decimal" onFocus={(e) => e.target.select()} />
                             </div>
                         </div>
                         <div className="space-y-2">
@@ -278,21 +278,21 @@ const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id' | 'recor
         <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                    <Label htmlFor="description">Descripción</Label>
-                    <Input id="description" value={formData.description} onChange={handleChange} required />
+                    <Label htmlFor="description-dash">Descripción</Label>
+                    <Input id="description-dash" value={formData.description} onChange={handleChange} required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="amount">Monto</Label>
-                    <Input id="amount" type="number" value={formData.amount} onChange={handleChange} required />
+                    <Label htmlFor="amount-dash">Monto</Label>
+                    <Input id="amount-dash" type="number" value={formData.amount} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="date">Fecha</Label>
-                    <Input id="date" type="date" value={formData.date} onChange={handleChange} required />
+                    <Label htmlFor="date-dash-exp">Fecha</Label>
+                    <Input id="date-dash-exp" type="date" value={formData.date} onChange={handleChange} required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="category">Categoría</Label>
+                    <Label htmlFor="category-dash">Categoría</Label>
                      <Select onValueChange={handleSelectChange} defaultValue={formData.category}>
-                        <SelectTrigger id="category">
+                        <SelectTrigger id="category-dash">
                             <SelectValue placeholder="Selecciona una categoría" />
                         </SelectTrigger>
                         <SelectContent>

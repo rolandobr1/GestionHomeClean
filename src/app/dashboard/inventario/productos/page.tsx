@@ -220,7 +220,7 @@ export default function ProductosPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="stock">Stock</Label>
-                            <Input id="stock" type="number" value={formData.stock} onChange={handleChange} required />
+                            <Input id="stock" type="number" value={formData.stock} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="unit">Unidad</Label>
@@ -230,16 +230,16 @@ export default function ProductosPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="salePriceRetail">Precio Detalle</Label>
-                            <Input id="salePriceRetail" type="number" value={formData.salePriceRetail} onChange={handleChange} required />
+                            <Input id="salePriceRetail" type="number" value={formData.salePriceRetail} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="salePriceWholesale">Precio Por Mayor</Label>
-                            <Input id="salePriceWholesale" type="number" value={formData.salePriceWholesale} onChange={handleChange} required />
+                            <Input id="salePriceWholesale" type="number" value={formData.salePriceWholesale} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} />
                         </div>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="reorderLevel">Nivel Reorden</Label>
-                        <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} required/>
+                        <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()}/>
                     </div>
                 </div>
                  <DialogFooter>

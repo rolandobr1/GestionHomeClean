@@ -64,7 +64,7 @@ const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (ex
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="amount">Monto</Label>
-                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value) || 0)} required />
+                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value) || 0)} required inputMode="decimal" onFocus={(e) => e.target.select()} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="date">Fecha</Label>
