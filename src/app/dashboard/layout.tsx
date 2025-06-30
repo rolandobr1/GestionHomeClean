@@ -57,7 +57,7 @@ export default function DashboardLayout({
       <SidebarProvider>
         <div className="flex h-screen bg-background">
           <DashboardSidebar />
-          <div className="flex flex-1 flex-col min-w-0">
+          <div className="flex flex-1 flex-col overflow-hidden">
             <DashboardHeader />
             <main className="flex-1 overflow-y-auto p-4 pb-16 md:p-6 md:pb-6 lg:p-8 lg:pb-8">
               {children}
