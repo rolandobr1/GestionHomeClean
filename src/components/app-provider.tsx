@@ -27,6 +27,7 @@ export type Expense = {
   amount: number;
   date: string;
   category: string;
+  supplierId: string;
   recordedBy: string;
 };
 

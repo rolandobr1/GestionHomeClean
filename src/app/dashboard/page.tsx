@@ -32,7 +32,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 import { useAppData } from '@/hooks/use-app-data';
-import type { Income, Expense, SoldProduct, Product, Client } from '@/components/app-provider';
+import type { Income, Expense, SoldProduct, Product, Client, Supplier } from '@/components/app-provider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { subMonths, format, getMonth, getYear } from 'date-fns';
@@ -255,18 +255,19 @@ const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income,
     );
 };
 
-const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id' | 'recordedBy'>) => void }) => {
+const ExpenseForm = ({ onSave, suppliers }: { onSave: (expense: Omit<Expense, 'id' | 'recordedBy'>) => void, suppliers: Supplier[] }) => {
     const [formData, setFormData] = useState({
-        description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Materia Prima'
+        description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Materia Prima', supplierId: 'generic'
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value, type } = e.target;
-        setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
+        const key = id.replace(/-dash-exp$/, '').replace(/-dash$/, '');
+        setFormData(prev => ({ ...prev, [key]: type === 'number' ? parseFloat(value) || 0 : value }));
     };
 
-    const handleSelectChange = (value: string) => {
-        setFormData(prev => ({ ...prev, category: value }));
+    const handleSelectChange = (field: 'category' | 'supplierId') => (value: string) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -290,8 +291,19 @@ const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id' | 'recor
                     <Input id="date-dash-exp" type="date" value={formData.date} onChange={handleChange} required />
                 </div>
                 <div className="space-y-2">
+                    <Label htmlFor="supplierId-dash">Suplidor</Label>
+                     <Select onValueChange={handleSelectChange('supplierId')} value={formData.supplierId}>
+                        <SelectTrigger id="supplierId-dash">
+                            <SelectValue placeholder="Selecciona un suplidor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
                     <Label htmlFor="category-dash">Categoría</Label>
-                     <Select onValueChange={handleSelectChange} defaultValue={formData.category}>
+                     <Select onValueChange={handleSelectChange('category')} value={formData.category}>
                         <SelectTrigger id="category-dash">
                             <SelectValue placeholder="Selecciona una categoría" />
                         </SelectTrigger>
@@ -319,7 +331,7 @@ const ExpenseForm = ({ onSave }: { onSave: (expense: Omit<Expense, 'id' | 'recor
 
 export default function DashboardPage() {
   const { toast } = useToast();
-  const { incomes, expenses, products, clients, addIncome, addExpense } = useAppData();
+  const { incomes, expenses, products, clients, suppliers, addIncome, addExpense } = useAppData();
   const { user } = useAuth();
 
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
@@ -336,6 +348,11 @@ export default function DashboardPage() {
     { id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' },
     ...clients
   ], [clients]);
+  
+  const allSuppliers = useMemo(() => [
+    { id: 'generic', name: 'Suplidor Genérico', email: '', phone: '', address: '' },
+    ...suppliers
+  ], [suppliers]);
 
   useEffect(() => {
     // Financial calculations
@@ -571,7 +588,7 @@ export default function DashboardPage() {
                     Añade un nuevo egreso a tus registros.
                   </DialogDescription>
               </DialogHeader>
-              <ExpenseForm onSave={handleExpenseSave} />
+              <ExpenseForm onSave={handleExpenseSave} suppliers={allSuppliers} />
           </DialogContent>
       </Dialog>
     </div>

@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppData } from '@/hooks/use-app-data';
-import type { Expense } from '@/components/app-provider';
+import type { Expense, Supplier } from '@/components/app-provider';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import type { DateRange } from 'react-day-picker';
 import { useToast } from "@/hooks/use-toast";
@@ -22,11 +22,12 @@ import { useAuth } from '@/hooks/use-auth';
 
 const expenseCategories = ["Materia Prima", "Envases", "Etiquetas", "Transportación", "Maquinarias y Herramientas", "Otro"];
 
-const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (expense: Expense) => void }) => {
+const ExpenseForm = ({ expense, onSave, suppliers }: { expense: Expense | null, onSave: (expense: Expense) => void, suppliers: Supplier[] }) => {
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState(0);
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [category, setCategory] = useState('Materia Prima');
+    const [supplierId, setSupplierId] = useState('generic');
 
     useEffect(() => {
         if (expense) {
@@ -34,11 +35,13 @@ const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (ex
             setAmount(expense.amount);
             setDate(format(new Date(expense.date), 'yyyy-MM-dd'));
             setCategory(expense.category);
+            setSupplierId(expense.supplierId || 'generic');
         } else {
             setDescription('');
             setAmount(0);
             setDate(new Date().toISOString().split('T')[0]);
             setCategory('Materia Prima');
+            setSupplierId('generic');
         }
     }, [expense]);
 
@@ -51,6 +54,7 @@ const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (ex
             amount,
             date,
             category,
+            supplierId,
             recordedBy: expense?.recordedBy || ''
         });
     }
@@ -69,6 +73,17 @@ const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (ex
                 <div className="space-y-2">
                     <Label htmlFor="date">Fecha</Label>
                     <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="supplierId">Suplidor</Label>
+                    <Select onValueChange={setSupplierId} value={supplierId}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecciona un suplidor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {suppliers.map(sup => <SelectItem key={sup.id} value={sup.id}>{sup.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="category">Categoría</Label>
@@ -93,7 +108,7 @@ const ExpenseForm = ({ expense, onSave }: { expense: Expense | null, onSave: (ex
 };
 
 export default function EgresosPage() {
-    const { expenses, addExpense, deleteExpense, updateExpense, addMultipleExpenses } = useAppData();
+    const { expenses, addExpense, deleteExpense, updateExpense, addMultipleExpenses, suppliers } = useAppData();
     const { user } = useAuth();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -106,6 +121,11 @@ export default function EgresosPage() {
     });
     const [categoryFilter, setCategoryFilter] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    
+    const allSuppliers = useMemo(() => [
+        { id: 'generic', name: 'Suplidor Genérico', email: '', phone: '', address: '' },
+        ...suppliers
+    ], [suppliers]);
 
     const filteredExpenses = useMemo(() => {
         return expenses.filter(expense => {
@@ -126,14 +146,20 @@ export default function EgresosPage() {
                 return false;
             }
 
-            // Search term filter (searches in description)
-            if (searchTerm && !expense.description.toLowerCase().includes(searchTerm.toLowerCase())) {
-                return false;
+            // Search term filter (searches in description and supplier name)
+            if (searchTerm) {
+                const lowerCaseSearchTerm = searchTerm.toLowerCase();
+                const supplier = allSuppliers.find(s => s.id === expense.supplierId);
+                const inDescription = expense.description.toLowerCase().includes(lowerCaseSearchTerm);
+                const inSupplier = supplier?.name.toLowerCase().includes(lowerCaseSearchTerm);
+                if (!inDescription && !inSupplier) {
+                    return false;
+                }
             }
             
             return true;
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [expenses, dateRange, categoryFilter, searchTerm]);
+    }, [expenses, dateRange, categoryFilter, searchTerm, allSuppliers]);
     
     const clearFilters = () => {
         setDateRange({ from: undefined, to: undefined });
@@ -218,6 +244,8 @@ export default function EgresosPage() {
             'amount': expense.amount,
             'date': expense.date,
             'category': expense.category,
+            'supplier': allSuppliers.find(s => s.id === expense.supplierId)?.name || 'Suplidor Genérico',
+            'recordedBy': expense.recordedBy
         }));
         const csvString = convertArrayOfObjectsToCSV(flattenedExpenses);
         downloadCSV(csvString, 'egresos.csv');
@@ -251,12 +279,16 @@ export default function EgresosPage() {
                         expenseData[header] = values[index]?.trim() || '';
                     });
 
+                    const supplierName = expenseData.supplier || 'Suplidor Genérico';
+                    const supplier = allSuppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase()) || allSuppliers.find(s => s.id === 'generic');
+
                     newExpenses.push({
                         id: expenseData.id || '',
                         description: expenseData.description || 'N/A',
                         amount: parseFloat(expenseData.amount) || 0,
                         date: expenseData.date || new Date().toISOString().split('T')[0],
                         category: expenseData.category || 'Otro',
+                        supplierId: supplier!.id,
                         recordedBy: user.name,
                     });
                 }
@@ -327,7 +359,7 @@ export default function EgresosPage() {
                             </SelectContent>
                         </Select>
                         <Input 
-                            placeholder="Buscar por descripción..." 
+                            placeholder="Buscar por descripción o suplidor..." 
                             value={searchTerm} 
                             onChange={(e) => setSearchTerm(e.target.value)} 
                             className="w-full md:w-[280px]" 
@@ -353,6 +385,7 @@ export default function EgresosPage() {
                             <TableRow>
                                 <TableHead>Descripción</TableHead>
                                 <TableHead className="hidden sm:table-cell">Categoría</TableHead>
+                                <TableHead className="hidden md:table-cell">Suplidor</TableHead>
                                 <TableHead className="hidden lg:table-cell">Registrado por</TableHead>
                                 <TableHead className="text-right">Monto</TableHead>
                                 <TableHead className="text-right hidden md:table-cell">Fecha</TableHead>
@@ -360,10 +393,13 @@ export default function EgresosPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredExpenses.length > 0 ? filteredExpenses.map((expense) => (
+                            {filteredExpenses.length > 0 ? filteredExpenses.map((expense) => {
+                                const supplier = allSuppliers.find(s => s.id === expense.supplierId);
+                                return (
                                 <TableRow key={expense.id}>
                                     <TableCell className="font-medium">{expense.description}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{expense.category}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{supplier?.name || 'Suplidor Genérico'}</TableCell>
                                     <TableCell className="hidden lg:table-cell">{expense.recordedBy}</TableCell>
                                     <TableCell className="text-right">RD${expense.amount.toFixed(2)}</TableCell>
                                     <TableCell className="text-right hidden md:table-cell">{format(new Date(expense.date), 'PPP', { locale: es })}</TableCell>
@@ -398,9 +434,9 @@ export default function EgresosPage() {
                                         </AlertDialog>
                                     </TableCell>
                                 </TableRow>
-                            )) : (
+                            )}) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
+                                    <TableCell colSpan={7} className="h-24 text-center">
                                         No se encontraron resultados.
                                     </TableCell>
                                 </TableRow>
@@ -418,7 +454,7 @@ export default function EgresosPage() {
                             {editingExpense ? 'Actualiza los detalles de tu egreso.' : 'Añade un nuevo egreso a tus registros.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <ExpenseForm expense={editingExpense} onSave={handleSave} />
+                    <ExpenseForm expense={editingExpense} onSave={handleSave} suppliers={allSuppliers} />
                 </DialogContent>
             </Dialog>
         </div>
