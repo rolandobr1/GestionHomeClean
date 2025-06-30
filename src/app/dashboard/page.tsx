@@ -67,12 +67,12 @@ const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income,
 
         const price = currentPriceType === 'retail' ? product.salePriceRetail : product.salePriceWholesale;
         
-        const existingProduct = soldProducts.find(p => p.productId === product.id);
+        const existingProduct = soldProducts.find(p => p.productId === product.id && p.price === price);
 
         if (existingProduct) {
             setSoldProducts(soldProducts.map(p => 
-                p.productId === product.id 
-                ? { ...p, quantity: p.quantity + currentQuantity, price } 
+                p.productId === product.id && p.price === price
+                ? { ...p, quantity: p.quantity + currentQuantity } 
                 : p
             ));
         } else {
@@ -450,15 +450,16 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-       <div className="grid grid-cols-2 gap-2">
+       <div className="flex w-full items-center gap-2">
             <Button
-              className="bg-green-600 hover:bg-green-700 text-primary-foreground"
+              className="flex-1 bg-green-600 hover:bg-green-700 text-primary-foreground"
               onClick={() => setIsIncomeDialogOpen(true)}
             >
                 <PlusCircle className="mr-2 h-5 w-5"/>
                 Ingreso
             </Button>
             <Button
+              className="flex-1"
               variant="destructive"
               onClick={() => setIsExpenseDialogOpen(true)}
             >
