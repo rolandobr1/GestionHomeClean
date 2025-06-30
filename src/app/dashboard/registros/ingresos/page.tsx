@@ -612,18 +612,18 @@ export default function IngresosPage() {
     return (
         <div className="space-y-6">
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
-             <div className="flex flex-col sm:flex-row items-end sm:items-start sm:justify-end gap-2">
+             <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />
-                    Importar
+                    Imp.
                 </Button>
                 <Button variant="outline" onClick={handleExport}>
                     <Download className="mr-2 h-4 w-4" />
-                    Exportar
+                    Exp.
                 </Button>
                 <Button onClick={() => { setEditingIncome(null); setIsDialogOpen(true); }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Añadir Ingreso
+                    Ingreso
                 </Button>
             </div>
 
