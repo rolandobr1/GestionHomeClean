@@ -10,6 +10,11 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 export const metadata: Metadata = {
   title: "QuimioGest",
   description: "Gestión inteligente para tu negocio de productos químicos.",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+  },
+  themeColor: "#3F51B5",
 };
 
 export default function RootLayout({
@@ -19,9 +24,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <head>
-        <meta name="theme-color" content="#3F51B5" />
-      </head>
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased",
