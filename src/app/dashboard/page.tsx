@@ -36,7 +36,7 @@ import { useAppData } from '@/hooks/use-app-data';
 import type { Income, Expense, SoldProduct, Product, Client, Supplier } from '@/components/app-provider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import { subMonths, format, getMonth, getYear } from 'date-fns';
+import { subMonths, format, getMonth, getYear, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -51,8 +51,11 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income, 'id' | 'recordedBy'>) => void, income: Income | null, clients: Client[] }) => {
-    const { products: allProducts } = useAppData();
+const IncomeForm = ({ onClose }: { onClose: () => void }) => {
+    const { products: allProducts, clients: allClients, addIncome } = useAppData();
+    const { user } = useAuth();
+    const { toast } = useToast();
+    const [isSaving, setIsSaving] = useState(false);
     const [clientId, setClientId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -96,22 +99,38 @@ const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income,
 
     const totalAmount = soldProducts.reduce((acc, p) => acc + (p.price * p.quantity), 0);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (soldProducts.length === 0) {
             alert("Debes agregar al menos un producto.");
             return;
         }
+        if (!user) {
+            toast({ title: "Error", description: "No se ha identificado al usuario.", variant: "destructive"});
+            return;
+        }
 
-        onSave({
-            clientId,
-            paymentMethod,
-            date,
-            products: soldProducts,
-            totalAmount,
-            category: 'Venta de Producto',
-        });
-        setSoldProducts([]); // Clear form after save
+        setIsSaving(true);
+        try {
+            await addIncome({
+                clientId,
+                paymentMethod,
+                date,
+                products: soldProducts,
+                totalAmount,
+                category: 'Venta de Producto',
+                recordedBy: user.name,
+            });
+            toast({
+                title: "Ingreso Registrado",
+                description: `Se ha añadido un ingreso por RD$${totalAmount.toFixed(2)}.`,
+            });
+            onClose();
+        } catch (error) {
+             toast({ title: "Error", description: "No se pudo registrar el ingreso.", variant: "destructive"});
+        } finally {
+            setIsSaving(false);
+        }
     }
     
     return (
@@ -120,12 +139,12 @@ const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income,
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="clientId-dash">Cliente</Label>
-                        <Select onValueChange={setClientId} defaultValue={clientId}>
+                        <Select onValueChange={setClientId} defaultValue={clientId} disabled={isSaving}>
                             <SelectTrigger id="clientId-dash">
                                 <SelectValue placeholder="Selecciona un cliente" />
                             </SelectTrigger>
                             <SelectContent>
-                                {clients.map(client => (
+                                {allClients.map(client => (
                                     <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
                                 ))}
                             </SelectContent>
@@ -133,13 +152,13 @@ const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income,
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="date-dash">Fecha</Label>
-                        <Input id="date-dash" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                        <Input id="date-dash" type="date" value={date} onChange={e => setDate(e.target.value)} required disabled={isSaving}/>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="paymentMethod-dash">Método Pago</Label>
-                        <Select onValueChange={(value: 'contado' | 'credito') => setPaymentMethod(value)} defaultValue={paymentMethod}>
+                        <Select onValueChange={(value: 'contado' | 'credito') => setPaymentMethod(value)} defaultValue={paymentMethod} disabled={isSaving}>
                             <SelectTrigger id="paymentMethod-dash">
                                 <SelectValue placeholder="Selecciona un método" />
                             </SelectTrigger>
@@ -159,7 +178,7 @@ const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income,
                         <div className="grid grid-cols-3 gap-4">
                              <div className="space-y-2 col-span-2">
                                 <Label htmlFor="productId-dash">Producto</Label>
-                                <Select onValueChange={setCurrentProduct} value={currentProduct}>
+                                <Select onValueChange={setCurrentProduct} value={currentProduct} disabled={isSaving}>
                                     <SelectTrigger id="productId-dash">
                                         <SelectValue placeholder="Selecciona un producto" />
                                     </SelectTrigger>
@@ -172,17 +191,17 @@ const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income,
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="quantity-dash">Cantidad</Label>
-                                <Input id="quantity-dash" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" inputMode="decimal" onFocus={(e) => e.target.select()} />
+                                <Input id="quantity-dash" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
                             </div>
                         </div>
                         <div className="space-y-2">
                              <Label>Tipo de Precio</Label>
-                            <RadioGroup value={currentPriceType} onValueChange={(value: 'retail' | 'wholesale') => setCurrentPriceType(value)} className="flex gap-4">
+                            <RadioGroup value={currentPriceType} onValueChange={(value: 'retail' | 'wholesale') => setCurrentPriceType(value)} className="flex gap-4" disabled={isSaving}>
                                 <div className="flex items-center space-x-2"><RadioGroupItem value="retail" id="retail-dash" /><Label htmlFor="retail-dash">Detalle</Label></div>
                                 <div className="flex items-center space-x-2"><RadioGroupItem value="wholesale" id="wholesale-dash" /><Label htmlFor="wholesale-dash">Por Mayor</Label></div>
                             </RadioGroup>
                         </div>
-                        <Button type="button" onClick={handleAddProduct} className="w-full" disabled={!currentProduct}>Añadir Producto a la Venta</Button>
+                        <Button type="button" onClick={handleAddProduct} className="w-full" disabled={!currentProduct || isSaving}>Añadir Producto a la Venta</Button>
                     </Card>
                 </div>
 
@@ -203,14 +222,14 @@ const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income,
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {soldProducts.map(p => (
-                                                <TableRow key={p.productId}>
+                                            {soldProducts.map((p, index) => (
+                                                <TableRow key={p.productId + index}>
                                                     <TableCell>{p.name}</TableCell>
                                                     <TableCell className="text-center">{p.quantity}</TableCell>
                                                     <TableCell className="text-right">RD${p.price.toFixed(2)}</TableCell>
                                                     <TableCell className="text-right">RD${(p.quantity * p.price).toFixed(2)}</TableCell>
                                                     <TableCell>
-                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(p.productId)}>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(p.productId)} disabled={isSaving}>
                                                             <Trash2 className="h-4 w-4 text-destructive"/>
                                                         </Button>
                                                     </TableCell>
@@ -220,11 +239,11 @@ const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income,
                                     </Table>
                                 </div>
                                 <div className="md:hidden space-y-3 p-3">
-                                    {soldProducts.map(p => (
-                                        <div key={p.productId} className="rounded-lg border bg-card text-card-foreground shadow-sm p-3 space-y-2">
+                                    {soldProducts.map((p, index) => (
+                                        <div key={p.productId + index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-3 space-y-2">
                                             <div className="flex justify-between items-start">
                                                 <p className="font-semibold pr-2">{p.name}</p>
-                                                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleRemoveProduct(p.productId)}>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleRemoveProduct(p.productId)} disabled={isSaving}>
                                                     <Trash2 className="h-4 w-4 text-destructive"/>
                                                 </Button>
                                             </div>
@@ -247,16 +266,20 @@ const IncomeForm = ({ onSave, income, clients }: { onSave: (income: Omit<Income,
                 </div>
                 <div className="flex justify-end gap-2">
                     <DialogClose asChild>
-                         <Button type="button" variant="secondary">Cancelar</Button>
+                         <Button type="button" variant="secondary" disabled={isSaving}>Cancelar</Button>
                     </DialogClose>
-                    <Button type="submit">Guardar</Button>
+                    <Button type="submit" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar'}</Button>
                 </div>
             </DialogFooter>
         </form>
     );
 };
 
-const ExpenseForm = ({ onSave, suppliers }: { onSave: (expense: Omit<Expense, 'id' | 'recordedBy'>) => void, suppliers: Supplier[] }) => {
+const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
+    const { suppliers, addExpense } = useAppData();
+    const { user } = useAuth();
+    const { toast } = useToast();
+    const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({
         description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Materia Prima', supplierId: 'generic'
     });
@@ -271,9 +294,26 @@ const ExpenseForm = ({ onSave, suppliers }: { onSave: (expense: Omit<Expense, 'i
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(formData);
+        if (!user) {
+            toast({ title: "Error", description: "No se ha identificado al usuario.", variant: "destructive"});
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            await addExpense({ ...formData, recordedBy: user.name });
+            toast({
+                title: "Egreso Registrado",
+                description: `Se ha añadido un egreso por RD$${formData.amount.toFixed(2)}.`,
+            });
+            onClose();
+        } catch (error) {
+            toast({ title: "Error", description: "No se pudo registrar el egreso.", variant: "destructive"});
+        } finally {
+            setIsSaving(false);
+        }
     }
     
     return (
@@ -281,7 +321,7 @@ const ExpenseForm = ({ onSave, suppliers }: { onSave: (expense: Omit<Expense, 'i
             <div className="grid gap-4 py-4">
                 <div className="space-y-2">
                     <Label htmlFor="supplierId-dash">Suplidor</Label>
-                     <Select onValueChange={handleSelectChange('supplierId')} value={formData.supplierId}>
+                     <Select onValueChange={handleSelectChange('supplierId')} value={formData.supplierId} disabled={isSaving}>
                         <SelectTrigger id="supplierId-dash">
                             <SelectValue placeholder="Selecciona un suplidor" />
                         </SelectTrigger>
@@ -292,7 +332,7 @@ const ExpenseForm = ({ onSave, suppliers }: { onSave: (expense: Omit<Expense, 'i
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="category-dash">Categoría</Label>
-                     <Select onValueChange={handleSelectChange('category')} value={formData.category}>
+                     <Select onValueChange={handleSelectChange('category')} value={formData.category} disabled={isSaving}>
                         <SelectTrigger id="category-dash">
                             <SelectValue placeholder="Selecciona una categoría" />
                         </SelectTrigger>
@@ -308,22 +348,22 @@ const ExpenseForm = ({ onSave, suppliers }: { onSave: (expense: Omit<Expense, 'i
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="description-dash">Descripción</Label>
-                    <Input id="description-dash" value={formData.description} onChange={handleChange} required />
+                    <Input id="description-dash" value={formData.description} onChange={handleChange} required disabled={isSaving}/>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="amount-dash">Monto</Label>
-                    <Input id="amount-dash" type="number" value={formData.amount} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} />
+                    <Input id="amount-dash" type="number" value={formData.amount} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="date-dash-exp">Fecha</Label>
-                    <Input id="date-dash-exp" type="date" value={formData.date} onChange={handleChange} required />
+                    <Input id="date-dash-exp" type="date" value={formData.date} onChange={handleChange} required disabled={isSaving}/>
                 </div>
             </div>
              <DialogFooter>
                 <DialogClose asChild>
-                     <Button type="button" variant="secondary">Cancelar</Button>
+                     <Button type="button" variant="secondary" disabled={isSaving}>Cancelar</Button>
                 </DialogClose>
-                <Button type="submit">Guardar</Button>
+                <Button type="submit" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar'}</Button>
             </DialogFooter>
         </form>
     );
@@ -331,10 +371,8 @@ const ExpenseForm = ({ onSave, suppliers }: { onSave: (expense: Omit<Expense, 'i
 
 
 export default function DashboardPage() {
-  const { toast } = useToast();
-  const { incomes, expenses, products, clients, suppliers, addIncome, addExpense } = useAppData();
-  const { user } = useAuth();
-
+  const { incomes, expenses, products, clients, suppliers } = useAppData();
+  
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
   
@@ -345,24 +383,16 @@ export default function DashboardPage() {
   const [lowStockItems, setLowStockItems] = useState<Product[]>([]);
   const [chartData, setChartData] = useState<{ month: string, income: number, expense: number }[]>([]);
 
-  const allClients = useMemo(() => [
-    { id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' },
-    ...clients
-  ], [clients]);
-  
-  const allSuppliers = useMemo(() => [
-    { id: 'generic', name: 'Suplidor Genérico', email: '', phone: '', address: '' },
-    ...suppliers
-  ], [suppliers]);
-
   useEffect(() => {
     // Financial calculations
     const today = new Date();
+    const firstDayOfMonth = startOfMonth(today);
+    const lastDayOfMonth = endOfMonth(today);
     
     const currentMonthIncome = incomes
       .filter(i => {
         const incomeDate = new Date(i.date);
-        return incomeDate.getUTCMonth() === today.getUTCMonth() && incomeDate.getUTCFullYear() === today.getUTCFullYear();
+        return incomeDate >= firstDayOfMonth && incomeDate <= lastDayOfMonth;
       })
       .reduce((acc, income) => acc + income.totalAmount, 0);
     setTotalIncome(currentMonthIncome);
@@ -374,7 +404,7 @@ export default function DashboardPage() {
     const currentMonthExpenses = expenses
       .filter(e => {
         const expenseDate = new Date(e.date);
-        return expenseDate.getUTCMonth() === today.getUTCMonth() && expenseDate.getUTCFullYear() === today.getUTCFullYear();
+        return expenseDate >= firstDayOfMonth && expenseDate <= lastDayOfMonth;
       })
       .reduce((acc, expense) => acc + expense.amount, 0);
     setTotalExpenses(currentMonthExpenses);
@@ -422,32 +452,9 @@ export default function DashboardPage() {
     // Inventory calculations
     const lowStock = products.filter(p => p.stock <= p.reorderLevel);
     setLowStockItems(lowStock);
-    
-    // NOTE: Inventory value calculation is missing product cost.
-    // This would require adding a `costPrice` to the Product type.
-    // For now, it will remain at 0.
 
   }, [incomes, expenses, products]);
 
-  const handleIncomeSave = (income: Omit<Income, 'id' | 'recordedBy'>) => {
-      if (!user) return;
-      addIncome({ ...income, recordedBy: user.name });
-      setIsIncomeDialogOpen(false);
-      toast({
-          title: "Ingreso Registrado",
-          description: `Se ha añadido un ingreso por RD$${income.totalAmount.toFixed(2)}.`,
-      });
-  };
-
-  const handleExpenseSave = (expense: Omit<Expense, 'id' | 'recordedBy'>) => {
-      if (!user) return;
-      addExpense({ ...expense, recordedBy: user.name });
-      setIsExpenseDialogOpen(false);
-      toast({
-          title: "Egreso Registrado",
-          description: `Se ha añadido un egreso por RD$${expense.amount.toFixed(2)}.`,
-      });
-  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -575,7 +582,7 @@ export default function DashboardPage() {
                       Añade un nuevo ingreso a tus registros.
                   </DialogDescription>
               </DialogHeader>
-              <IncomeForm onSave={handleIncomeSave} income={null} clients={allClients} />
+              <IncomeForm onClose={() => setIsIncomeDialogOpen(false)} />
           </DialogContent>
       </Dialog>
 
@@ -587,13 +594,9 @@ export default function DashboardPage() {
                     Añade un nuevo egreso a tus registros.
                   </DialogDescription>
               </DialogHeader>
-              <ExpenseForm onSave={handleExpenseSave} suppliers={allSuppliers} />
+              <ExpenseForm onClose={() => setIsExpenseDialogOpen(false)} />
           </DialogContent>
       </Dialog>
     </div>
   );
 }
-
-    
-
-    

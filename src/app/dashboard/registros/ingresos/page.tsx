@@ -29,8 +29,9 @@ import { useAuth } from '@/hooks/use-auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave: (income: Income) => void, clients: Client[] }) => {
+const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | null, onSave: (income: Income | Omit<Income, 'id'>) => Promise<void>, clients: Client[], onClose: () => void }) => {
     const { products: allProducts } = useAppData();
+    const [isSaving, setIsSaving] = useState(false);
     const [clientId, setClientId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -44,7 +45,7 @@ const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave
         if (income) {
             setClientId(income.clientId);
             setPaymentMethod(income.paymentMethod);
-            setDate(income.date);
+            setDate(format(new Date(income.date), 'yyyy-MM-dd'));
             setSoldProducts(income.products);
         } else {
             setClientId('generic');
@@ -88,23 +89,38 @@ const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave
 
     const totalAmount = soldProducts.reduce((acc, p) => acc + (p.price * p.quantity), 0);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (soldProducts.length === 0) {
              alert("Debes agregar al menos un producto.");
             return;
         }
-
-        onSave({
-            id: income?.id || '',
-            clientId,
-            paymentMethod,
-            date,
-            products: soldProducts,
-            totalAmount,
-            category: 'Venta de Producto',
-            recordedBy: income?.recordedBy || '',
-        });
+        setIsSaving(true);
+        try {
+            if (income) {
+                 await onSave({
+                    ...income,
+                    clientId,
+                    paymentMethod,
+                    date,
+                    products: soldProducts,
+                    totalAmount
+                });
+            } else {
+                await onSave({
+                    clientId,
+                    paymentMethod,
+                    date,
+                    products: soldProducts,
+                    totalAmount,
+                    category: 'Venta de Producto',
+                    recordedBy: '', // Will be set in the provider
+                });
+            }
+            onClose();
+        } finally {
+            setIsSaving(false);
+        }
     }
     
     return (
@@ -113,7 +129,7 @@ const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="clientId">Cliente</Label>
-                        <Select onValueChange={setClientId} value={clientId}>
+                        <Select onValueChange={setClientId} value={clientId} disabled={isSaving}>
                             <SelectTrigger id="clientId">
                                 <SelectValue placeholder="Selecciona un cliente" />
                             </SelectTrigger>
@@ -126,13 +142,13 @@ const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="date">Fecha</Label>
-                        <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                        <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} required disabled={isSaving} />
                     </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="paymentMethod">Método Pago</Label>
-                        <Select onValueChange={(value: 'contado' | 'credito') => setPaymentMethod(value)} value={paymentMethod}>
+                        <Select onValueChange={(value: 'contado' | 'credito') => setPaymentMethod(value)} value={paymentMethod} disabled={isSaving}>
                             <SelectTrigger id="paymentMethod">
                                 <SelectValue placeholder="Selecciona un método" />
                             </SelectTrigger>
@@ -152,7 +168,7 @@ const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave
                         <div className="grid grid-cols-3 gap-4">
                              <div className="space-y-2 col-span-2">
                                 <Label htmlFor="productId-form">Producto</Label>
-                                <Select onValueChange={setCurrentProduct} value={currentProduct}>
+                                <Select onValueChange={setCurrentProduct} value={currentProduct} disabled={isSaving}>
                                     <SelectTrigger id="productId-form">
                                         <SelectValue placeholder="Selecciona un producto" />
                                     </SelectTrigger>
@@ -165,17 +181,17 @@ const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="quantity">Cantidad</Label>
-                                <Input id="quantity" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" inputMode="decimal" onFocus={(e) => e.target.select()} />
+                                <Input id="quantity" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
                             </div>
                         </div>
                         <div className="space-y-2">
                              <Label>Tipo de Precio</Label>
-                            <RadioGroup value={currentPriceType} onValueChange={(value: 'retail' | 'wholesale') => setCurrentPriceType(value)} className="flex gap-4">
+                            <RadioGroup value={currentPriceType} onValueChange={(value: 'retail' | 'wholesale') => setCurrentPriceType(value)} className="flex gap-4" disabled={isSaving}>
                                 <div className="flex items-center space-x-2"><RadioGroupItem value="retail" id="retail" /><Label htmlFor="retail">Detalle</Label></div>
                                 <div className="flex items-center space-x-2"><RadioGroupItem value="wholesale" id="wholesale" /><Label htmlFor="wholesale">Por Mayor</Label></div>
                             </RadioGroup>
                         </div>
-                        <Button type="button" onClick={handleAddProduct} className="w-full" disabled={!currentProduct}>Añadir Producto a la Venta</Button>
+                        <Button type="button" onClick={handleAddProduct} className="w-full" disabled={!currentProduct || isSaving}>Añadir Producto a la Venta</Button>
                     </Card>
                 </div>
 
@@ -196,14 +212,14 @@ const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {soldProducts.map(p => (
-                                                <TableRow key={p.productId}>
+                                            {soldProducts.map((p, index) => (
+                                                <TableRow key={p.productId + index}>
                                                     <TableCell>{p.name}</TableCell>
                                                     <TableCell className="text-center">{p.quantity}</TableCell>
                                                     <TableCell className="text-right">RD${p.price.toFixed(2)}</TableCell>
                                                     <TableCell className="text-right">RD${(p.quantity * p.price).toFixed(2)}</TableCell>
                                                     <TableCell>
-                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(p.productId)}>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(p.productId)} disabled={isSaving}>
                                                             <Trash2 className="h-4 w-4 text-destructive"/>
                                                         </Button>
                                                     </TableCell>
@@ -213,11 +229,11 @@ const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave
                                     </Table>
                                 </div>
                                 <div className="md:hidden space-y-3 p-3">
-                                    {soldProducts.map(p => (
-                                        <div key={p.productId} className="rounded-lg border bg-card text-card-foreground shadow-sm p-3 space-y-2">
+                                    {soldProducts.map((p, index) => (
+                                        <div key={p.productId + index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-3 space-y-2">
                                             <div className="flex justify-between items-start">
                                                 <p className="font-semibold pr-2">{p.name}</p>
-                                                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleRemoveProduct(p.productId)}>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleRemoveProduct(p.productId)} disabled={isSaving}>
                                                     <Trash2 className="h-4 w-4 text-destructive"/>
                                                 </Button>
                                             </div>
@@ -240,9 +256,9 @@ const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave
                 </div>
                 <div className="flex justify-end gap-2">
                     <DialogClose asChild>
-                         <Button type="button" variant="secondary">Cancelar</Button>
+                         <Button type="button" variant="secondary" disabled={isSaving}>Cancelar</Button>
                     </DialogClose>
-                    <Button type="submit">Guardar</Button>
+                    <Button type="submit" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar'}</Button>
                 </div>
             </DialogFooter>
         </form>
@@ -314,25 +330,29 @@ export default function IngresosPage() {
         setIsDialogOpen(true);
     };
 
-    const handleDelete = (incomeId: string) => {
-        deleteIncome(incomeId);
+    const handleDelete = async (incomeId: string) => {
+        await deleteIncome(incomeId);
     };
 
-    const handleSave = (income: Income) => {
+    const handleSave = async (incomeData: Income | Omit<Income, 'id'>) => {
         if (!user) {
             toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
             return;
         }
-        const incomeToSave: Income = { ...income, recordedBy: user.name };
         
-        if (editingIncome) {
-            updateIncome(incomeToSave);
+        if ('id' in incomeData && incomeData.id) {
+            await updateIncome(incomeData as Income);
         } else {
-            const { id, ...newIncomeData } = incomeToSave;
-            addIncome(newIncomeData);
+            const incomeToSave = { ...incomeData, recordedBy: user.name };
+            await addIncome(incomeToSave);
         }
-        setEditingIncome(null);
-        setIsDialogOpen(false);
+    };
+    
+    const handleDialogChange = (open: boolean) => {
+        setIsDialogOpen(open);
+        if (!open) {
+            setEditingIncome(null);
+        }
     };
 
     const handleGenerateInvoice = (income: Income) => {
@@ -533,12 +553,12 @@ export default function IngresosPage() {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file || !user) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const text = e.target?.result as string;
                 const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -660,7 +680,7 @@ export default function IngresosPage() {
                     });
                 }
                 
-                addMultipleIncomes(newIncomes);
+                await addMultipleIncomes(newIncomes);
 
                 toast({
                     title: "Importación Exitosa",
@@ -840,7 +860,7 @@ export default function IngresosPage() {
                                                 <AlertDialogHeader>
                                                 <AlertDialogTitle>¿Estás seguro de que quieres eliminar este ingreso?</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del ingreso.
+                                                    Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del ingreso y devolverá los productos al stock.
                                                 </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
@@ -863,7 +883,7 @@ export default function IngresosPage() {
                 </CardContent>
             </Card>
 
-             <Dialog open={isDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setEditingIncome(null); setIsDialogOpen(isOpen);}}>
+             <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>{editingIncome ? 'Editar Ingreso' : 'Añadir Ingreso'}</DialogTitle>
@@ -871,7 +891,7 @@ export default function IngresosPage() {
                             {editingIncome ? 'Actualiza los detalles de tu ingreso.' : 'Añade un nuevo ingreso a tus registros.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <IncomeForm income={editingIncome} onSave={handleSave} clients={allClients} />
+                    <IncomeForm income={editingIncome} onSave={handleSave} clients={allClients} onClose={() => handleDialogChange(false)} />
                 </DialogContent>
             </Dialog>
 

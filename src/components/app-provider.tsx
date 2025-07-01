@@ -90,14 +90,14 @@ interface AppContextType {
   clients: Client[];
   suppliers: Supplier[];
   invoiceSettings: InvoiceSettings;
-  addIncome: (income: Omit<Income, 'id'>) => void;
-  addMultipleIncomes: (incomes: Income[]) => void;
-  deleteIncome: (id: string) => void;
-  updateIncome: (income: Income) => void;
-  addExpense: (expense: Omit<Expense, 'id'>) => void;
-  addMultipleExpenses: (expenses: Expense[]) => void;
-  deleteExpense: (id: string) => void;
-  updateExpense: (expense: Expense) => void;
+  addIncome: (income: Omit<Income, 'id'>) => Promise<void>;
+  addMultipleIncomes: (incomes: Income[]) => Promise<void>;
+  deleteIncome: (id: string) => Promise<void>;
+  updateIncome: (income: Income) => Promise<void>;
+  addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
+  addMultipleExpenses: (expenses: Expense[]) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
+  updateExpense: (expense: Expense) => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   addMultipleProducts: (products: Product[]) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
@@ -136,119 +136,113 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     shareMessage: "Aquí está tu factura de QuimioGest.",
   });
 
-  // Fetch Products from Firestore
+  // --- Firestore Listeners ---
   useEffect(() => {
-    if (db) {
-      const unsubscribe = onSnapshot(collection(db, 'products'), (snapshot) => {
-        const productsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
-        setProducts(productsData);
-      });
-      return () => unsubscribe();
-    }
-  }, []);
+    if (!db) return;
+    const unsubscribers: (() => void)[] = [];
 
-  // Fetch Clients from Firestore
-  useEffect(() => {
-    if (db) {
-      const unsubscribe = onSnapshot(collection(db, 'clients'), (snapshot) => {
-        const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Client[];
-        setClients(clientsData);
-      });
-      return () => unsubscribe();
-    }
-  }, []);
+    const collectionsToSync: { name: string, setter: React.Dispatch<any> }[] = [
+      { name: 'incomes', setter: setIncomes },
+      { name: 'expenses', setter: setExpenses },
+      { name: 'products', setter: setProducts },
+      { name: 'clients', setter: setClients },
+      { name: 'suppliers', setter: setSuppliers },
+      { name: 'rawMaterials', setter: setRawMaterials },
+    ];
 
-  // Fetch Suppliers from Firestore
-  useEffect(() => {
-    if (db) {
-      const unsubscribe = onSnapshot(collection(db, 'suppliers'), (snapshot) => {
-        const suppliersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Supplier[];
-        setSuppliers(suppliersData);
+    collectionsToSync.forEach(({ name, setter }) => {
+      const q = collection(db, name);
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setter(data);
       });
-      return () => unsubscribe();
-    }
-  }, []);
-  
-  // Fetch Raw Materials from Firestore
-  useEffect(() => {
-    if (db) {
-      const unsubscribe = onSnapshot(collection(db, 'rawMaterials'), (snapshot) => {
-        const materialsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as RawMaterial[];
-        setRawMaterials(materialsData);
-      });
-      return () => unsubscribe();
-    }
+      unsubscribers.push(unsubscribe);
+    });
+
+    return () => unsubscribers.forEach(unsub => unsub());
   }, []);
 
 
   const updateInvoiceSettings = (settings: Partial<InvoiceSettings>) => {
     setInvoiceSettings(prev => ({ ...prev, ...settings }));
   };
+  
+  // --- Income Management with Firestore ---
+  const addIncome = async (income: Omit<Income, 'id'>) => {
+    if (!db) return;
+    const batch = writeBatch(db);
+    
+    // Create new income document
+    const incomeRef = doc(collection(db, "incomes"));
+    batch.set(incomeRef, income);
 
-  const addIncome = (income: Omit<Income, 'id'>) => {
+    // Update product stock
     const quantitySoldMap = new Map<string, number>();
     income.products.forEach(soldProduct => {
         quantitySoldMap.set(soldProduct.productId, (quantitySoldMap.get(soldProduct.productId) || 0) + soldProduct.quantity);
     });
     
-    if (db) {
-      const batch = writeBatch(db);
-      products.forEach(product => {
-        if (quantitySoldMap.has(product.id)) {
-          const quantitySold = quantitySoldMap.get(product.id)!;
-          const productRef = doc(db, "products", product.id);
-          batch.update(productRef, { stock: product.stock - quantitySold });
-        }
-      });
-      batch.commit();
-    }
+    products.forEach(product => {
+      if (quantitySoldMap.has(product.id)) {
+        const quantitySold = quantitySoldMap.get(product.id)!;
+        const productRef = doc(db, "products", product.id);
+        batch.update(productRef, { stock: product.stock - quantitySold });
+      }
+    });
 
-    setIncomes(prev => [...prev, { ...income, id: new Date().toISOString() + Math.random() }]);
+    await batch.commit();
   };
 
-  const addMultipleIncomes = (incomesToUpsert: Income[]) => {
+  const addMultipleIncomes = async (incomesToUpsert: Income[]) => {
+      if (!db) return;
       const stockChanges = new Map<string, number>();
       const existingIncomesMap = new Map(incomes.map(i => [i.id, i]));
+      const batch = writeBatch(db);
 
       incomesToUpsert.forEach(income => {
           const originalIncome = income.id ? existingIncomesMap.get(income.id) : undefined;
           
-          if (originalIncome) { // This is an UPDATE, so add back original stock
+          if (originalIncome) { 
+              // UPDATE: add back original stock
               originalIncome.products.forEach(p => {
                   stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
               });
           }
-          // Subtract new/updated stock
+          // ADD/UPDATE: subtract new stock
           income.products.forEach(p => {
               stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
           });
+          
+          // Add or update income doc in batch
+          const {id, ...incomeData} = income;
+          const docRef = id ? doc(db, 'incomes', id) : doc(collection(db, 'incomes'));
+          batch.set(docRef, incomeData);
       });
       
-      if (db) {
-        const batch = writeBatch(db);
-        products.forEach(product => {
-            if (stockChanges.has(product.id)) {
-                const productRef = doc(db, "products", product.id);
-                batch.update(productRef, { stock: product.stock + stockChanges.get(product.id)! });
-            }
-        });
-        batch.commit();
-      }
-
-      setIncomes(prevIncomes => {
-        const incomeMap = new Map(prevIncomes.map(i => [i.id, i]));
-        incomesToUpsert.forEach(income => {
-          const id = income.id || (new Date().toISOString() + Math.random());
-          incomeMap.set(id, { ...income, id });
-        });
-        return Array.from(incomeMap.values());
+      // Add stock updates to batch
+      products.forEach(product => {
+          if (stockChanges.has(product.id)) {
+              const productRef = doc(db, "products", product.id);
+              const currentStock = products.find(p => p.id === product.id)?.stock || 0;
+              batch.update(productRef, { stock: currentStock + stockChanges.get(product.id)! });
+          }
       });
+      await batch.commit();
   };
 
-  const updateIncome = (updatedIncome: Income) => {
+  const updateIncome = async (updatedIncome: Income) => {
+      if (!db) return;
       const originalIncome = incomes.find(i => i.id === updatedIncome.id);
+      
+      const batch = writeBatch(db);
+      
+      // Update income doc
+      const {id, ...incomeData} = updatedIncome;
+      const incomeRef = doc(db, 'incomes', id);
+      batch.update(incomeRef, incomeData);
 
-      if (originalIncome && db) {
+      // Update stock if original income is found
+      if (originalIncome) {
           const stockChanges = new Map<string, number>();
           // + for original items, - for updated items
           originalIncome.products.forEach(p => {
@@ -258,216 +252,179 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
           });
           
-          const batch = writeBatch(db);
           products.forEach(product => {
               if (stockChanges.has(product.id)) {
                   const productRef = doc(db, "products", product.id);
-                  batch.update(productRef, { stock: product.stock + stockChanges.get(product.id)! });
+                  const currentStock = products.find(p => p.id === product.id)?.stock || 0;
+                  batch.update(productRef, { stock: currentStock + stockChanges.get(product.id)! });
               }
           });
-          batch.commit();
       }
       
-      setIncomes(prev => prev.map(i => i.id === updatedIncome.id ? updatedIncome : i));
+      await batch.commit();
   };
 
-  const deleteIncome = (id: string) => {
+  const deleteIncome = async (id: string) => {
+    if (!db) return;
     const incomeToDelete = incomes.find(i => i.id === id);
+    const batch = writeBatch(db);
 
-    if (incomeToDelete && db) {
+    // Delete income doc
+    const incomeRef = doc(db, 'incomes', id);
+    batch.delete(incomeRef);
+
+    // Return stock
+    if (incomeToDelete) {
         const stockToReturn = new Map<string, number>();
         incomeToDelete.products.forEach(p => {
             stockToReturn.set(p.productId, (stockToReturn.get(p.productId) || 0) + p.quantity);
         });
 
-        const batch = writeBatch(db);
         products.forEach(product => {
             if (stockToReturn.has(product.id)) {
                 const productRef = doc(db, "products", product.id);
-                batch.update(productRef, { stock: product.stock + stockToReturn.get(product.id)! });
+                const currentStock = products.find(p => p.id === product.id)?.stock || 0;
+                batch.update(productRef, { stock: currentStock + stockToReturn.get(product.id)! });
             }
         });
-        batch.commit();
     }
 
-    setIncomes(prev => prev.filter(i => i.id !== id));
+    await batch.commit();
   };
 
-  const addExpense = (expense: Omit<Expense, 'id'>) => {
-    setExpenses(prev => [...prev, { ...expense, id: new Date().toISOString() + Math.random() }]);
+  // --- Expense Management with Firestore ---
+  const addExpense = async (expense: Omit<Expense, 'id'>) => {
+    if(db) await addDoc(collection(db, 'expenses'), expense);
   };
 
-  const addMultipleExpenses = (expensesToUpsert: Expense[]) => {
-      setExpenses(prevExpenses => {
-        const expenseMap = new Map(prevExpenses.map(e => [e.id, e]));
-        expensesToUpsert.forEach(expense => {
-            const id = expense.id || (new Date().toISOString() + Math.random());
-            expenseMap.set(id, { ...expense, id });
-        });
-        return Array.from(expenseMap.values());
+  const addMultipleExpenses = async (expensesToUpsert: Expense[]) => {
+      if (!db) return;
+      const batch = writeBatch(db);
+      expensesToUpsert.forEach(expense => {
+          const { id, ...expenseData } = expense;
+          const docRef = id ? doc(db, 'expenses', id) : doc(collection(db, 'expenses'));
+          batch.set(docRef, expenseData);
       });
+      await batch.commit();
   }
 
-  const updateExpense = (updatedExpense: Expense) => {
-    setExpenses(prev => prev.map(e => e.id === updatedExpense.id ? updatedExpense : e));
+  const updateExpense = async (updatedExpense: Expense) => {
+    if(db) {
+        const { id, ...expenseData } = updatedExpense;
+        await updateDoc(doc(db, 'expenses', id), expenseData);
+    }
   };
 
-  const deleteExpense = (id: string) => {
-    setExpenses(prev => prev.filter(e => e.id !== id));
+  const deleteExpense = async (id: string) => {
+    if(db) await deleteDoc(doc(db, 'expenses', id));
   };
 
   // --- Product Management with Firestore ---
   const addProduct = async (product: Omit<Product, 'id'>) => {
-    if (db) {
-      await addDoc(collection(db, 'products'), product);
-    }
+    if (db) await addDoc(collection(db, 'products'), product);
   }
 
   const addMultipleProducts = async (productsToUpsert: Product[]) => {
-    if (db) {
-      const batch = writeBatch(db);
-      productsToUpsert.forEach(product => {
-        const { id, ...productData } = product;
-        let docRef;
-        if (id) {
-          docRef = doc(db, 'products', id);
-          batch.set(docRef, productData);
-        } else {
-          docRef = doc(collection(db, 'products'));
-          batch.set(docRef, productData);
-        }
-      });
-      await batch.commit();
-    }
+    if (!db) return;
+    const batch = writeBatch(db);
+    productsToUpsert.forEach(product => {
+      const { id, ...productData } = product;
+      const docRef = id ? doc(db, 'products', id) : doc(collection(db, 'products'));
+      batch.set(docRef, productData);
+    });
+    await batch.commit();
   }
 
   const updateProduct = async (updatedProduct: Product) => {
-    if (db) {
-      const { id, ...productData } = updatedProduct;
-      const productRef = doc(db, 'products', id);
-      await updateDoc(productRef, productData);
-    }
+    if (!db) return;
+    const { id, ...productData } = updatedProduct;
+    const productRef = doc(db, 'products', id);
+    await updateDoc(productRef, productData);
   }
 
   const deleteProduct = async (id: string) => {
-    if (db) {
-      const productRef = doc(db, 'products', id);
-      await deleteDoc(productRef);
-    }
+    if (db) await deleteDoc(doc(db, 'products', id));
   }
 
   // --- Raw Material Management with Firestore ---
   const addRawMaterial = async (material: Omit<RawMaterial, 'id'>) => {
-    if (db) {
-      await addDoc(collection(db, 'rawMaterials'), material);
-    }
+    if (db) await addDoc(collection(db, 'rawMaterials'), material);
   };
 
   const addMultipleRawMaterials = async (materialsToUpsert: RawMaterial[]) => {
-    if (db) {
-        const batch = writeBatch(db);
-        materialsToUpsert.forEach(material => {
-            const { id, ...materialData } = material;
-            let docRef;
-            if (id) {
-                docRef = doc(db, 'rawMaterials', id);
-            } else {
-                docRef = doc(collection(db, 'rawMaterials'));
-            }
-            batch.set(docRef, materialData);
-        });
-        await batch.commit();
-    }
+    if (!db) return;
+    const batch = writeBatch(db);
+    materialsToUpsert.forEach(material => {
+        const { id, ...materialData } = material;
+        const docRef = id ? doc(db, 'rawMaterials', id) : doc(collection(db, 'rawMaterials'));
+        batch.set(docRef, materialData);
+    });
+    await batch.commit();
   };
 
   const updateRawMaterial = async (updatedMaterial: RawMaterial) => {
-    if (db) {
-      const { id, ...materialData } = updatedMaterial;
-      const materialRef = doc(db, 'rawMaterials', id);
-      await updateDoc(materialRef, materialData);
-    }
+    if (!db) return;
+    const { id, ...materialData } = updatedMaterial;
+    const materialRef = doc(db, 'rawMaterials', id);
+    await updateDoc(materialRef, materialData);
   };
 
   const deleteRawMaterial = async (id: string) => {
-    if (db) {
-      await deleteDoc(doc(db, 'rawMaterials', id));
-    }
+    if (db) await deleteDoc(doc(db, 'rawMaterials', id));
   };
 
   // --- Client Management with Firestore ---
   const addClient = async (client: Omit<Client, 'id'>) => {
-    if (db) {
-      await addDoc(collection(db, 'clients'), client);
-    }
+    if (db) await addDoc(collection(db, 'clients'), client);
   };
 
   const addMultipleClients = async (clientsToUpsert: Client[]) => {
-    if (db) {
-      const batch = writeBatch(db);
-      clientsToUpsert.forEach(client => {
-        const { id, ...clientData } = client;
-        let docRef;
-        if (id) {
-          docRef = doc(db, 'clients', id);
-        } else {
-          docRef = doc(collection(db, 'clients'));
-        }
-        batch.set(docRef, clientData);
-      });
-      await batch.commit();
-    }
+    if (!db) return;
+    const batch = writeBatch(db);
+    clientsToUpsert.forEach(client => {
+      const { id, ...clientData } = client;
+      const docRef = id ? doc(db, 'clients', id) : doc(collection(db, 'clients'));
+      batch.set(docRef, clientData);
+    });
+    await batch.commit();
   };
 
   const updateClient = async (updatedClient: Client) => {
-    if (db) {
-      const { id, ...clientData } = updatedClient;
-      const clientRef = doc(db, 'clients', id);
-      await updateDoc(clientRef, clientData);
-    }
+    if (!db) return;
+    const { id, ...clientData } = updatedClient;
+    const clientRef = doc(db, 'clients', id);
+    await updateDoc(clientRef, clientData);
   };
 
   const deleteClient = async (id: string) => {
-    if (db) {
-      await deleteDoc(doc(db, 'clients', id));
-    }
+    if (db) await deleteDoc(doc(db, 'clients', id));
   };
 
   // --- Supplier Management with Firestore ---
   const addSupplier = async (supplier: Omit<Supplier, 'id'>) => {
-    if (db) {
-      await addDoc(collection(db, 'suppliers'), supplier);
-    }
+    if (db) await addDoc(collection(db, 'suppliers'), supplier);
   };
 
   const addMultipleSuppliers = async (suppliersToUpsert: Supplier[]) => {
-    if (db) {
-      const batch = writeBatch(db);
-      suppliersToUpsert.forEach(supplier => {
-        const { id, ...supplierData } = supplier;
-        let docRef;
-        if (id) {
-          docRef = doc(db, 'suppliers', id);
-        } else {
-          docRef = doc(collection(db, 'suppliers'));
-        }
-        batch.set(docRef, supplierData);
-      });
-      await batch.commit();
-    }
+    if (!db) return;
+    const batch = writeBatch(db);
+    suppliersToUpsert.forEach(supplier => {
+      const { id, ...supplierData } = supplier;
+      const docRef = id ? doc(db, 'suppliers', id) : doc(collection(db, 'suppliers'));
+      batch.set(docRef, supplierData);
+    });
+    await batch.commit();
   };
 
   const updateSupplier = async (updatedSupplier: Supplier) => {
-    if (db) {
-      const { id, ...supplierData } = updatedSupplier;
-      const supplierRef = doc(db, 'suppliers', id);
-      await updateDoc(supplierRef, supplierData);
-    }
+    if (!db) return;
+    const { id, ...supplierData } = updatedSupplier;
+    const supplierRef = doc(db, 'suppliers', id);
+    await updateDoc(supplierRef, supplierData);
   };
 
   const deleteSupplier = async (id: string) => {
-    if (db) {
-      await deleteDoc(doc(db, 'suppliers', id));
-    }
+    if (db) await deleteDoc(doc(db, 'suppliers', id));
   };
 
 

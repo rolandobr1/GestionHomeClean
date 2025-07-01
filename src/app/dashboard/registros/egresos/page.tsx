@@ -23,7 +23,8 @@ import { useAuth } from '@/hooks/use-auth';
 
 const expenseCategories = ["Materia Prima", "Envases", "Etiquetas", "Transportación", "Maquinarias y Herramientas", "Otro"];
 
-const ExpenseForm = ({ expense, onSave, suppliers }: { expense: Expense | null, onSave: (expense: Expense) => void, suppliers: Supplier[] }) => {
+const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense | null, onSave: (expense: Expense | Omit<Expense, 'id'>) => Promise<void>, suppliers: Supplier[], onClose: () => void }) => {
+    const [isSaving, setIsSaving] = useState(false);
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState(0);
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -47,17 +48,33 @@ const ExpenseForm = ({ expense, onSave, suppliers }: { expense: Expense | null, 
     }, [expense]);
 
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({
-            id: expense?.id || '',
-            description,
-            amount,
-            date,
-            category,
-            supplierId,
-            recordedBy: expense?.recordedBy || ''
-        });
+        setIsSaving(true);
+        try {
+            if (expense) {
+                await onSave({
+                    ...expense,
+                    description,
+                    amount,
+                    date,
+                    category,
+                    supplierId,
+                });
+            } else {
+                await onSave({
+                    description,
+                    amount,
+                    date,
+                    category,
+                    supplierId,
+                    recordedBy: '' // Will be set in provider
+                });
+            }
+            onClose();
+        } finally {
+            setIsSaving(false);
+        }
     }
     
     return (
@@ -65,7 +82,7 @@ const ExpenseForm = ({ expense, onSave, suppliers }: { expense: Expense | null, 
             <div className="grid gap-4 py-4">
                 <div className="space-y-2">
                     <Label htmlFor="supplierId">Suplidor</Label>
-                    <Select onValueChange={setSupplierId} value={supplierId}>
+                    <Select onValueChange={setSupplierId} value={supplierId} disabled={isSaving}>
                         <SelectTrigger>
                             <SelectValue placeholder="Selecciona un suplidor" />
                         </SelectTrigger>
@@ -76,7 +93,7 @@ const ExpenseForm = ({ expense, onSave, suppliers }: { expense: Expense | null, 
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="category">Categoría</Label>
-                    <Select onValueChange={setCategory} value={category}>
+                    <Select onValueChange={setCategory} value={category} disabled={isSaving}>
                         <SelectTrigger>
                             <SelectValue placeholder="Selecciona una categoría" />
                         </SelectTrigger>
@@ -87,22 +104,22 @@ const ExpenseForm = ({ expense, onSave, suppliers }: { expense: Expense | null, 
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="description">Descripción</Label>
-                    <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} required />
+                    <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} required disabled={isSaving}/>
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="amount">Monto</Label>
-                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value) || 0)} required inputMode="decimal" onFocus={(e) => e.target.select()} />
+                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value) || 0)} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="date">Fecha</Label>
-                    <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+                    <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required disabled={isSaving}/>
                 </div>
             </div>
              <DialogFooter>
                 <DialogClose asChild>
-                     <Button type="button" variant="secondary">Cancelar</Button>
+                     <Button type="button" variant="secondary" disabled={isSaving}>Cancelar</Button>
                 </DialogClose>
-                <Button type="submit">Guardar</Button>
+                <Button type="submit" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar'}</Button>
             </DialogFooter>
         </form>
     );
@@ -173,25 +190,29 @@ export default function EgresosPage() {
         setIsDialogOpen(true);
     };
 
-    const handleDelete = (expenseId: string) => {
-        deleteExpense(expenseId);
+    const handleDelete = async (expenseId: string) => {
+        await deleteExpense(expenseId);
     };
 
-    const handleSave = (expense: Expense) => {
+    const handleSave = async (expenseData: Expense | Omit<Expense, 'id'>) => {
         if (!user) {
             toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
             return;
         }
         
-        if (editingExpense) {
-            updateExpense(expense);
+        if ('id' in expenseData && expenseData.id) {
+            await updateExpense(expenseData as Expense);
         } else {
-            const expenseToSave = { ...expense, recordedBy: user.name };
-            const { id, ...newExpenseData } = expenseToSave;
-            addExpense(newExpenseData);
+            const expenseToSave = { ...expenseData, recordedBy: user.name };
+            await addExpense(expenseToSave);
         }
-        setEditingExpense(null);
-        setIsDialogOpen(false);
+    };
+
+    const handleDialogChange = (open: boolean) => {
+        setIsDialogOpen(open);
+        if (!open) {
+            setEditingExpense(null);
+        }
     };
 
     const convertArrayOfObjectsToCSV = (data: any[]) => {
@@ -254,12 +275,12 @@ export default function EgresosPage() {
         toast({ title: 'Exportación Exitosa', description: 'Tus registros han sido descargados.' });
     };
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file || !user) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const text = e.target?.result as string;
                 const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -294,7 +315,7 @@ export default function EgresosPage() {
                     });
                 }
                 
-                addMultipleExpenses(newExpenses);
+                await addMultipleExpenses(newExpenses);
 
                 toast({
                     title: "Importación Exitosa",
@@ -447,7 +468,7 @@ export default function EgresosPage() {
                 </CardContent>
             </Card>
 
-             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+             <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>{editingExpense ? 'Editar Egreso' : 'Añadir Egreso'}</DialogTitle>
@@ -455,11 +476,9 @@ export default function EgresosPage() {
                             {editingExpense ? 'Actualiza los detalles de tu egreso.' : 'Añade un nuevo egreso a tus registros.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <ExpenseForm expense={editingExpense} onSave={handleSave} suppliers={allSuppliers} />
+                    <ExpenseForm expense={editingExpense} onSave={handleSave} suppliers={allSuppliers} onClose={() => handleDialogChange(false)} />
                 </DialogContent>
             </Dialog>
         </div>
     );
 }
-
-    
