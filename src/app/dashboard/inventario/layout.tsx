@@ -24,7 +24,7 @@ export default function InventarioLayout({
             <p className="text-muted-foreground">Administra tus productos y materias primas.</p>
         </div>
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="productos">Productos Terminados</TabsTrigger>
                 <TabsTrigger value="materia-prima">Materia Prima</TabsTrigger>
             </TabsList>

@@ -24,7 +24,7 @@ export default function RegistrosLayout({
             <p className="text-muted-foreground">Administra tus ingresos y egresos.</p>
         </div>
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="ingresos">Ingresos</TabsTrigger>
                 <TabsTrigger value="egresos">Egresos</TabsTrigger>
             </TabsList>

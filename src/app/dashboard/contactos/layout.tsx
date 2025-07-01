@@ -24,7 +24,7 @@ export default function ContactosLayout({
             <p className="text-muted-foreground">Administra tus clientes y suplidores.</p>
         </div>
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="clientes">Clientes</TabsTrigger>
                 <TabsTrigger value="suplidores">Suplidores</TabsTrigger>
             </TabsList>
