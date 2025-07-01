@@ -102,18 +102,18 @@ interface AppContextType {
   addMultipleProducts: (products: Product[]) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
-  addRawMaterial: (material: Omit<RawMaterial, 'id'>) => void;
-  addMultipleRawMaterials: (materials: RawMaterial[]) => void;
-  updateRawMaterial: (material: RawMaterial) => void;
-  deleteRawMaterial: (id: string) => void;
-  addClient: (client: Omit<Client, 'id'>) => void;
-  addMultipleClients: (clients: Client[]) => void;
-  updateClient: (client: Client) => void;
-  deleteClient: (id: string) => void;
-  addSupplier: (supplier: Omit<Supplier, 'id'>) => void;
-  addMultipleSuppliers: (suppliers: Supplier[]) => void;
-  updateSupplier: (supplier: Supplier) => void;
-  deleteSupplier: (id: string) => void;
+  addRawMaterial: (material: Omit<RawMaterial, 'id'>) => Promise<void>;
+  addMultipleRawMaterials: (materials: RawMaterial[]) => Promise<void>;
+  updateRawMaterial: (material: RawMaterial) => Promise<void>;
+  deleteRawMaterial: (id: string) => Promise<void>;
+  addClient: (client: Omit<Client, 'id'>) => Promise<void>;
+  addMultipleClients: (clients: Client[]) => Promise<void>;
+  updateClient: (client: Client) => Promise<void>;
+  deleteClient: (id: string) => Promise<void>;
+  addSupplier: (supplier: Omit<Supplier, 'id'>) => Promise<void>;
+  addMultipleSuppliers: (suppliers: Supplier[]) => Promise<void>;
+  updateSupplier: (supplier: Supplier) => Promise<void>;
+  deleteSupplier: (id: string) => Promise<void>;
   updateInvoiceSettings: (settings: Partial<InvoiceSettings>) => void;
 }
 
@@ -142,6 +142,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const unsubscribe = onSnapshot(collection(db, 'products'), (snapshot) => {
         const productsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
         setProducts(productsData);
+      });
+      return () => unsubscribe();
+    }
+  }, []);
+
+  // Fetch Clients from Firestore
+  useEffect(() => {
+    if (db) {
+      const unsubscribe = onSnapshot(collection(db, 'clients'), (snapshot) => {
+        const clientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Client[];
+        setClients(clientsData);
+      });
+      return () => unsubscribe();
+    }
+  }, []);
+
+  // Fetch Suppliers from Firestore
+  useEffect(() => {
+    if (db) {
+      const unsubscribe = onSnapshot(collection(db, 'suppliers'), (snapshot) => {
+        const suppliersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Supplier[];
+        setSuppliers(suppliersData);
+      });
+      return () => unsubscribe();
+    }
+  }, []);
+  
+  // Fetch Raw Materials from Firestore
+  useEffect(() => {
+    if (db) {
+      const unsubscribe = onSnapshot(collection(db, 'rawMaterials'), (snapshot) => {
+        const materialsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as RawMaterial[];
+        setRawMaterials(materialsData);
       });
       return () => unsubscribe();
     }
@@ -323,73 +356,118 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const addRawMaterial = (material: Omit<RawMaterial, 'id'>) => {
-    setRawMaterials(prev => [...prev, { ...material, id: new Date().toISOString() + Math.random() }]);
+  // --- Raw Material Management with Firestore ---
+  const addRawMaterial = async (material: Omit<RawMaterial, 'id'>) => {
+    if (db) {
+      await addDoc(collection(db, 'rawMaterials'), material);
+    }
   };
 
-  const addMultipleRawMaterials = (materialsToUpsert: RawMaterial[]) => {
-      setRawMaterials(prevMaterials => {
-        const materialMap = new Map(prevMaterials.map(m => [m.id, m]));
+  const addMultipleRawMaterials = async (materialsToUpsert: RawMaterial[]) => {
+    if (db) {
+        const batch = writeBatch(db);
         materialsToUpsert.forEach(material => {
-            const id = material.id || (new Date().toISOString() + Math.random());
-            materialMap.set(id, { ...material, id });
+            const { id, ...materialData } = material;
+            let docRef;
+            if (id) {
+                docRef = doc(db, 'rawMaterials', id);
+            } else {
+                docRef = doc(collection(db, 'rawMaterials'));
+            }
+            batch.set(docRef, materialData);
         });
-        return Array.from(materialMap.values());
-      });
+        await batch.commit();
+    }
   };
 
-  const updateRawMaterial = (updatedMaterial: RawMaterial) => {
-      setRawMaterials(prev => prev.map(m => m.id === updatedMaterial.id ? updatedMaterial : m));
+  const updateRawMaterial = async (updatedMaterial: RawMaterial) => {
+    if (db) {
+      const { id, ...materialData } = updatedMaterial;
+      const materialRef = doc(db, 'rawMaterials', id);
+      await updateDoc(materialRef, materialData);
+    }
   };
 
-  const deleteRawMaterial = (id: string) => {
-      setRawMaterials(prev => prev.filter(m => m.id !== id));
+  const deleteRawMaterial = async (id: string) => {
+    if (db) {
+      await deleteDoc(doc(db, 'rawMaterials', id));
+    }
   };
 
-  const addClient = (client: Omit<Client, 'id'>) => {
-    setClients(prev => [...prev, { ...client, id: new Date().toISOString() + Math.random() }]);
+  // --- Client Management with Firestore ---
+  const addClient = async (client: Omit<Client, 'id'>) => {
+    if (db) {
+      await addDoc(collection(db, 'clients'), client);
+    }
   };
 
-  const addMultipleClients = (clientsToUpsert: Client[]) => {
-    setClients(prevClients => {
-      const clientMap = new Map(prevClients.map(c => [c.id, c]));
+  const addMultipleClients = async (clientsToUpsert: Client[]) => {
+    if (db) {
+      const batch = writeBatch(db);
       clientsToUpsert.forEach(client => {
-        const id = client.id || (new Date().toISOString() + Math.random());
-        clientMap.set(id, { ...client, id });
+        const { id, ...clientData } = client;
+        let docRef;
+        if (id) {
+          docRef = doc(db, 'clients', id);
+        } else {
+          docRef = doc(collection(db, 'clients'));
+        }
+        batch.set(docRef, clientData);
       });
-      return Array.from(clientMap.values());
-    });
+      await batch.commit();
+    }
   };
 
-  const updateClient = (updatedClient: Client) => {
-    setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
+  const updateClient = async (updatedClient: Client) => {
+    if (db) {
+      const { id, ...clientData } = updatedClient;
+      const clientRef = doc(db, 'clients', id);
+      await updateDoc(clientRef, clientData);
+    }
   };
 
-  const deleteClient = (id: string) => {
-    setClients(prev => prev.filter(c => c.id !== id));
+  const deleteClient = async (id: string) => {
+    if (db) {
+      await deleteDoc(doc(db, 'clients', id));
+    }
   };
 
-  const addSupplier = (supplier: Omit<Supplier, 'id'>) => {
-    setSuppliers(prev => [...prev, { ...supplier, id: new Date().toISOString() + Math.random() }]);
+  // --- Supplier Management with Firestore ---
+  const addSupplier = async (supplier: Omit<Supplier, 'id'>) => {
+    if (db) {
+      await addDoc(collection(db, 'suppliers'), supplier);
+    }
   };
 
-  const addMultipleSuppliers = (suppliersToUpsert: Supplier[]) => {
-      setSuppliers(prevSuppliers => {
-        const supplierMap = new Map(prevSuppliers.map(s => [s.id, s]));
-        suppliersToUpsert.forEach(supplier => {
-            const id = supplier.id || (new Date().toISOString() + Math.random());
-            supplierMap.set(id, { ...supplier, id });
-        });
-        return Array.from(supplierMap.values());
+  const addMultipleSuppliers = async (suppliersToUpsert: Supplier[]) => {
+    if (db) {
+      const batch = writeBatch(db);
+      suppliersToUpsert.forEach(supplier => {
+        const { id, ...supplierData } = supplier;
+        let docRef;
+        if (id) {
+          docRef = doc(db, 'suppliers', id);
+        } else {
+          docRef = doc(collection(db, 'suppliers'));
+        }
+        batch.set(docRef, supplierData);
       });
+      await batch.commit();
+    }
   };
 
-  const updateSupplier = (updatedSupplier: Supplier) => {
-    setSuppliers(prev => prev.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
+  const updateSupplier = async (updatedSupplier: Supplier) => {
+    if (db) {
+      const { id, ...supplierData } = updatedSupplier;
+      const supplierRef = doc(db, 'suppliers', id);
+      await updateDoc(supplierRef, supplierData);
+    }
   };
 
-  const deleteSupplier = (id: string) => {
-    setSuppliers(prev => prev.filter(s => s.id !== id));
+  const deleteSupplier = async (id: string) => {
+    if (db) {
+      await deleteDoc(doc(db, 'suppliers', id));
+    }
   };
 
 

@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download } from 'lucide-react';
@@ -23,12 +24,23 @@ const MaterialForm = ({
     suppliers
 }: {
     material: RawMaterial | null,
-    onSave: (material: RawMaterial) => void,
+    onSave: (material: RawMaterial) => Promise<void>,
     suppliers: Supplier[]
 }) => {
-    const [formData, setFormData] = useState(material || {
+    const defaultState = {
         name: '', sku: '', unit: '', purchasePrice: 0, stock: 0, reorderLevel: 0, supplierId: 'generic'
-    });
+    };
+    const [formData, setFormData] = useState<Omit<RawMaterial, 'id'|'recordedBy'>>(defaultState);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (material) {
+            const { id, recordedBy, ...rest } = material;
+            setFormData(rest);
+        } else {
+            setFormData(defaultState);
+        }
+    }, [material]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value, type } = e.target;
@@ -39,9 +51,14 @@ const MaterialForm = ({
         setFormData(prev => ({ ...prev, supplierId: value }));
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ ...formData, id: material?.id || '', recordedBy: material?.recordedBy || '' });
+        setIsSaving(true);
+        try {
+            await onSave({ ...formData, id: material?.id || '', recordedBy: material?.recordedBy || '' });
+        } finally {
+            setIsSaving(false);
+        }
     }
     
     return (
@@ -49,35 +66,35 @@ const MaterialForm = ({
             <div className="grid gap-4 py-4">
                 <div className="space-y-2">
                     <Label htmlFor="name">Nombre</Label>
-                    <Input id="name" value={formData.name} onChange={handleChange} required />
+                    <Input id="name" value={formData.name} onChange={handleChange} required disabled={isSaving}/>
                 </div>
                     <div className="space-y-2">
                     <Label htmlFor="sku">SKU</Label>
-                    <Input id="sku" value={formData.sku} onChange={handleChange} />
+                    <Input id="sku" value={formData.sku} onChange={handleChange} disabled={isSaving}/>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="stock">Stock</Label>
-                        <Input id="stock" type="number" value={formData.stock} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()}/>
+                        <Input id="stock" type="number" value={formData.stock} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="unit">Unidad</Label>
-                        <Input id="unit" value={formData.unit} onChange={handleChange} />
+                        <Input id="unit" value={formData.unit} onChange={handleChange} disabled={isSaving}/>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="purchasePrice">Precio Compra</Label>
-                        <Input id="purchasePrice" type="number" value={formData.purchasePrice} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()}/>
+                        <Input id="purchasePrice" type="number" value={formData.purchasePrice} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="reorderLevel">Nivel Reorden</Label>
-                        <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()}/>
+                        <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
                     </div>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="supplierId">Suplidor</Label>
-                    <Select onValueChange={handleSelectChange} value={formData.supplierId}>
+                    <Select onValueChange={handleSelectChange} value={formData.supplierId} disabled={isSaving}>
                         <SelectTrigger id="supplierId">
                             <SelectValue placeholder="Selecciona un suplidor" />
                         </SelectTrigger>
@@ -89,9 +106,11 @@ const MaterialForm = ({
             </div>
                 <DialogFooter>
                 <DialogClose asChild>
-                        <Button type="button" variant="secondary">Cancelar</Button>
+                        <Button type="button" variant="secondary" disabled={isSaving}>Cancelar</Button>
                 </DialogClose>
-                <Button type="submit">Guardar</Button>
+                <Button type="submit" disabled={isSaving}>
+                    {isSaving ? 'Guardando...' : 'Guardar'}
+                </Button>
             </DialogFooter>
         </form>
     );
@@ -115,7 +134,7 @@ export default function MateriaPrimaPage() {
         if (!file || !user) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const text = e.target?.result as string;
                 const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -128,7 +147,7 @@ export default function MateriaPrimaPage() {
                     throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
                 }
 
-                const newMaterials: RawMaterial[] = [];
+                const newMaterials: Omit<RawMaterial, 'id'>[] = [];
                 for (let i = 1; i < lines.length; i++) {
                     const values = lines[i].split(',');
                     const materialData: any = {};
@@ -140,7 +159,6 @@ export default function MateriaPrimaPage() {
                     const supplier = allSuppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase()) || allSuppliers.find(s => s.id === 'generic');
                     
                     newMaterials.push({
-                        id: materialData.id || '',
                         name: materialData.name || 'N/A',
                         sku: materialData.sku || 'N/A',
                         unit: materialData.unit || 'N/A',
@@ -152,7 +170,7 @@ export default function MateriaPrimaPage() {
                     });
                 }
                 
-                addMultipleRawMaterials(newMaterials);
+                await addMultipleRawMaterials(newMaterials as RawMaterial[]);
 
                 toast({
                     title: "Importación Exitosa",
@@ -243,18 +261,18 @@ export default function MateriaPrimaPage() {
         deleteRawMaterial(materialId);
     };
 
-    const handleSave = (material: RawMaterial) => {
+    const handleSave = async (material: RawMaterial) => {
         if (!user) {
             toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
             return;
         }
 
         if (editingMaterial) {
-            updateRawMaterial(material);
+            await updateRawMaterial(material);
         } else {
             const materialToSave = { ...material, recordedBy: user.name };
             const { id, ...newMaterialData } = materialToSave;
-            addRawMaterial(newMaterialData);
+            await addRawMaterial(newMaterialData);
         }
         setEditingMaterial(null);
         setIsDialogOpen(false);

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -21,12 +22,13 @@ const ContactForm = ({
   onClose,
 }: {
   contact: Omit<Client, 'id'> | Client | null;
-  onSave: (client: Omit<Client, 'id'> | Client) => void;
+  onSave: (client: Omit<Client, 'id'> | Client) => Promise<void>;
   onClose: () => void;
 }) => {
   const [formData, setFormData] = useState<Omit<Client, 'id'>>({
     name: '', email: '', phone: '', address: ''
   });
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (contact) {
@@ -41,9 +43,14 @@ const ContactForm = ({
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    setIsSaving(true);
+    try {
+      await onSave(formData);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -51,28 +58,30 @@ const ContactForm = ({
       <div className="grid gap-4 py-4">
         <div className="space-y-2">
           <Label htmlFor="name">Nombre</Label>
-          <Input id="name" value={formData.name} onChange={handleChange} required />
+          <Input id="name" value={formData.name} onChange={handleChange} required disabled={isSaving}/>
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Correo</Label>
-          <Input id="email" type="email" value={formData.email} onChange={handleChange} />
+          <Input id="email" type="email" value={formData.email} onChange={handleChange} disabled={isSaving}/>
         </div>
         <div className="space-y-2">
           <Label htmlFor="phone">Teléfono</Label>
-          <Input id="phone" value={formData.phone} onChange={handleChange} />
+          <Input id="phone" value={formData.phone} onChange={handleChange} disabled={isSaving}/>
         </div>
         <div className="space-y-2">
           <Label htmlFor="address">Dirección</Label>
-          <Input id="address" value={formData.address} onChange={handleChange} />
+          <Input id="address" value={formData.address} onChange={handleChange} disabled={isSaving}/>
         </div>
       </div>
       <DialogFooter>
         <DialogClose asChild>
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
             Cancelar
           </Button>
         </DialogClose>
-        <Button type="submit">Guardar</Button>
+        <Button type="submit" disabled={isSaving}>
+          {isSaving ? 'Guardando...' : 'Guardar'}
+        </Button>
       </DialogFooter>
     </form>
   );
@@ -91,7 +100,7 @@ export default function ClientesPage() {
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
         try {
             const text = e.target?.result as string;
             const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -104,7 +113,7 @@ export default function ClientesPage() {
                 throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
             }
 
-            const newClients: Client[] = [];
+            const newClients: Omit<Client, 'id'>[] = [];
             for (let i = 1; i < lines.length; i++) {
                 const values = lines[i].split(',');
                 const clientData: any = {};
@@ -113,7 +122,6 @@ export default function ClientesPage() {
                 });
 
                 newClients.push({
-                    id: clientData.id || '',
                     name: clientData.name || 'N/A',
                     email: clientData.email || 'N/A',
                     phone: clientData.phone || 'N/A',
@@ -121,7 +129,7 @@ export default function ClientesPage() {
                 });
             }
             
-            addMultipleClients(newClients);
+            await addMultipleClients(newClients as Client[]);
 
             toast({
             title: "Importación Exitosa",
@@ -214,11 +222,11 @@ export default function ClientesPage() {
         deleteClient(clientId);
     };
 
-    const handleSave = (clientData: Omit<Client, 'id'> | Client) => {
+    const handleSave = async (clientData: Omit<Client, 'id'> | Client) => {
         if ('id' in clientData && clientData.id) {
-            updateClient(clientData as Client);
+            await updateClient(clientData as Client);
         } else {
-            addClient(clientData);
+            await addClient(clientData);
         }
         setIsDialogOpen(false);
     };
