@@ -2,8 +2,9 @@
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
-import { db } from '@/lib/firebase';
+import { db, isConfigured, firebaseConfig } from '@/lib/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { FirebaseConfigStatus } from './config-status';
 
 // Type definitions
 export type SoldProduct = {
@@ -427,6 +428,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (db) await deleteDoc(doc(db, 'suppliers', id));
   };
 
+  if (!isConfigured) {
+    return <FirebaseConfigStatus config={firebaseConfig} />;
+  }
 
   return (
     <AppContext.Provider value={{
