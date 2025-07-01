@@ -876,17 +876,17 @@ export default function IngresosPage() {
             </Dialog>
 
             <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
-                <DialogContent className="w-[95%] sm:max-w-4xl p-0">
-                    <DialogHeader className="p-6 pb-0">
+                <DialogContent className="w-[95%] max-w-4xl p-0">
+                    <DialogHeader className="p-4 pb-0 sm:p-6 sm:pb-0">
                         <DialogTitle>Vista Previa de Factura</DialogTitle>
                         <DialogDescription>
                             Puedes descargar la factura como PDF o compartirla directamente.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="p-4 sm:p-6 overflow-auto max-h-[70vh]">
+                    <div className="overflow-y-auto max-h-[70vh]">
                        {selectedIncomeForInvoice && <InvoiceTemplate income={selectedIncomeForInvoice} clients={allClients} invoiceSettings={invoiceSettings} />}
                     </div>
-                    <DialogFooter className="p-6 bg-muted/50 flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                    <DialogFooter className="p-4 sm:p-6 bg-muted/50 flex-col-reverse sm:flex-row sm:justify-end gap-2">
                         <Button variant="outline" onClick={handleDownloadPdf}>
                             <Download className="mr-2 h-4 w-4" />
                             Descargar PDF
@@ -901,5 +901,3 @@ export default function IngresosPage() {
         </div>
     );
 }
-
-

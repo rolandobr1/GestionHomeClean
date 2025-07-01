@@ -19,8 +19,8 @@ export const InvoiceTemplate = ({ income, clients, invoiceSettings }: InvoiceTem
   if (!income) return null;
 
   return (
-    <div className="bg-white text-black p-8 font-sans w-full">
-      <header className="flex justify-between items-start pb-6 border-b-2 border-gray-200">
+    <div className="bg-white text-black p-4 md:p-6 font-sans w-full min-w-[320px]">
+      <header className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b-2 border-gray-200">
         <div>
           <div className="mb-2">
             <img src={invoiceSettings.companyLogo} alt="Logo de la empresa" width="150" height="50" className="object-contain" />
@@ -28,28 +28,28 @@ export const InvoiceTemplate = ({ income, clients, invoiceSettings }: InvoiceTem
           <p className="text-sm text-gray-500">{invoiceSettings.companyAddress}</p>
           <p className="text-sm text-gray-500">RNC: {invoiceSettings.companyRNC}</p>
         </div>
-        <div className="text-right">
+        <div className="text-left sm:text-right">
           <h2 className="text-2xl font-semibold uppercase text-gray-600">Factura</h2>
           <p className="text-sm text-gray-500">Nº: {income.id.slice(-6).toUpperCase()}</p>
           <p className="text-sm text-gray-500">Fecha: {format(new Date(income.date), 'dd/MM/yyyy', { locale: es })}</p>
         </div>
       </header>
 
-      <section className="my-8 grid grid-cols-2 gap-4">
+      <section className="my-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
             <h3 className="font-semibold text-gray-500 uppercase text-sm mb-2">Facturar a:</h3>
             <div className="text-gray-700">
             <p className="font-bold">{client?.name || 'Cliente Genérico'}</p>
             </div>
         </div>
-        <div className='text-right'>
+        <div className='text-left sm:text-right'>
             <h3 className="font-semibold text-gray-500 uppercase text-sm mb-2">Método de Pago:</h3>
             <p className="font-bold capitalize text-gray-700">{income.paymentMethod}</p>
         </div>
       </section>
 
-      <section>
-        <table className="w-full text-left">
+      <section className="overflow-x-auto">
+        <table className="w-full text-left min-w-[400px]">
           <thead className="bg-gray-100 text-gray-600 uppercase text-sm">
             <tr>
               <th className="p-3 w-1/2 font-semibold">Producto</th>
