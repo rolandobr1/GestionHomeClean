@@ -1,6 +1,9 @@
+
 "use client";
 
-import React, { createContext, useState, ReactNode } from 'react';
+import React, { createContext, useState, ReactNode, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 
 // Type definitions
 export type SoldProduct = {
@@ -78,13 +81,6 @@ export type InvoiceSettings = {
   shareMessage: string;
 };
 
-export const initialProducts: Product[] = [
-  { id: '1', name: 'Jabon de Cuaba', sku: 'JC-001', unit: 'Galon', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
-  { id: '2', name: 'Jabon Lavaplatos', sku: 'JL-001', unit: 'Galon', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
-  { id: '3', name: 'Desinfectante Lavanda', sku: 'DL-001', unit: 'Galon', salePriceRetail: 200, salePriceWholesale: 150, stock: 50, reorderLevel: 10 },
-];
-
-
 // Context interface
 interface AppContextType {
   incomes: Income[];
@@ -102,10 +98,10 @@ interface AppContextType {
   addMultipleExpenses: (expenses: Expense[]) => void;
   deleteExpense: (id: string) => void;
   updateExpense: (expense: Expense) => void;
-  addProduct: (product: Omit<Product, 'id'>) => void;
-  addMultipleProducts: (products: Product[]) => void;
-  deleteProduct: (id: string) => void;
-  updateProduct: (product: Product) => void;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+  addMultipleProducts: (products: Product[]) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  updateProduct: (product: Product) => Promise<void>;
   addRawMaterial: (material: Omit<RawMaterial, 'id'>) => void;
   addMultipleRawMaterials: (materials: RawMaterial[]) => void;
   updateRawMaterial: (material: RawMaterial) => void;
@@ -128,7 +124,7 @@ export const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -140,6 +136,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     shareMessage: "Aquí está tu factura de QuimioGest.",
   });
 
+  // Fetch Products from Firestore
+  useEffect(() => {
+    if (db) {
+      const unsubscribe = onSnapshot(collection(db, 'products'), (snapshot) => {
+        const productsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
+        setProducts(productsData);
+      });
+      return () => unsubscribe();
+    }
+  }, []);
+
+
   const updateInvoiceSettings = (settings: Partial<InvoiceSettings>) => {
     setInvoiceSettings(prev => ({ ...prev, ...settings }));
   };
@@ -149,16 +157,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     income.products.forEach(soldProduct => {
         quantitySoldMap.set(soldProduct.productId, (quantitySoldMap.get(soldProduct.productId) || 0) + soldProduct.quantity);
     });
-
-    setProducts(prevProducts => 
-        prevProducts.map(product => {
-            if (quantitySoldMap.has(product.id)) {
-                const quantitySold = quantitySoldMap.get(product.id)!;
-                return { ...product, stock: product.stock - quantitySold };
-            }
-            return product;
-        })
-    );
+    
+    if (db) {
+      const batch = writeBatch(db);
+      products.forEach(product => {
+        if (quantitySoldMap.has(product.id)) {
+          const quantitySold = quantitySoldMap.get(product.id)!;
+          const productRef = doc(db, "products", product.id);
+          batch.update(productRef, { stock: product.stock - quantitySold });
+        }
+      });
+      batch.commit();
+    }
 
     setIncomes(prev => [...prev, { ...income, id: new Date().toISOString() + Math.random() }]);
   };
@@ -181,14 +191,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           });
       });
       
-      setProducts(prevProducts => 
-          prevProducts.map(product => {
-              if (stockChanges.has(product.id)) {
-                  return { ...product, stock: product.stock + stockChanges.get(product.id)! };
-              }
-              return product;
-          })
-      );
+      if (db) {
+        const batch = writeBatch(db);
+        products.forEach(product => {
+            if (stockChanges.has(product.id)) {
+                const productRef = doc(db, "products", product.id);
+                batch.update(productRef, { stock: product.stock + stockChanges.get(product.id)! });
+            }
+        });
+        batch.commit();
+      }
 
       setIncomes(prevIncomes => {
         const incomeMap = new Map(prevIncomes.map(i => [i.id, i]));
@@ -203,7 +215,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateIncome = (updatedIncome: Income) => {
       const originalIncome = incomes.find(i => i.id === updatedIncome.id);
 
-      if (originalIncome) {
+      if (originalIncome && db) {
           const stockChanges = new Map<string, number>();
           // + for original items, - for updated items
           originalIncome.products.forEach(p => {
@@ -213,14 +225,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
           });
           
-          setProducts(prevProducts => 
-              prevProducts.map(product => {
-                  if (stockChanges.has(product.id)) {
-                      return { ...product, stock: product.stock + stockChanges.get(product.id)! };
-                  }
-                  return product;
-              })
-          );
+          const batch = writeBatch(db);
+          products.forEach(product => {
+              if (stockChanges.has(product.id)) {
+                  const productRef = doc(db, "products", product.id);
+                  batch.update(productRef, { stock: product.stock + stockChanges.get(product.id)! });
+              }
+          });
+          batch.commit();
       }
       
       setIncomes(prev => prev.map(i => i.id === updatedIncome.id ? updatedIncome : i));
@@ -229,20 +241,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const deleteIncome = (id: string) => {
     const incomeToDelete = incomes.find(i => i.id === id);
 
-    if (incomeToDelete) {
+    if (incomeToDelete && db) {
         const stockToReturn = new Map<string, number>();
         incomeToDelete.products.forEach(p => {
             stockToReturn.set(p.productId, (stockToReturn.get(p.productId) || 0) + p.quantity);
         });
 
-        setProducts(prevProducts => 
-            prevProducts.map(product => {
-                if (stockToReturn.has(product.id)) {
-                    return { ...product, stock: product.stock + stockToReturn.get(product.id)! };
-                }
-                return product;
-            })
-        );
+        const batch = writeBatch(db);
+        products.forEach(product => {
+            if (stockToReturn.has(product.id)) {
+                const productRef = doc(db, "products", product.id);
+                batch.update(productRef, { stock: product.stock + stockToReturn.get(product.id)! });
+            }
+        });
+        batch.commit();
     }
 
     setIncomes(prev => prev.filter(i => i.id !== id));
@@ -271,27 +283,44 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setExpenses(prev => prev.filter(e => e.id !== id));
   };
 
-  const addProduct = (product: Omit<Product, 'id'>) => {
-      setProducts(prev => [...prev, { ...product, id: new Date().toISOString() + Math.random() }]);
+  // --- Product Management with Firestore ---
+  const addProduct = async (product: Omit<Product, 'id'>) => {
+    if (db) {
+      await addDoc(collection(db, 'products'), product);
+    }
   }
 
-  const addMultipleProducts = (productsToUpsert: Product[]) => {
-    setProducts(prevProducts => {
-      const productMap = new Map(prevProducts.map(p => [p.id, p]));
+  const addMultipleProducts = async (productsToUpsert: Product[]) => {
+    if (db) {
+      const batch = writeBatch(db);
       productsToUpsert.forEach(product => {
-        const id = product.id || (new Date().toISOString() + Math.random());
-        productMap.set(id, { ...product, id });
+        const { id, ...productData } = product;
+        let docRef;
+        if (id) {
+          docRef = doc(db, 'products', id);
+          batch.set(docRef, productData);
+        } else {
+          docRef = doc(collection(db, 'products'));
+          batch.set(docRef, productData);
+        }
       });
-      return Array.from(productMap.values());
-    });
+      await batch.commit();
+    }
   }
 
-  const updateProduct = (updatedProduct: Product) => {
-      setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+  const updateProduct = async (updatedProduct: Product) => {
+    if (db) {
+      const { id, ...productData } = updatedProduct;
+      const productRef = doc(db, 'products', id);
+      await updateDoc(productRef, productData);
+    }
   }
 
-  const deleteProduct = (id: string) => {
-      setProducts(prev => prev.filter(p => p.id !== id));
+  const deleteProduct = async (id: string) => {
+    if (db) {
+      const productRef = doc(db, 'products', id);
+      await deleteDoc(productRef);
+    }
   }
 
   const addRawMaterial = (material: Omit<RawMaterial, 'id'>) => {
