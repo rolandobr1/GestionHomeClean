@@ -28,10 +28,10 @@ export default function RegistrosLayout({
                 <TabsTrigger value="ingresos">Ingresos</TabsTrigger>
                 <TabsTrigger value="egresos">Egresos</TabsTrigger>
             </TabsList>
+            <div className="pt-4">
+                {children}
+            </div>
         </Tabs>
-        <div className="pt-4">
-            {children}
-        </div>
     </div>
   );
 }

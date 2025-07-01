@@ -28,10 +28,10 @@ export default function ContactosLayout({
                 <TabsTrigger value="clientes">Clientes</TabsTrigger>
                 <TabsTrigger value="suplidores">Suplidores</TabsTrigger>
             </TabsList>
+            <div className="pt-4">
+                {children}
+            </div>
         </Tabs>
-        <div className="pt-4">
-            {children}
-        </div>
     </div>
   );
 }
