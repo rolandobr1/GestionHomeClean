@@ -1,120 +1,171 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-  } from "@/components/ui/alert-dialog"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAppData } from '@/hooks/use-app-data';
+import { useAuth } from '@/hooks/use-auth';
+import type { RawMaterial, Supplier } from '@/components/app-provider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-type RawMaterial = {
-  id: string;
-  name: string;
-  sku: string;
-  unit: string;
-  purchasePrice: number;
-  stock: number;
-  reorderLevel: number;
-  supplier: string;
+const MaterialForm = ({
+    material,
+    onSave,
+    suppliers
+}: {
+    material: RawMaterial | null,
+    onSave: (material: RawMaterial) => void,
+    suppliers: Supplier[]
+}) => {
+    const [formData, setFormData] = useState(material || {
+        name: '', sku: '', unit: '', purchasePrice: 0, stock: 0, reorderLevel: 0, supplierId: 'generic'
+    });
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { id, value, type } = e.target;
+        setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
+    };
+
+    const handleSelectChange = (value: string) => {
+        setFormData(prev => ({ ...prev, supplierId: value }));
+    }
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({ ...formData, id: material?.id || '', recordedBy: material?.recordedBy || '' });
+    }
+    
+    return (
+        <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                    <Label htmlFor="name">Nombre</Label>
+                    <Input id="name" value={formData.name} onChange={handleChange} required />
+                </div>
+                    <div className="space-y-2">
+                    <Label htmlFor="sku">SKU</Label>
+                    <Input id="sku" value={formData.sku} onChange={handleChange} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="stock">Stock</Label>
+                        <Input id="stock" type="number" value={formData.stock} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()}/>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="unit">Unidad</Label>
+                        <Input id="unit" value={formData.unit} onChange={handleChange} />
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="purchasePrice">Precio Compra</Label>
+                        <Input id="purchasePrice" type="number" value={formData.purchasePrice} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()}/>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="reorderLevel">Nivel Reorden</Label>
+                        <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()}/>
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="supplierId">Suplidor</Label>
+                    <Select onValueChange={handleSelectChange} value={formData.supplierId}>
+                        <SelectTrigger id="supplierId">
+                            <SelectValue placeholder="Selecciona un suplidor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+                <DialogFooter>
+                <DialogClose asChild>
+                        <Button type="button" variant="secondary">Cancelar</Button>
+                </DialogClose>
+                <Button type="submit">Guardar</Button>
+            </DialogFooter>
+        </form>
+    );
 };
 
-const initialRawMaterials: RawMaterial[] = [];
-
 export default function MateriaPrimaPage() {
-    const [materials, setMaterials] = useState<RawMaterial[]>(initialRawMaterials);
+    const { rawMaterials, suppliers, addRawMaterial, updateRawMaterial, deleteRawMaterial, addMultipleRawMaterials } = useAppData();
+    const { user } = useAuth();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const allSuppliers = useMemo(() => [
+        { id: 'generic', name: 'Suplidor Genérico', email: '', phone: '', address: '' },
+        ...suppliers
+    ], [suppliers]);
+
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file || !user) return;
 
         const reader = new FileReader();
         reader.onload = (e) => {
-        try {
-            const text = e.target?.result as string;
-            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-            if (lines.length < 2) throw new Error("El archivo CSV está vacío o solo contiene la cabecera.");
+            try {
+                const text = e.target?.result as string;
+                const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+                if (lines.length < 2) throw new Error("El archivo CSV está vacío o solo contiene la cabecera.");
 
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-            const requiredHeaders = ['name', 'sku', 'unit', 'purchaseprice', 'stock', 'reorderlevel', 'supplier'];
-            const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh.replace(/\s+/g, '')));
-            if (missingHeaders.length > 0) {
-                throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
-            }
+                const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
+                const requiredHeaders = ['name', 'sku', 'unit', 'purchaseprice', 'stock', 'reorderlevel', 'supplier'];
+                const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
+                if (missingHeaders.length > 0) {
+                    throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
+                }
 
-            const newMaterials: RawMaterial[] = [];
-            for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',');
-                const materialData: any = {};
-                headers.forEach((header, index) => {
-                    materialData[header.replace(/\s+/g, '')] = values[index]?.trim() || '';
+                const newMaterials: RawMaterial[] = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',');
+                    const materialData: any = {};
+                    headers.forEach((header, index) => {
+                        materialData[header] = values[index]?.trim() || '';
+                    });
+                    
+                    const supplierName = materialData.supplier || 'Suplidor Genérico';
+                    const supplier = allSuppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase()) || allSuppliers.find(s => s.id === 'generic');
+                    
+                    newMaterials.push({
+                        id: materialData.id || '',
+                        name: materialData.name || 'N/A',
+                        sku: materialData.sku || 'N/A',
+                        unit: materialData.unit || 'N/A',
+                        purchasePrice: parseFloat(materialData.purchaseprice) || 0,
+                        stock: parseInt(materialData.stock, 10) || 0,
+                        reorderLevel: parseInt(materialData.reorderlevel, 10) || 0,
+                        supplierId: supplier!.id,
+                        recordedBy: materialData.recordedby || user.name,
+                    });
+                }
+                
+                addMultipleRawMaterials(newMaterials);
+
+                toast({
+                    title: "Importación Exitosa",
+                    description: `${newMaterials.length} materias primas han sido importadas.`,
                 });
 
-                newMaterials.push({
-                    id: materialData.id || new Date().toISOString() + Math.random(),
-                    name: materialData.name || 'N/A',
-                    sku: materialData.sku || 'N/A',
-                    unit: materialData.unit || 'N/A',
-                    purchasePrice: parseFloat(materialData.purchaseprice) || 0,
-                    stock: parseInt(materialData.stock, 10) || 0,
-                    reorderLevel: parseInt(materialData.reorderlevel, 10) || 0,
-                    supplier: materialData.supplier || 'N/A',
+            } catch (error: any) {
+                toast({
+                    variant: "destructive",
+                    title: "Error de Importación",
+                    description: error.message || "No se pudo procesar el archivo CSV.",
                 });
             }
-            
-            setMaterials(prev => [...prev, ...newMaterials]);
-
-            toast({
-                title: "Importación Exitosa",
-                description: `${newMaterials.length} materias primas han sido importadas.`,
-            });
-
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Error de Importación",
-                description: error.message || "No se pudo procesar el archivo CSV.",
-            });
-        }
         };
         reader.onerror = () => {
             toast({
@@ -170,11 +221,14 @@ export default function MateriaPrimaPage() {
     }
 
     const handleExport = () => {
-        if (materials.length === 0) {
+        if (rawMaterials.length === 0) {
             toast({ title: 'No hay datos', description: 'No hay materias primas para exportar.', variant: 'destructive' });
             return;
         }
-        const dataToExport = materials.map(({ id, ...rest }) => rest);
+        const dataToExport = rawMaterials.map(({ id, supplierId, ...rest }) => ({
+            ...rest,
+            supplier: allSuppliers.find(s => s.id === supplierId)?.name || 'N/A',
+        }));
         const csvString = convertArrayOfObjectsToCSV(dataToExport);
         downloadCSV(csvString, 'materia_prima.csv');
         toast({ title: 'Exportación Exitosa', description: 'Tus materias primas han sido descargadas.' });
@@ -186,78 +240,24 @@ export default function MateriaPrimaPage() {
     };
 
     const handleDelete = (materialId: string) => {
-        setMaterials(materials.filter(m => m.id !== materialId));
+        deleteRawMaterial(materialId);
     };
 
     const handleSave = (material: RawMaterial) => {
+        if (!user) {
+            toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
+            return;
+        }
+
         if (editingMaterial) {
-            setMaterials(materials.map(m => m.id === material.id ? material : m));
+            updateRawMaterial(material);
         } else {
-            setMaterials([...materials, { ...material, id: new Date().toISOString() + Math.random() }]);
+            const materialToSave = { ...material, recordedBy: user.name };
+            const { id, ...newMaterialData } = materialToSave;
+            addRawMaterial(newMaterialData);
         }
         setEditingMaterial(null);
         setIsDialogOpen(false);
-    };
-
-    const MaterialForm = ({ material, onSave }: { material: RawMaterial | null, onSave: (material: RawMaterial) => void }) => {
-        const [formData, setFormData] = useState(material || {
-            name: '', sku: '', unit: '', purchasePrice: 0, stock: 0, reorderLevel: 0, supplier: ''
-        });
-
-        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const { id, value, type } = e.target;
-            setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
-        };
-
-        const handleSubmit = (e: React.FormEvent) => {
-            e.preventDefault();
-            onSave({ ...formData, id: material?.id || '' });
-        }
-        
-        return (
-            <form onSubmit={handleSubmit}>
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="name">Nombre</Label>
-                        <Input id="name" value={formData.name} onChange={handleChange} required />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="sku">SKU</Label>
-                        <Input id="sku" value={formData.sku} onChange={handleChange} />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="stock">Stock</Label>
-                            <Input id="stock" type="number" value={formData.stock} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()}/>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="unit">Unidad</Label>
-                            <Input id="unit" value={formData.unit} onChange={handleChange} />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="purchasePrice">Precio Compra</Label>
-                            <Input id="purchasePrice" type="number" value={formData.purchasePrice} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()}/>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="reorderLevel">Nivel Reorden</Label>
-                            <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()}/>
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="supplier">Suplidor</Label>
-                        <Input id="supplier" value={formData.supplier} onChange={handleChange} />
-                    </div>
-                </div>
-                 <DialogFooter>
-                    <DialogClose asChild>
-                         <Button type="button" variant="secondary">Cancelar</Button>
-                    </DialogClose>
-                    <Button type="submit">Guardar</Button>
-                </DialogFooter>
-            </form>
-        );
     };
 
     return (
@@ -295,10 +295,12 @@ export default function MateriaPrimaPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {materials.map((material) => (
+                            {rawMaterials.map((material) => {
+                                const supplier = allSuppliers.find(s => s.id === material.supplierId);
+                                return (
                                 <TableRow key={material.id}>
                                     <TableCell className="font-medium">{material.name}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{material.supplier}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{supplier?.name || 'N/A'}</TableCell>
                                     <TableCell className="text-right">
                                         {material.stock <= material.reorderLevel ? (
                                             <Badge variant="destructive">{material.stock} {material.unit}</Badge>
@@ -338,21 +340,21 @@ export default function MateriaPrimaPage() {
                                         </AlertDialog>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )})}
                         </TableBody>
                     </Table>
                 </CardContent>
             </Card>
 
              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>{editingMaterial ? 'Editar Materia Prima' : 'Añadir Materia Prima'}</DialogTitle>
                         <DialogDescription>
                             {editingMaterial ? 'Actualiza los detalles de tu material.' : 'Añade un nuevo material a tu inventario.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <MaterialForm material={editingMaterial} onSave={handleSave} />
+                    <MaterialForm material={editingMaterial} onSave={handleSave} suppliers={allSuppliers} />
                 </DialogContent>
             </Dialog>
         </div>

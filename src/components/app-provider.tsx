@@ -42,6 +42,18 @@ export type Product = {
   reorderLevel: number;
 };
 
+export type RawMaterial = {
+  id: string;
+  name: string;
+  sku: string;
+  unit: string;
+  purchasePrice: number;
+  stock: number;
+  reorderLevel: number;
+  supplierId: string;
+  recordedBy: string;
+};
+
 export type Client = {
   id: string;
   name: string;
@@ -78,6 +90,7 @@ interface AppContextType {
   incomes: Income[];
   expenses: Expense[];
   products: Product[];
+  rawMaterials: RawMaterial[];
   clients: Client[];
   suppliers: Supplier[];
   invoiceSettings: InvoiceSettings;
@@ -93,6 +106,10 @@ interface AppContextType {
   addMultipleProducts: (products: Product[]) => void;
   deleteProduct: (id: string) => void;
   updateProduct: (product: Product) => void;
+  addRawMaterial: (material: Omit<RawMaterial, 'id'>) => void;
+  addMultipleRawMaterials: (materials: RawMaterial[]) => void;
+  updateRawMaterial: (material: RawMaterial) => void;
+  deleteRawMaterial: (id: string) => void;
   addClient: (client: Omit<Client, 'id'>) => void;
   addMultipleClients: (clients: Client[]) => void;
   updateClient: (client: Client) => void;
@@ -112,6 +129,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
@@ -276,6 +294,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setProducts(prev => prev.filter(p => p.id !== id));
   }
 
+  const addRawMaterial = (material: Omit<RawMaterial, 'id'>) => {
+    setRawMaterials(prev => [...prev, { ...material, id: new Date().toISOString() + Math.random() }]);
+  };
+
+  const addMultipleRawMaterials = (materialsToUpsert: RawMaterial[]) => {
+      setRawMaterials(prevMaterials => {
+        const materialMap = new Map(prevMaterials.map(m => [m.id, m]));
+        materialsToUpsert.forEach(material => {
+            const id = material.id || (new Date().toISOString() + Math.random());
+            materialMap.set(id, { ...material, id });
+        });
+        return Array.from(materialMap.values());
+      });
+  };
+
+  const updateRawMaterial = (updatedMaterial: RawMaterial) => {
+      setRawMaterials(prev => prev.map(m => m.id === updatedMaterial.id ? updatedMaterial : m));
+  };
+
+  const deleteRawMaterial = (id: string) => {
+      setRawMaterials(prev => prev.filter(m => m.id !== id));
+  };
+
   const addClient = (client: Omit<Client, 'id'>) => {
     setClients(prev => [...prev, { ...client, id: new Date().toISOString() + Math.random() }]);
   };
@@ -325,10 +366,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AppContext.Provider value={{
-        incomes, expenses, products, clients, suppliers, invoiceSettings,
+        incomes, expenses, products, rawMaterials, clients, suppliers, invoiceSettings,
         addIncome, addMultipleIncomes, deleteIncome, updateIncome,
         addExpense, addMultipleExpenses, deleteExpense, updateExpense,
         addProduct, addMultipleProducts, deleteProduct, updateProduct,
+        addRawMaterial, addMultipleRawMaterials, updateRawMaterial, deleteRawMaterial,
         addClient, addMultipleClients, updateClient, deleteClient,
         addSupplier, addMultipleSuppliers, updateSupplier, deleteSupplier,
         updateInvoiceSettings
