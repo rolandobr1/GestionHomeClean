@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "homeclean-1b1a2"
-  }
+    "default": "homeclean-1b1a2",
+    "HOMECLEAN": "homeclean-1b1a2"
+  },
+  "targets": {},
+  "etags": {}
 }
