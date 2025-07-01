@@ -1,6 +1,6 @@
 # Cómo Desplegar tu Aplicación en Firebase
 
-Esta guía te mostrará cómo desplegar tu aplicación Next.js utilizando Firebase App Hosting. El proyecto ya está preconfigurado para que este proceso sea lo más sencillo posible.
+Esta guía te mostrará cómo desplegar tu aplicación Next.js utilizando **Firebase Hosting**. El proyecto ya está preconfigurado para que este proceso sea rápido y sencillo.
 
 ## Requisitos Previos
 
@@ -34,23 +34,15 @@ Esto abrirá una ventana en tu navegador para que inicies sesión con tu cuenta 
 
 ---
 
-## Paso 3: Configurar tu Proyecto Local
+## Paso 3: Asociar tu Proyecto de Firebase
 
-Si es la primera vez que despliegas este proyecto, necesitas asociarlo con el proyecto que creaste en la Consola de Firebase.
+Si es la primera vez que despliegas, necesitas asociar este código con el proyecto que creaste en la Consola de Firebase. Ejecuta el siguiente comando y sigue las instrucciones para seleccionar tu proyecto:
 
-1.  **Navega a la carpeta raíz de tu proyecto** en la terminal.
-2.  Ejecuta el siguiente comando para iniciar la configuración:
+```bash
+firebase use --add
+```
 
-    ```bash
-    firebase init hosting
-    ```
-3.  La terminal te hará algunas preguntas:
-    *   **"Please select an option"**: Elige **"Use an existing project"** y selecciona el proyecto que creaste en la Consola de Firebase.
-    *   **"What do you want to use as your public directory?"**: Escribe `out` y presiona Enter. (Aunque App Hosting lo gestiona automáticamente, es una buena práctica).
-    *   **"Configure as a single-page app (rewrite all urls to /index.html)?"**: Escribe `N` (No) y presiona Enter.
-    *   **"Set up automatic builds and deploys with GitHub?"**: Escribe `N` (No) por ahora.
-
-Esto creará un archivo `.firebaserc` que vincula tu código local con tu proyecto en la nube.
+La terminal te guiará para que elijas tu proyecto de Firebase de una lista. Esto creará un archivo `.firebaserc` que vincula tu código local con tu proyecto en la nube.
 
 ---
 
@@ -62,7 +54,9 @@ Esto creará un archivo `.firebaserc` que vincula tu código local con tu proyec
 firebase deploy
 ```
 
-La Firebase CLI detectará automáticamente tu archivo `apphosting.yaml`, lo que le indica que debe construir tu aplicación de Next.js y desplegarla en App Hosting.
+La Firebase CLI leerá tu archivo `firebase.json`, que le indica que debe:
+1.  **Construir la aplicación:** Ejecuta `npm run build` para generar la versión estática y optimizada de tu app en la carpeta `out`.
+2.  **Desplegar los archivos:** Sube el contenido de la carpeta `out` a Firebase Hosting.
 
 Este proceso puede tardar unos minutos. Verás el progreso en la terminal.
 
