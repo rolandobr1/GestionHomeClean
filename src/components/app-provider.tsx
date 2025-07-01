@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
@@ -160,8 +159,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         },
         (error) => {
           console.error(`Error al escuchar la colección ${name}:`, error);
-          if (error.code === 'permission-denied') {
-            console.error("FIREBASE: ¡Permiso denegado! Revisa las reglas de seguridad de Firestore.");
+          if (error.code === 'permission-denied' || error.code === 'unauthenticated') {
+            console.error("FIREBASE: ¡Permiso denegado! Revisa las reglas de seguridad de Firestore y que las APIs necesarias estén habilitadas.");
           }
         }
       );
@@ -418,7 +417,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (db) await deleteDoc(doc(db, 'suppliers', id));
   };
 
-  if (!isConfigured) {
+  if (!isConfigured || !db) {
     return <FirebaseConfigStatus config={firebaseConfig} />;
   }
 

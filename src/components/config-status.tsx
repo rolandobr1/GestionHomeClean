@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Terminal, CheckCircle, XCircle, AlertCircle, Info } from "lucide-react";
 import React from 'react';
 
 type ConfigKeys =
@@ -29,14 +29,15 @@ interface FirebaseConfigStatusProps {
 }
 
 export function FirebaseConfigStatus({ config }: FirebaseConfigStatusProps) {
+  const allKeysPresent = Object.values(config).every(Boolean);
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <Card className="mx-auto max-w-2xl w-full">
         <CardHeader>
-          <CardTitle className="text-xl">Configuración de Firebase Incompleta</CardTitle>
+          <CardTitle className="text-xl">Error de Conexión con Firebase</CardTitle>
           <CardDescription>
-            La aplicación no puede conectar con Firebase porque faltan algunas
-            credenciales o no se han cargado correctamente.
+            La aplicación no puede conectar con Firebase. Revisa los siguientes puntos para solucionarlo.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -44,14 +45,21 @@ export function FirebaseConfigStatus({ config }: FirebaseConfigStatusProps) {
             <Terminal className="h-4 w-4" />
             <AlertTitle>¡Acción Requerida!</AlertTitle>
             <AlertDescription>
-              <p className="mt-2">
-                Por favor, revisa tu archivo <code>.env.local</code> y sigue los pasos de la guía de solución de problemas a continuación.
-              </p>
-              <p className="text-xs text-muted-foreground pt-2">
-                Consulta <code>firebase-instructions.md</code> para ver la guía detallada de cómo obtener las claves.
-              </p>
+              {allKeysPresent 
+                ? "Todas las credenciales están presentes, pero la conexión falló. Revisa la guía de solución de problemas para habilitar los servicios necesarios en Firebase."
+                : "Faltan algunas credenciales de Firebase. Revisa tu archivo .env.local (para desarrollo local) o los 'Secrets' (para la previsualización)."
+              }
             </AlertDescription>
           </Alert>
+
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>Nota para la Previsualización</AlertTitle>
+            <AlertDescription>
+              Si ya has añadido los 'Secrets' y sigues viendo este error, asegúrate de que los nombres de los secrets coincidan **exactamente** con los que se listan abajo, incluyendo el prefijo `NEXT_PUBLIC_`. Luego, intenta forzar un reinicio de la previsualización haciendo un cambio pequeño en el código.
+            </AlertDescription>
+          </Alert>
+          
           <div className="border rounded-md p-4 space-y-2 text-sm">
              <h4 className="font-semibold mb-2">Estado de las Credenciales:</h4>
              {Object.entries(configLabels).map(([key, label]) => (
@@ -79,25 +87,25 @@ export function FirebaseConfigStatus({ config }: FirebaseConfigStatusProps) {
             </CardHeader>
             <CardContent className="text-sm text-amber-900 space-y-4">
                 <div className="space-y-1">
-                    <h4 className="font-semibold">1. ¿Reiniciaste el servidor?</h4>
+                    <h4 className="font-semibold">1. Habilita las APIs de Google Cloud</h4>
                     <p>
-                        Next.js solo carga el archivo <code>.env.local</code> al iniciar. Si has modificado las claves, detén el servidor (con <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Ctrl</kbd> + <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">C</kbd>) y vuelve a ejecutar <code>npm run dev</code>.
+                        A menudo el problema es que las APIs necesarias no están activas. Ve a la <a href="https://console.cloud.google.com/apis/library" target="_blank" rel="noopener noreferrer" className="underline">Biblioteca de APIs de Google Cloud</a> y asegúrate de que las siguientes APIs estén **HABILITADAS** para tu proyecto:
+                        <ul className="list-disc pl-5 mt-1 font-medium">
+                            <li>Identity Toolkit API</li>
+                            <li>Cloud Firestore API</li>
+                        </ul>
+                    </p>
+                </div>
+                 <div className="space-y-1">
+                    <h4 className="font-semibold">2. Habilita el proveedor de Correo/Contraseña</h4>
+                    <p>
+                        En la Consola de Firebase, ve a **Authentication** &rarr; **Sign-in method** y asegúrate de que **Correo electrónico/Contraseña** esté habilitado.
                     </p>
                 </div>
                 <div className="space-y-1">
-                    <h4 className="font-semibold">2. ¿Usaste comillas en el archivo?</h4>
+                    <h4 className="font-semibold">3. Reinicia el servidor (para desarrollo local)</h4>
                     <p>
-                        Los valores en <code>.env.local</code> <strong>no</strong> deben llevar comillas.
-                    </p>
-                    <div className="font-mono text-xs bg-gray-100 p-2 rounded-md space-y-1">
-                        <div><span className="font-bold text-green-700 mr-2">✅ Correcto:</span><span className="text-gray-600">NEXT_PUBLIC_...=AIza...</span></div>
-                        <div><span className="font-bold text-red-700 mr-2">❌ Incorrecto:</span><span className="text-gray-600">NEXT_PUBLIC_...="AIza..."</span></div>
-                    </div>
-                </div>
-                <div className="space-y-1">
-                    <h4 className="font-semibold">3. ¿Copiaste bien las claves?</h4>
-                    <p>
-                        Asegúrate de haber copiado el valor completo de cada clave, sin espacios extra al principio o al final.
+                        Next.js solo carga el archivo <code>.env.local</code> al iniciar. Detén el servidor (con <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">Ctrl</kbd> + <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">C</kbd>) y vuelve a ejecutar <code>npm run dev</code>.
                     </p>
                 </div>
             </CardContent>
