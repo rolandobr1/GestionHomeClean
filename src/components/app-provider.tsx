@@ -153,10 +153,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     collectionsToSync.forEach(({ name, setter }) => {
       const q = collection(db, name);
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setter(data);
-      });
+      const unsubscribe = onSnapshot(q,
+        (querySnapshot) => {
+          const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setter(data);
+        },
+        (error) => {
+          console.error(`Error al escuchar la colección ${name}:`, error);
+          if (error.code === 'permission-denied') {
+            console.error("FIREBASE: ¡Permiso denegado! Revisa las reglas de seguridad de Firestore.");
+          }
+        }
+      );
       unsubscribers.push(unsubscribe);
     });
 
