@@ -449,7 +449,7 @@ export default function IngresosPage() {
           
           await navigator.share({
             title: 'Factura QuimioGest',
-            text: `Aquí está tu factura de QuimioGest.`,
+            text: invoiceSettings.shareMessage,
             files: [file],
           });
         } catch (error: any) {
@@ -901,4 +901,5 @@ export default function IngresosPage() {
         </div>
     );
 }
+
 

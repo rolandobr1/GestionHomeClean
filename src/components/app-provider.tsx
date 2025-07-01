@@ -63,6 +63,7 @@ export type InvoiceSettings = {
   companyAddress: string;
   companyRNC: string;
   companyLogo: string;
+  shareMessage: string;
 };
 
 export const initialProducts: Product[] = [
@@ -118,6 +119,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     companyAddress: "Calle Ficticia 123, Santo Domingo",
     companyRNC: "1-2345678-9",
     companyLogo: "/logohomeclean.png",
+    shareMessage: "Aquí está tu factura de QuimioGest.",
   });
 
   const updateInvoiceSettings = (settings: Partial<InvoiceSettings>) => {

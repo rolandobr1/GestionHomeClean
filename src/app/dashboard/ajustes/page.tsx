@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useAppData } from '@/hooks/use-app-data';
 import type { InvoiceSettings } from '@/components/app-provider';
 import { useToast } from "@/hooks/use-toast";
+import { Textarea } from '@/components/ui/textarea';
 
 export default function AjustesPage() {
   const { invoiceSettings, updateInvoiceSettings } = useAppData();
@@ -18,7 +19,7 @@ export default function AjustesPage() {
     setFormData(invoiceSettings);
   }, [invoiceSettings]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
   };
@@ -64,6 +65,13 @@ export default function AjustesPage() {
                 <p className="text-sm text-muted-foreground">
                     Usa una ruta local (ej. /logo.png) o una URL completa (ej. https://...). El logo debe estar en la carpeta `public` de tu proyecto.
                 </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="shareMessage">Mensaje para Compartir Factura</Label>
+              <Textarea id="shareMessage" value={formData.shareMessage || ''} onChange={handleChange} placeholder="Ej: Aquí está tu factura de QuimioGest." />
+              <p className="text-sm text-muted-foreground">
+                Este texto se usará al compartir una factura por WhatsApp u otras apps.
+              </p>
             </div>
             <div className="flex justify-end">
               <Button type="submit">Guardar Cambios</Button>
