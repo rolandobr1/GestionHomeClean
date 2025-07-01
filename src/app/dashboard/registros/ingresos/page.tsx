@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -16,9 +17,8 @@ import { Separator } from '@/components/ui/separator';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppData } from '@/hooks/use-app-data';
-import type { Income, SoldProduct, Client, InvoiceSettings } from '@/components/app-provider';
+import type { Income, SoldProduct, Client } from '@/components/app-provider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { toJpeg, toBlob } from 'html-to-image';
 import { InvoiceTemplate } from '@/components/invoice-template';
 import { useToast } from "@/hooks/use-toast";
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
@@ -26,6 +26,8 @@ import type { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useAuth } from '@/hooks/use-auth';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const IncomeForm = ({ income, onSave, clients }: { income: Income | null, onSave: (income: Income) => void, clients: Client[] }) => {
     const { products: allProducts } = useAppData();
@@ -256,7 +258,6 @@ export default function IngresosPage() {
 
     const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
     const [selectedIncomeForInvoice, setSelectedIncomeForInvoice] = useState<Income | null>(null);
-    const invoiceRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -339,26 +340,97 @@ export default function IngresosPage() {
         setIsInvoiceOpen(true);
     };
 
-    const handleDownloadJpg = async () => {
-        if (!invoiceRef.current || !selectedIncomeForInvoice) return;
+    const generatePdfDoc = (incomeToExport: Income | null) => {
+        if (!incomeToExport) return null;
 
-        try {
-            const dataUrl = await toJpeg(invoiceRef.current, { backgroundColor: 'white', pixelRatio: 2 });
-            const link = document.createElement('a');
-            link.download = `factura-${selectedIncomeForInvoice.id.slice(-6)}.jpg`;
-            link.href = dataUrl;
-            link.click();
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: 'Error al Descargar',
-                description: 'No se pudo generar el archivo JPG.',
-            });
+        const client = allClients.find(c => c.id === incomeToExport.clientId);
+        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'letter' });
+
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 40;
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(20);
+        doc.text(invoiceSettings.companyName, margin, 60);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(invoiceSettings.companyAddress, margin, 75);
+        doc.text(`RNC: ${invoiceSettings.companyRNC}`, margin, 85);
+
+        doc.setFontSize(14);
+        doc.text("Factura", pageWidth - margin, 60, { align: 'right' });
+
+        doc.setFontSize(10);
+        doc.text(`Nº: ${incomeToExport.id.slice(-6).toUpperCase()}`, pageWidth - margin, 75, { align: 'right' });
+        doc.text(`Fecha: ${format(new Date(incomeToExport.date), 'dd/MM/yyyy', { locale: es })}`, pageWidth - margin, 85, { align: 'right' });
+        
+        doc.setLineWidth(1);
+        doc.line(margin, 110, pageWidth - margin, 110);
+        doc.setFont('helvetica', 'bold');
+        doc.text("Facturar a:", margin, 130);
+        doc.setFont('helvetica', 'normal');
+        doc.text(client?.name || 'Cliente Genérico', margin, 145);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text("Método de Pago:", pageWidth / 2, 130);
+        doc.setFont('helvetica', 'normal');
+        doc.text(incomeToExport.paymentMethod, pageWidth / 2, 145);
+        doc.line(margin, 160, pageWidth - margin, 160);
+
+        const tableData = incomeToExport.products.map(p => ([
+            p.name,
+            p.quantity.toString(),
+            `RD$${p.price.toFixed(2)}`,
+            `RD$${(p.quantity * p.price).toFixed(2)}`
+        ]));
+
+        autoTable(doc, {
+            startY: 180,
+            head: [['Producto', 'Cant.', 'Precio Unit.', 'Subtotal']],
+            body: tableData,
+            theme: 'striped',
+            styles: { cellPadding: 8, fontSize: 10 },
+            headStyles: { fillColor: [241, 245, 249] },
+            columnStyles: {
+                1: { halign: 'center' },
+                2: { halign: 'right' },
+                3: { halign: 'right' },
+            }
+        });
+
+        const finalY = (doc as any).lastAutoTable.finalY;
+        const totalXPos = pageWidth - margin - 180;
+
+        doc.setFontSize(10);
+        doc.text('Subtotal:', totalXPos, finalY + 30);
+        doc.text(`RD$${incomeToExport.totalAmount.toFixed(2)}`, pageWidth - margin, finalY + 30, { align: 'right' });
+        doc.text('ITBIS (0%):', totalXPos, finalY + 45);
+        doc.text('RD$0.00', pageWidth - margin, finalY + 45, { align: 'right' });
+
+        doc.setLineWidth(1.5);
+        doc.line(totalXPos, finalY + 55, pageWidth - margin, finalY + 55);
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Total:', totalXPos, finalY + 70);
+        doc.text(`RD$${incomeToExport.totalAmount.toFixed(2)}`, pageWidth - margin, finalY + 70, { align: 'right' });
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'italic');
+        doc.text('¡Gracias por su compra!', pageWidth / 2, doc.internal.pageSize.getHeight() - 30, { align: 'center' });
+
+        return doc;
+    }
+
+    const handleDownloadPdf = () => {
+        const doc = generatePdfDoc(selectedIncomeForInvoice);
+        if (doc && selectedIncomeForInvoice) {
+            doc.save(`factura-${selectedIncomeForInvoice.id.slice(-6)}.pdf`);
         }
     };
 
     const handleShare = async () => {
-        if (!invoiceRef.current || !selectedIncomeForInvoice) return;
         if (!navigator.share) {
           toast({
             variant: 'destructive',
@@ -368,12 +440,12 @@ export default function IngresosPage() {
           return;
         }
     
+        const doc = generatePdfDoc(selectedIncomeForInvoice);
+        if (!doc || !selectedIncomeForInvoice) return;
+
         try {
-          const blob = await toBlob(invoiceRef.current, { backgroundColor: 'white', pixelRatio: 2 });
-          if (!blob) {
-            throw new Error('No se pudo generar la imagen.');
-          }
-          const file = new File([blob], `factura-${selectedIncomeForInvoice.id.slice(-6)}.jpg`, { type: 'image/jpeg' });
+          const pdfBlob = doc.output('blob');
+          const file = new File([pdfBlob], `factura-${selectedIncomeForInvoice.id.slice(-6)}.pdf`, { type: 'application/pdf' });
           
           await navigator.share({
             title: 'Factura QuimioGest',
@@ -389,7 +461,7 @@ export default function IngresosPage() {
                  });
             }
         }
-      };
+    };
     
     const convertArrayOfObjectsToCSV = (data: any[]) => {
         if (data.length === 0) return '';
@@ -804,20 +876,20 @@ export default function IngresosPage() {
             </Dialog>
 
             <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
-                <DialogContent className="max-w-4xl p-0">
+                <DialogContent className="w-[95%] sm:max-w-4xl p-0">
                     <DialogHeader className="p-6 pb-0">
                         <DialogTitle>Vista Previa de Factura</DialogTitle>
                         <DialogDescription>
-                            Puedes descargar la factura como imagen o compartirla directamente.
+                            Puedes descargar la factura como PDF o compartirla directamente.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="p-4 sm:p-6 overflow-auto">
-                       {selectedIncomeForInvoice && <InvoiceTemplate ref={invoiceRef} income={selectedIncomeForInvoice} clients={allClients} invoiceSettings={invoiceSettings} />}
+                    <div className="p-4 sm:p-6 overflow-auto max-h-[70vh]">
+                       {selectedIncomeForInvoice && <InvoiceTemplate income={selectedIncomeForInvoice} clients={allClients} invoiceSettings={invoiceSettings} />}
                     </div>
                     <DialogFooter className="p-6 bg-muted/50 flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                        <Button variant="outline" onClick={handleDownloadJpg}>
+                        <Button variant="outline" onClick={handleDownloadPdf}>
                             <Download className="mr-2 h-4 w-4" />
-                            Descargar JPG
+                            Descargar PDF
                         </Button>
                         <Button onClick={handleShare}>
                             <Share2 className="mr-2 h-4 w-4" />
@@ -829,3 +901,4 @@ export default function IngresosPage() {
         </div>
     );
 }
+

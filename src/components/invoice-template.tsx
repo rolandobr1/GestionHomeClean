@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -12,13 +13,13 @@ interface InvoiceTemplateProps {
   invoiceSettings: InvoiceSettings;
 }
 
-export const InvoiceTemplate = React.forwardRef<HTMLDivElement, InvoiceTemplateProps>(({ income, clients, invoiceSettings }, ref) => {
+export const InvoiceTemplate = ({ income, clients, invoiceSettings }: InvoiceTemplateProps) => {
   const client = clients.find(c => c.id === income.clientId);
 
   if (!income) return null;
 
   return (
-    <div ref={ref} className="bg-white text-black p-8 font-sans w-[800px] mx-auto">
+    <div className="bg-white text-black p-8 font-sans w-full">
       <header className="flex justify-between items-start pb-6 border-b-2 border-gray-200">
         <div>
           <div className="mb-2">
@@ -93,6 +94,4 @@ export const InvoiceTemplate = React.forwardRef<HTMLDivElement, InvoiceTemplateP
       </footer>
     </div>
   );
-});
-
-InvoiceTemplate.displayName = 'InvoiceTemplate';
+};
