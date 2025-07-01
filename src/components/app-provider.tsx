@@ -3,7 +3,7 @@
 
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import { db, isConfigured, firebaseConfig } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, increment } from 'firebase/firestore';
 import { FirebaseConfigStatus } from './config-status';
 
 // Type definitions
@@ -178,125 +178,107 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   // --- Income Management with Firestore ---
   const addIncome = async (income: Omit<Income, 'id'>) => {
-    if (!db) return;
+    if (!db) throw new Error("Firestore no está inicializado.");
     const batch = writeBatch(db);
     
-    // Create new income document
     const incomeRef = doc(collection(db, "incomes"));
     batch.set(incomeRef, income);
 
-    // Update product stock
-    const quantitySoldMap = new Map<string, number>();
     income.products.forEach(soldProduct => {
-        quantitySoldMap.set(soldProduct.productId, (quantitySoldMap.get(soldProduct.productId) || 0) + soldProduct.quantity);
-    });
-    
-    products.forEach(product => {
-      if (quantitySoldMap.has(product.id)) {
-        const quantitySold = quantitySoldMap.get(product.id)!;
-        const productRef = doc(db, "products", product.id);
-        batch.update(productRef, { stock: product.stock - quantitySold });
-      }
+        const productRef = doc(db, "products", soldProduct.productId);
+        batch.update(productRef, { stock: increment(-soldProduct.quantity) });
     });
 
     await batch.commit();
   };
 
   const addMultipleIncomes = async (incomesToUpsert: Income[]) => {
-      if (!db) return;
+      if (!db) throw new Error("Firestore no está inicializado.");
+      const batch = writeBatch(db);
       const stockChanges = new Map<string, number>();
       const existingIncomesMap = new Map(incomes.map(i => [i.id, i]));
-      const batch = writeBatch(db);
 
-      incomesToUpsert.forEach(income => {
-          const originalIncome = income.id ? existingIncomesMap.get(income.id) : undefined;
-          
-          if (originalIncome) { 
-              // UPDATE: add back original stock
+      for (const income of incomesToUpsert) {
+          const originalIncome = income.id ? existingIncomesMap.get(income.id) : null;
+          const { id, ...incomeData } = income;
+          const docRef = id ? doc(db, 'incomes', id) : doc(collection(db, 'incomes'));
+
+          if (originalIncome) {
               originalIncome.products.forEach(p => {
                   stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
               });
           }
-          // ADD/UPDATE: subtract new stock
+
           income.products.forEach(p => {
               stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
           });
-          
-          // Add or update income doc in batch
-          const {id, ...incomeData} = income;
-          const docRef = id ? doc(db, 'incomes', id) : doc(collection(db, 'incomes'));
+
           batch.set(docRef, incomeData);
-      });
+      }
       
-      // Add stock updates to batch
-      products.forEach(product => {
-          if (stockChanges.has(product.id)) {
-              const productRef = doc(db, "products", product.id);
-              const currentStock = products.find(p => p.id === product.id)?.stock || 0;
-              batch.update(productRef, { stock: currentStock + stockChanges.get(product.id)! });
+      for (const [productId, quantityChange] of stockChanges.entries()) {
+          if (quantityChange !== 0) {
+              const productRef = doc(db, "products", productId);
+              batch.update(productRef, { stock: increment(quantityChange) });
           }
-      });
+      }
+
       await batch.commit();
   };
 
   const updateIncome = async (updatedIncome: Income) => {
-      if (!db) return;
+      if (!db) throw new Error("Firestore no está inicializado.");
       const originalIncome = incomes.find(i => i.id === updatedIncome.id);
+      if (!originalIncome) {
+          console.error("No se encontró el ingreso original a actualizar.");
+          const { id, ...incomeData } = updatedIncome;
+          await updateDoc(doc(db, 'incomes', id), incomeData);
+          return;
+      }
       
       const batch = writeBatch(db);
       
-      // Update income doc
-      const {id, ...incomeData} = updatedIncome;
+      const { id, ...incomeData } = updatedIncome;
       const incomeRef = doc(db, 'incomes', id);
       batch.update(incomeRef, incomeData);
 
-      // Update stock if original income is found
-      if (originalIncome) {
-          const stockChanges = new Map<string, number>();
-          // + for original items, - for updated items
-          originalIncome.products.forEach(p => {
-              stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
-          });
-          updatedIncome.products.forEach(p => {
-              stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
-          });
-          
-          products.forEach(product => {
-              if (stockChanges.has(product.id)) {
-                  const productRef = doc(db, "products", product.id);
-                  const currentStock = products.find(p => p.id === product.id)?.stock || 0;
-                  batch.update(productRef, { stock: currentStock + stockChanges.get(product.id)! });
-              }
-          });
+      const stockChanges = new Map<string, number>();
+      
+      originalIncome.products.forEach(p => {
+          stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+      });
+
+      updatedIncome.products.forEach(p => {
+          stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+      });
+      
+      for (const [productId, quantityChange] of stockChanges.entries()) {
+          if (quantityChange !== 0) {
+              const productRef = doc(db, "products", productId);
+              batch.update(productRef, { stock: increment(quantityChange) });
+          }
       }
       
       await batch.commit();
   };
 
   const deleteIncome = async (id: string) => {
-    if (!db) return;
+    if (!db) throw new Error("Firestore no está inicializado.");
     const incomeToDelete = incomes.find(i => i.id === id);
-    const batch = writeBatch(db);
+    if (!incomeToDelete) {
+        console.error("No se encontró el ingreso a eliminar en el estado local. Solo se borrará el registro de ingreso.");
+        await deleteDoc(doc(db, 'incomes', id));
+        return;
+    }
 
-    // Delete income doc
+    const batch = writeBatch(db);
     const incomeRef = doc(db, 'incomes', id);
     batch.delete(incomeRef);
 
-    // Return stock
-    if (incomeToDelete) {
-        const stockToReturn = new Map<string, number>();
-        incomeToDelete.products.forEach(p => {
-            stockToReturn.set(p.productId, (stockToReturn.get(p.productId) || 0) + p.quantity);
-        });
-
-        products.forEach(product => {
-            if (stockToReturn.has(product.id)) {
-                const productRef = doc(db, "products", product.id);
-                const currentStock = products.find(p => p.id === product.id)?.stock || 0;
-                batch.update(productRef, { stock: currentStock + stockToReturn.get(product.id)! });
-            }
-        });
-    }
+    incomeToDelete.products.forEach(p => {
+        const productRef = doc(db, "products", p.productId);
+        batch.update(productRef, { stock: increment(p.quantity) });
+    });
 
     await batch.commit();
   };
