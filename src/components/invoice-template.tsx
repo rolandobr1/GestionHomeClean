@@ -19,7 +19,7 @@ export const InvoiceTemplate = ({ income, clients, invoiceSettings }: InvoiceTem
   if (!income) return null;
 
   return (
-    <div className="bg-white text-black p-4 md:p-6 font-sans w-full min-w-[320px]">
+    <div className="bg-white text-black p-4 md:p-6 font-sans w-full min-w-[320px] flex-grow overflow-y-auto">
       <header className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b-2 border-gray-200">
         <div>
           <div className="mb-2">
