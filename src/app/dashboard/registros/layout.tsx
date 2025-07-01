@@ -18,12 +18,12 @@ export default function RegistrosLayout({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
         <div>
             <h1 className="text-2xl font-bold">Gestión de Registros</h1>
             <p className="text-muted-foreground">Administra tus ingresos y egresos.</p>
         </div>
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="ingresos">Ingresos</TabsTrigger>
                 <TabsTrigger value="egresos">Egresos</TabsTrigger>
