@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download } from 'lucide-react';
@@ -14,13 +14,87 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppData } from '@/hooks/use-app-data';
 import type { Client } from '@/components/app-provider';
 
+
+// Moved ContactForm outside of the main component to prevent re-creation on every render.
+// This is a stable component.
+const ContactForm = ({
+  contact,
+  onSave,
+}: {
+  contact: Client | null;
+  onSave: (client: Client) => void;
+}) => {
+  const [formData, setFormData] = useState<Omit<Client, 'id'>>({
+    name: '', email: '', phone: '', address: ''
+  });
+
+  useEffect(() => {
+    // When the dialog opens and a contact is passed, populate the form.
+    // When opening for a new contact, `contact` is null, so we use the default state.
+    if (contact) {
+      setFormData(contact);
+    } else {
+      setFormData({ name: '', email: '', phone: '', address: '' });
+    }
+  }, [contact]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({ ...formData, id: contact?.id || '' });
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="grid gap-4 py-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Nombre</Label>
+          <Input id="name" value={formData.name} onChange={handleChange} required />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">Correo</Label>
+          <Input id="email" type="email" value={formData.email} onChange={handleChange} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="phone">Teléfono</Label>
+          <Input id="phone" value={formData.phone} onChange={handleChange} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="address">Dirección</Label>
+          <Input id="address" value={formData.address} onChange={handleChange} />
+        </div>
+      </div>
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button type="button" variant="secondary">
+            Cancelar
+          </Button>
+        </DialogClose>
+        <Button type="submit">Guardar</Button>
+      </DialogFooter>
+    </form>
+  );
+};
+
+
 export default function ClientesPage() {
-    const { clients, addClient, updateClient, deleteClient, addMultipleClients } from useAppData();
+    const { clients, addClient, updateClient, deleteClient, addMultipleClients } = useAppData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // This effect cleans up the `editingClient` state when the dialog is closed.
+    useEffect(() => {
+      if (!isDialogOpen) {
+        setEditingClient(null);
+      }
+    }, [isDialogOpen]);
+    
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -151,53 +225,7 @@ export default function ClientesPage() {
             const { id, ...newClientData } = client;
             addClient(newClientData);
         }
-        setEditingClient(null);
         setIsDialogOpen(false);
-    };
-
-    const ContactForm = ({ contact, onSave }: { contact: Client | null, onSave: (client: Client) => void }) => {
-        const [formData, setFormData] = useState(contact || {
-            name: '', email: '', phone: '', address: ''
-        });
-
-        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const { id, value } = e.target;
-            setFormData(prev => ({ ...prev, [id]: value }));
-        };
-
-        const handleSubmit = (e: React.FormEvent) => {
-            e.preventDefault();
-            onSave({ ...formData, id: contact?.id || '' });
-        }
-        
-        return (
-            <form onSubmit={handleSubmit}>
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="name">Nombre</Label>
-                        <Input id="name" value={formData.name} onChange={handleChange} required />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="email">Correo</Label>
-                        <Input id="email" type="email" value={formData.email} onChange={handleChange} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="phone">Teléfono</Label>
-                        <Input id="phone" value={formData.phone} onChange={handleChange} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="address">Dirección</Label>
-                        <Input id="address" value={formData.address} onChange={handleChange} />
-                    </div>
-                </div>
-                 <DialogFooter>
-                    <DialogClose asChild>
-                         <Button type="button" variant="secondary">Cancelar</Button>
-                    </DialogClose>
-                    <Button type="submit">Guardar</Button>
-                </DialogFooter>
-            </form>
-        );
     };
 
     return (
