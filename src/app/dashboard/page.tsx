@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -511,7 +512,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Rendimiento Financiero</CardTitle>
@@ -519,7 +520,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="pl-2">
              <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                <BarChart data={chartData} margin={{ top: 20, right: 20, bottom: 5, left: 20 }}>
+                <BarChart data={chartData} margin={{ top: 20, right: 20, bottom: 5, left: -10 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
                     <YAxis tickLine={false} axisLine={false} tickMargin={10} tickFormatter={(value) => `RD$${value / 1000}k`} />
@@ -592,3 +593,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
