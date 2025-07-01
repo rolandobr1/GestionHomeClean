@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -63,18 +64,6 @@ const ExpenseForm = ({ expense, onSave, suppliers }: { expense: Expense | null, 
         <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                    <Label htmlFor="description">Descripción</Label>
-                    <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} required />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="amount">Monto</Label>
-                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value) || 0)} required inputMode="decimal" onFocus={(e) => e.target.select()} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="date">Fecha</Label>
-                    <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
                     <Label htmlFor="supplierId">Suplidor</Label>
                     <Select onValueChange={setSupplierId} value={supplierId}>
                         <SelectTrigger>
@@ -95,6 +84,18 @@ const ExpenseForm = ({ expense, onSave, suppliers }: { expense: Expense | null, 
                             {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                         </SelectContent>
                     </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="description">Descripción</Label>
+                    <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} required />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="amount">Monto</Label>
+                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value) || 0)} required inputMode="decimal" onFocus={(e) => e.target.select()} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="date">Fecha</Label>
+                    <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
                 </div>
             </div>
              <DialogFooter>
@@ -460,3 +461,5 @@ export default function EgresosPage() {
         </div>
     );
 }
+
+    

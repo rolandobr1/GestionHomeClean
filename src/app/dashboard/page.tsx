@@ -280,18 +280,6 @@ const ExpenseForm = ({ onSave, suppliers }: { onSave: (expense: Omit<Expense, 'i
         <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                    <Label htmlFor="description-dash">Descripción</Label>
-                    <Input id="description-dash" value={formData.description} onChange={handleChange} required />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="amount-dash">Monto</Label>
-                    <Input id="amount-dash" type="number" value={formData.amount} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="date-dash-exp">Fecha</Label>
-                    <Input id="date-dash-exp" type="date" value={formData.date} onChange={handleChange} required />
-                </div>
-                <div className="space-y-2">
                     <Label htmlFor="supplierId-dash">Suplidor</Label>
                      <Select onValueChange={handleSelectChange('supplierId')} value={formData.supplierId}>
                         <SelectTrigger id="supplierId-dash">
@@ -317,6 +305,18 @@ const ExpenseForm = ({ onSave, suppliers }: { onSave: (expense: Omit<Expense, 'i
                             <SelectItem value="Otro">Otro</SelectItem>
                         </SelectContent>
                     </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="description-dash">Descripción</Label>
+                    <Input id="description-dash" value={formData.description} onChange={handleChange} required />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="amount-dash">Monto</Label>
+                    <Input id="amount-dash" type="number" value={formData.amount} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="date-dash-exp">Fecha</Label>
+                    <Input id="date-dash-exp" type="date" value={formData.date} onChange={handleChange} required />
                 </div>
             </div>
              <DialogFooter>
@@ -593,5 +593,7 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
 
     
