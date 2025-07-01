@@ -8,13 +8,13 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "QuimioGest",
-  description: "Gestión inteligente para tu negocio de productos químicos.",
+  title: "HOMECLEAN",
+  description: "Gestión inteligente para tu negocio de limpieza.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "QuimioGest",
+    title: "HOMECLEAN",
   },
 };
 

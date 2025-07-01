@@ -20,7 +20,7 @@ export const AuthContext = createContext<AuthContextType>({
   logout: () => {},
 });
 
-const SESSION_STORAGE_KEY = 'quimiogest_user';
+const SESSION_STORAGE_KEY = 'homeclean_user';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);

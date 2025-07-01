@@ -17,8 +17,8 @@ export default function UserSelectionPage() {
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-background">
        <header className="absolute top-0 px-4 lg:px-6 h-14 flex items-center w-full">
-         <img src="/logohomeclean.png" alt="QuimioGest Logo" width="120" height="40" className="object-contain" />
-         <span className="sr-only">QuimioGest</span>
+         <img src="/logohomeclean.png" alt="HOMECLEAN Logo" width="120" height="40" className="object-contain" />
+         <span className="sr-only">HOMECLEAN</span>
       </header>
       <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
         <div className="space-y-6 max-w-sm w-full">
@@ -39,7 +39,7 @@ export default function UserSelectionPage() {
         </div>
       </main>
       <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center justify-center px-4 md:px-6 border-t">
-        <p className="text-xs text-muted-foreground">© 2024 QuimioGest. Todos los derechos reservados.</p>
+        <p className="text-xs text-muted-foreground">© 2024 HOMECLEAN. Todos los derechos reservados.</p>
       </footer>
     </div>
   );

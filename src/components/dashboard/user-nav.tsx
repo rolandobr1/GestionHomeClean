@@ -35,7 +35,7 @@ export function UserNav() {
   }
   
   const getInitials = (name: string | null) => {
-    if (!name) return 'QG';
+    if (!name) return 'HC';
     return name.substring(0, 2).toUpperCase();
   }
 

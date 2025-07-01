@@ -85,7 +85,7 @@ export default function AjustesPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="shareMessage">Mensaje para Compartir Factura</Label>
-              <Textarea id="shareMessage" value={formData.shareMessage || ''} onChange={handleChange} placeholder="Ej: Aquí está tu factura de QuimioGest." />
+              <Textarea id="shareMessage" value={formData.shareMessage || ''} onChange={handleChange} placeholder="Ej: Aquí está tu factura de HOMECLEAN." />
               <p className="text-sm text-muted-foreground">
                 Este texto se usará al compartir una factura por WhatsApp u otras apps.
               </p>

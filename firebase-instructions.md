@@ -9,7 +9,7 @@ Para que la aplicación funcione correctamente, necesitas **habilitar los servic
 Este es el paso más importante y el que se suele olvidar.
 
 1.  **Ve a la Biblioteca de APIs de Google Cloud:** [console.cloud.google.com/apis/library](https://console.cloud.google.com/apis/library)
-2.  **Selecciona tu proyecto "QuimioGest"** en la parte superior.
+2.  **Selecciona tu proyecto "HOMECLEAN"** en la parte superior.
 3.  Busca y **habilita** las siguientes dos APIs (si no lo están ya):
     *   **Identity Toolkit API** (Esencial para la autenticación)
     *   **Cloud Firestore API** (Esencial para la base de datos)

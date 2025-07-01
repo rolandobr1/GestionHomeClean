@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -468,7 +467,7 @@ export default function IngresosPage() {
           const file = new File([pdfBlob], `factura-${selectedIncomeForInvoice.id.slice(-6)}.pdf`, { type: 'application/pdf' });
           
           await navigator.share({
-            title: 'Factura QuimioGest',
+            title: 'Factura HOMECLEAN',
             text: invoiceSettings.shareMessage,
             files: [file],
           });

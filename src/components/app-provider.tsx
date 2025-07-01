@@ -129,11 +129,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [clients, setClients] = useState<Client[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
-    companyName: "QuimioGest S.R.L.",
+    companyName: "HOMECLEAN S.R.L.",
     companyAddress: "Calle Ficticia 123, Santo Domingo",
     companyRNC: "1-2345678-9",
     companyLogo: "/logohomeclean.png",
-    shareMessage: "Aquí está tu factura de QuimioGest.",
+    shareMessage: "Aquí está tu factura de HOMECLEAN.",
   });
 
   // --- Firestore Listeners ---
