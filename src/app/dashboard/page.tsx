@@ -513,7 +513,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Rendimiento Financiero</CardTitle>
             <CardDescription>Ingresos vs. Egresos en los últimos 6 meses.</CardDescription>
@@ -531,7 +531,7 @@ export default function DashboardPage() {
             </ChartContainer>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="text-accent h-5 w-5"/> Alertas de Inventario
