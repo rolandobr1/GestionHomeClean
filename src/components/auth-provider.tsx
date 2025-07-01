@@ -20,21 +20,45 @@ export const AuthContext = createContext<AuthContextType>({
   logout: () => {},
 });
 
+const SESSION_STORAGE_KEY = 'quimiogest_user';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(false);
+    try {
+      const storedUser = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.error("Failed to parse user from session storage", error);
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    } finally {
+        setLoading(false);
+    }
   }, []);
 
   const login = (name: "Rolando" | "Mikel") => {
-    setUser({ name });
+    const newUser = { name };
+    try {
+        sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newUser));
+        setUser(newUser);
+    } catch (error) {
+        console.error("Failed to save user to session storage", error);
+        setUser(newUser);
+    }
   };
 
   const logout = () => {
-    setUser(null);
+    try {
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch (error) {
+        console.error("Failed to remove user from session storage", error);
+    } finally {
+        setUser(null);
+    }
   };
 
   const value = useMemo(() => ({ user, loading, login, logout }), [user, loading]);
