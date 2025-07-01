@@ -15,22 +15,20 @@ import { useAppData } from '@/hooks/use-app-data';
 import type { Client } from '@/components/app-provider';
 
 
-// Moved ContactForm outside of the main component to prevent re-creation on every render.
-// This is a stable component.
 const ContactForm = ({
   contact,
   onSave,
+  onClose,
 }: {
-  contact: Client | null;
-  onSave: (client: Client) => void;
+  contact: Omit<Client, 'id'> | Client | null;
+  onSave: (client: Omit<Client, 'id'> | Client) => void;
+  onClose: () => void;
 }) => {
   const [formData, setFormData] = useState<Omit<Client, 'id'>>({
     name: '', email: '', phone: '', address: ''
   });
 
   useEffect(() => {
-    // When the dialog opens and a contact is passed, populate the form.
-    // When opening for a new contact, `contact` is null, so we use the default state.
     if (contact) {
       setFormData(contact);
     } else {
@@ -45,7 +43,7 @@ const ContactForm = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ ...formData, id: contact?.id || '' });
+    onSave(formData);
   };
 
   return (
@@ -70,7 +68,7 @@ const ContactForm = ({
       </div>
       <DialogFooter>
         <DialogClose asChild>
-          <Button type="button" variant="secondary">
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
         </DialogClose>
@@ -88,13 +86,6 @@ export default function ClientesPage() {
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // This effect cleans up the `editingClient` state when the dialog is closed.
-    useEffect(() => {
-      if (!isDialogOpen) {
-        setEditingClient(null);
-      }
-    }, [isDialogOpen]);
-    
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -209,6 +200,11 @@ export default function ClientesPage() {
         toast({ title: 'Exportación Exitosa', description: 'Tus clientes han sido descargados.' });
     };
 
+    const handleAddNew = () => {
+        setEditingClient(null);
+        setIsDialogOpen(true);
+    };
+
     const handleEdit = (client: Client) => {
         setEditingClient(client);
         setIsDialogOpen(true);
@@ -218,14 +214,20 @@ export default function ClientesPage() {
         deleteClient(clientId);
     };
 
-    const handleSave = (client: Client) => {
-        if (editingClient) {
-            updateClient(client);
+    const handleSave = (clientData: Omit<Client, 'id'> | Client) => {
+        if ('id' in clientData && clientData.id) {
+            updateClient(clientData as Client);
         } else {
-            const { id, ...newClientData } = client;
-            addClient(newClientData);
+            addClient(clientData);
         }
         setIsDialogOpen(false);
+    };
+    
+    const handleDialogChange = (open: boolean) => {
+        setIsDialogOpen(open);
+        if (!open) {
+            setEditingClient(null);
+        }
     };
 
     return (
@@ -240,7 +242,7 @@ export default function ClientesPage() {
                     <Download className="mr-2 h-4 w-4" />
                     Exp.
                 </Button>
-                <Button onClick={() => { setEditingClient(null); setIsDialogOpen(true); }}>
+                <Button onClick={handleAddNew}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Cliente
                 </Button>
@@ -304,7 +306,7 @@ export default function ClientesPage() {
                 </CardContent>
             </Card>
 
-             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+             <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <DialogTitle>{editingClient ? 'Editar Cliente' : 'Añadir Cliente'}</DialogTitle>
@@ -312,7 +314,7 @@ export default function ClientesPage() {
                             {editingClient ? 'Actualiza los detalles de tu cliente.' : 'Añade un nuevo cliente a tus registros.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <ContactForm contact={editingClient} onSave={handleSave} />
+                    <ContactForm contact={editingClient} onSave={handleSave} onClose={() => handleDialogChange(false)} />
                 </DialogContent>
             </Dialog>
         </div>

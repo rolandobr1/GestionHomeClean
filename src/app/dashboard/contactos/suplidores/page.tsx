@@ -14,14 +14,15 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppData } from '@/hooks/use-app-data';
 import type { Supplier } from '@/components/app-provider';
 
-// Moved ContactForm outside of the main component to prevent re-creation on every render.
-// This is a stable component.
+
 const ContactForm = ({
   contact,
   onSave,
+  onClose,
 }: {
-  contact: Supplier | null;
-  onSave: (supplier: Supplier) => void;
+  contact: Omit<Supplier, 'id'> | Supplier | null;
+  onSave: (supplier: Omit<Supplier, 'id'> | Supplier) => void;
+  onClose: () => void;
 }) => {
   const [formData, setFormData] = useState<Omit<Supplier, 'id'>>({
     name: '', email: '', phone: '', address: ''
@@ -42,7 +43,7 @@ const ContactForm = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ ...formData, id: contact?.id || '' });
+    onSave(formData);
   };
 
   return (
@@ -67,7 +68,7 @@ const ContactForm = ({
       </div>
       <DialogFooter>
         <DialogClose asChild>
-          <Button type="button" variant="secondary">
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
         </DialogClose>
@@ -84,13 +85,6 @@ export default function SuplidoresPage() {
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // This effect cleans up the `editingSupplier` state when the dialog is closed.
-    useEffect(() => {
-      if (!isDialogOpen) {
-        setEditingSupplier(null);
-      }
-    }, [isDialogOpen]);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -206,6 +200,11 @@ export default function SuplidoresPage() {
         toast({ title: 'Exportación Exitosa', description: 'Tus suplidores han sido descargados.' });
     };
 
+    const handleAddNew = () => {
+        setEditingSupplier(null);
+        setIsDialogOpen(true);
+    };
+
     const handleEdit = (supplier: Supplier) => {
         setEditingSupplier(supplier);
         setIsDialogOpen(true);
@@ -215,14 +214,20 @@ export default function SuplidoresPage() {
         deleteSupplier(supplierId);
     };
 
-    const handleSave = (supplier: Supplier) => {
-        if (editingSupplier) {
-            updateSupplier(supplier);
+    const handleSave = (supplierData: Omit<Supplier, 'id'> | Supplier) => {
+        if ('id' in supplierData && supplierData.id) {
+            updateSupplier(supplierData as Supplier);
         } else {
-            const { id, ...newSupplierData } = supplier;
-            addSupplier(newSupplierData);
+            addSupplier(supplierData);
         }
         setIsDialogOpen(false);
+    };
+
+    const handleDialogChange = (open: boolean) => {
+        setIsDialogOpen(open);
+        if (!open) {
+            setEditingSupplier(null);
+        }
     };
 
     return (
@@ -237,7 +242,7 @@ export default function SuplidoresPage() {
                     <Download className="mr-2 h-4 w-4" />
                     Exp.
                 </Button>
-                <Button onClick={() => { setEditingSupplier(null); setIsDialogOpen(true); }}>
+                <Button onClick={handleAddNew}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Suplidor
                 </Button>
@@ -301,7 +306,7 @@ export default function SuplidoresPage() {
                 </CardContent>
             </Card>
 
-             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+             <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <DialogTitle>{editingSupplier ? 'Editar Suplidor' : 'Añadir Suplidor'}</DialogTitle>
@@ -309,7 +314,7 @@ export default function SuplidoresPage() {
                             {editingSupplier ? 'Actualiza los detalles de tu suplidor.' : 'Añade un nuevo suplidor a tus registros.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <ContactForm contact={editingSupplier} onSave={handleSave} />
+                    <ContactForm contact={editingSupplier} onSave={handleSave} onClose={() => handleDialogChange(false)} />
                 </DialogContent>
             </Dialog>
         </div>
