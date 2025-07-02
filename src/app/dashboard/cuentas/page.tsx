@@ -233,12 +233,12 @@ export default function CuentasPage() {
                 </PopoverContent>
             </Popover>
 
-            <Select value={recordedByFilter} onValueChange={setRecordedByFilter}>
+            <Select value={recordedByFilter || 'all'} onValueChange={(value) => setRecordedByFilter(value === 'all' ? '' : value)}>
               <SelectTrigger className="w-full md:w-[240px]">
                 <SelectValue placeholder="Filtrar por usuario..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los usuarios</SelectItem>
+                <SelectItem value="all">Todos los usuarios</SelectItem>
                 {allUsers.map(user => <SelectItem key={user} value={user}>{user}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -327,5 +327,3 @@ export default function CuentasPage() {
     </div>
   );
 }
-
-    
