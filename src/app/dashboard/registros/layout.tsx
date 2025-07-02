@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePathname, useRouter } from "next/navigation";
 
 export default function RegistrosLayout({
@@ -29,9 +29,9 @@ export default function RegistrosLayout({
                 <TabsTrigger value="ingresos">Ingresos</TabsTrigger>
                 <TabsTrigger value="egresos">Egresos</TabsTrigger>
             </TabsList>
-            <TabsContent value={activeTab} className="mt-4">
+            <div className="mt-4">
                 {children}
-            </TabsContent>
+            </div>
         </Tabs>
     </div>
   );
