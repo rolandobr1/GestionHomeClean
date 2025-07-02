@@ -21,8 +21,8 @@ export function UserNav() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     toast({
       title: "Sesión cerrada",
       description: "Has cerrado sesión exitosamente.",
@@ -54,7 +54,7 @@ export function UserNav() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{user.name}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              Usuario Activo
+              {user.email}
             </p>
           </div>
         </DropdownMenuLabel>
