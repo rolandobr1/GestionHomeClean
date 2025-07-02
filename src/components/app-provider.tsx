@@ -3,7 +3,7 @@
 
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import { db, isConfigured, firebaseConfig } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, increment, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, increment, setDoc, arrayUnion } from 'firebase/firestore';
 import { FirebaseConfigStatus } from './config-status';
 
 // Type definitions
@@ -14,15 +14,24 @@ export type SoldProduct = {
   name: string;
 };
 
+export type Payment = {
+  id: string;
+  date: string;
+  amount: number;
+  recordedBy: string;
+};
+
 export type Income = {
   id: string;
   totalAmount: number;
+  balance: number;
   date: string;
   category: string;
   clientId: string;
   paymentMethod: 'credito' | 'contado';
   products: SoldProduct[];
   recordedBy: string;
+  payments: Payment[];
 };
 
 export type Expense = {
@@ -92,10 +101,11 @@ interface AppContextType {
   suppliers: Supplier[];
   invoiceSettings: InvoiceSettings;
   loading: boolean;
-  addIncome: (income: Omit<Income, 'id'>) => Promise<void>;
+  addIncome: (income: Omit<Income, 'id' | 'balance' | 'payments'>) => Promise<void>;
   addMultipleIncomes: (incomes: Income[]) => Promise<void>;
   deleteIncome: (id: string) => Promise<void>;
   updateIncome: (income: Income) => Promise<void>;
+  addPayment: (incomeId: string, payment: Omit<Payment, 'id'>) => Promise<void>;
   addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
   addMultipleExpenses: (expenses: Expense[]) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
@@ -149,7 +159,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribers: (() => void)[] = [];
 
     const collectionsToSync: { name: string, setter: React.Dispatch<any> }[] = [
-        { name: 'incomes', setter: setIncomes },
         { name: 'expenses', setter: setExpenses },
         { name: 'products', setter: setProducts },
         { name: 'clients', setter: setClients },
@@ -172,6 +181,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             setLoading(false);
         }
     };
+
+    unsubscribers.push(onSnapshot(collection(db, 'incomes'), (querySnapshot) => {
+        const data = querySnapshot.docs.map(doc => {
+            const incomeData = { id: doc.id, ...doc.data() } as any;
+            if (incomeData.payments === undefined) {
+                incomeData.payments = [];
+            }
+            if (incomeData.balance === undefined) {
+                const paymentsTotal = incomeData.payments.reduce((acc: number, p: Payment) => acc + p.amount, 0);
+                if (incomeData.paymentMethod === 'contado') {
+                    incomeData.balance = 0;
+                } else {
+                    incomeData.balance = incomeData.totalAmount - paymentsTotal;
+                }
+            }
+            return incomeData;
+        });
+        setIncomes(data as Income[]);
+        if (!loadStatus.incomes) {
+            loadStatus.incomes = true;
+            checkAllLoaded();
+        }
+    }, (error) => {
+        console.error(`Error al escuchar la colección incomes:`, error);
+        if (!loadStatus.incomes) {
+            loadStatus.incomes = true;
+            checkAllLoaded();
+        }
+    }));
 
     const createUnsubscriber = (name: string, setter: React.Dispatch<any>) => {
         const q = collection(db, name);
@@ -227,12 +265,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
   
   // --- Income Management with Firestore ---
-  const addIncome = async (income: Omit<Income, 'id'>) => {
+  const addIncome = async (income: Omit<Income, 'id' | 'balance' | 'payments'>) => {
     if (!db) throw new Error("Firestore no está inicializado.");
     const batch = writeBatch(db);
     
     const incomeRef = doc(collection(db, "incomes"));
-    batch.set(incomeRef, income);
+
+    const newIncomeData: Omit<Income, 'id'> = { ...income, payments: [], balance: 0 };
+
+    if (income.paymentMethod === 'contado') {
+        newIncomeData.balance = 0;
+        newIncomeData.payments.push({
+            id: doc(collection(db, 'temp')).id,
+            amount: income.totalAmount,
+            date: income.date,
+            recordedBy: income.recordedBy
+        });
+    } else {
+        newIncomeData.balance = income.totalAmount;
+    }
+
+    batch.set(incomeRef, newIncomeData);
 
     income.products.forEach(soldProduct => {
         const productRef = doc(db, "products", soldProduct.productId);
@@ -288,6 +341,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       
       const batch = writeBatch(db);
       
+      const paymentSum = updatedIncome.payments.reduce((acc, p) => acc + p.amount, 0);
+      updatedIncome.balance = updatedIncome.totalAmount - paymentSum;
+      
       const { id, ...incomeData } = updatedIncome;
       const incomeRef = doc(db, 'incomes', id);
       batch.update(incomeRef, incomeData);
@@ -331,6 +387,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
 
     await batch.commit();
+  };
+  
+  const addPayment = async (incomeId: string, payment: Omit<Payment, 'id'>) => {
+    if (!db) throw new Error("Firestore no está inicializado.");
+    const incomeRef = doc(db, 'incomes', incomeId);
+    
+    const newPayment = { ...payment, id: doc(collection(db, 'temp')).id };
+
+    await updateDoc(incomeRef, {
+        payments: arrayUnion(newPayment),
+        balance: increment(-payment.amount)
+    });
   };
 
   // --- Expense Management with Firestore ---
@@ -476,7 +544,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     <AppContext.Provider value={{
         loading,
         incomes, expenses, products, rawMaterials, clients, suppliers, invoiceSettings,
-        addIncome, addMultipleIncomes, deleteIncome, updateIncome,
+        addIncome, addMultipleIncomes, deleteIncome, updateIncome, addPayment,
         addExpense, addMultipleExpenses, deleteExpense, updateExpense,
         addProduct, addMultipleProducts, deleteProduct, updateProduct,
         addRawMaterial, addMultipleRawMaterials, updateRawMaterial, deleteRawMaterial,
@@ -488,3 +556,5 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
+
+    
