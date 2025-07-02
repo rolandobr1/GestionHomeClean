@@ -370,7 +370,7 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
 };
 
 
-export default function DashboardPage() {
+export default function DashboardPage({ params, searchParams }: { params: any; searchParams: any; }) {
   const { incomes, expenses, products, clients, suppliers } = useAppData();
   
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);

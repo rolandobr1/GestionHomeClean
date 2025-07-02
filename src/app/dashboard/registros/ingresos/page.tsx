@@ -265,7 +265,7 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
     );
 };
 
-export default function IngresosPage() {
+export default function IngresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes, invoiceSettings } = useAppData();
     const { user } = useAuth();
     const { toast } = useToast();
@@ -702,8 +702,7 @@ export default function IngresosPage() {
     };
 
     return (
-        <>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
+        <div className="space-y-6">
              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />
@@ -918,6 +917,6 @@ export default function IngresosPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </>
+        </div>
     );
 }

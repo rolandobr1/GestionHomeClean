@@ -88,7 +88,7 @@ const ContactForm = ({
 };
 
 
-export default function SuplidoresPage() {
+export default function SuplidoresPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { suppliers, addSupplier, updateSupplier, deleteSupplier, addMultipleSuppliers } = useAppData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -240,7 +240,6 @@ export default function SuplidoresPage() {
 
     return (
         <>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
             <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />

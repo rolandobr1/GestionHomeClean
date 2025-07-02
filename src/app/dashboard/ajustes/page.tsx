@@ -16,7 +16,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 
-export default function AjustesPage() {
+export default function AjustesPage({ params, searchParams }: { params: any; searchParams: any; }) {
   const { 
     invoiceSettings, 
     updateInvoiceSettings, 
@@ -66,11 +66,6 @@ export default function AjustesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Ajustes</h1>
-        <p className="text-muted-foreground">Gestiona la configuración de tu aplicación y visualiza los datos del sistema.</p>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle>Información de la Factura</CardTitle>
@@ -128,78 +123,80 @@ export default function AjustesPage() {
                     <TabsTrigger value="clients">Clientes</TabsTrigger>
                     <TabsTrigger value="suppliers">Suplidores</TabsTrigger>
                 </TabsList>
-                <TabsContent value="incomes" className="mt-4">
-                    <div className="w-full overflow-x-auto">
-                        <Table>
-                            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Fecha</TableHead><TableHead>Monto</TableHead><TableHead>Registrado Por</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {incomes.map((item: Income) => (
-                                    <TableRow key={item.id}><TableCell>{item.id.slice(-6)}</TableCell><TableCell>{allClients.find(c=>c.id === item.clientId)?.name}</TableCell><TableCell>{format(new Date(item.date), 'P', { locale: es })}</TableCell><TableCell>RD${item.totalAmount.toFixed(2)}</TableCell><TableCell>{item.recordedBy}</TableCell></TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </TabsContent>
-                <TabsContent value="expenses" className="mt-4">
-                    <div className="w-full overflow-x-auto">
-                        <Table>
-                            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Descripción</TableHead><TableHead>Suplidor</TableHead><TableHead>Fecha</TableHead><TableHead>Monto</TableHead><TableHead>Registrado Por</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {expenses.map((item: Expense) => (
-                                    <TableRow key={item.id}><TableCell>{item.id.slice(-6)}</TableCell><TableCell>{item.description}</TableCell><TableCell>{allSuppliers.find(s=>s.id === item.supplierId)?.name}</TableCell><TableCell>{format(new Date(item.date), 'P', { locale: es })}</TableCell><TableCell>RD${item.amount.toFixed(2)}</TableCell><TableCell>{item.recordedBy}</TableCell></TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </TabsContent>
-                 <TabsContent value="products" className="mt-4">
-                    <div className="w-full overflow-x-auto">
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>SKU</TableHead><TableHead>Stock</TableHead><TableHead>Precio Detalle</TableHead><TableHead>Precio Por Mayor</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {products.map((item: Product) => (
-                                    <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell>{item.sku}</TableCell><TableCell><Badge variant={item.stock <= item.reorderLevel ? "destructive" : "secondary"}>{item.stock} {item.unit}</Badge></TableCell><TableCell>RD${item.salePriceRetail.toFixed(2)}</TableCell><TableCell>RD${item.salePriceWholesale.toFixed(2)}</TableCell></TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </TabsContent>
-                 <TabsContent value="rawMaterials" className="mt-4">
-                    <div className="w-full overflow-x-auto">
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>SKU</TableHead><TableHead>Suplidor</TableHead><TableHead>Stock</TableHead><TableHead>Precio Compra</TableHead><TableHead>Registrado Por</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {rawMaterials.map((item: RawMaterial) => (
-                                    <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell>{item.sku}</TableCell><TableCell>{allSuppliers.find(s=>s.id === item.supplierId)?.name}</TableCell><TableCell><Badge variant={item.stock <= item.reorderLevel ? "destructive" : "secondary"}>{item.stock} {item.unit}</Badge></TableCell><TableCell>RD${item.purchasePrice.toFixed(2)}</TableCell><TableCell>{item.recordedBy}</TableCell></TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </TabsContent>
-                 <TabsContent value="clients" className="mt-4">
-                    <div className="w-full overflow-x-auto">
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Email</TableHead><TableHead>Teléfono</TableHead><TableHead>Dirección</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {clients.map((item: Client) => (
-                                    <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell>{item.email}</TableCell><TableCell>{item.phone}</TableCell><TableCell>{item.address}</TableCell></TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </TabsContent>
-                 <TabsContent value="suppliers" className="mt-4">
-                    <div className="w-full overflow-x-auto">
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Email</TableHead><TableHead>Teléfono</TableHead><TableHead>Dirección</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {suppliers.map((item: Supplier) => (
-                                    <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell>{item.email}</TableCell><TableCell>{item.phone}</TableCell><TableCell>{item.address}</TableCell></TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </TabsContent>
+                <div className="mt-4">
+                  <TabsContent value="incomes">
+                      <div className="w-full overflow-x-auto">
+                          <Table>
+                              <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Fecha</TableHead><TableHead>Monto</TableHead><TableHead>Registrado Por</TableHead></TableRow></TableHeader>
+                              <TableBody>
+                                  {incomes.map((item: Income) => (
+                                      <TableRow key={item.id}><TableCell>{item.id.slice(-6)}</TableCell><TableCell>{allClients.find(c=>c.id === item.clientId)?.name}</TableCell><TableCell>{format(new Date(item.date), 'P', { locale: es })}</TableCell><TableCell>RD${item.totalAmount.toFixed(2)}</TableCell><TableCell>{item.recordedBy}</TableCell></TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </div>
+                  </TabsContent>
+                  <TabsContent value="expenses">
+                      <div className="w-full overflow-x-auto">
+                          <Table>
+                              <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Descripción</TableHead><TableHead>Suplidor</TableHead><TableHead>Fecha</TableHead><TableHead>Monto</TableHead><TableHead>Registrado Por</TableHead></TableRow></TableHeader>
+                              <TableBody>
+                                  {expenses.map((item: Expense) => (
+                                      <TableRow key={item.id}><TableCell>{item.id.slice(-6)}</TableCell><TableCell>{item.description}</TableCell><TableCell>{allSuppliers.find(s=>s.id === item.supplierId)?.name}</TableCell><TableCell>{format(new Date(item.date), 'P', { locale: es })}</TableCell><TableCell>RD${item.amount.toFixed(2)}</TableCell><TableCell>{item.recordedBy}</TableCell></TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </div>
+                  </TabsContent>
+                   <TabsContent value="products">
+                      <div className="w-full overflow-x-auto">
+                          <Table>
+                              <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>SKU</TableHead><TableHead>Stock</TableHead><TableHead>Precio Detalle</TableHead><TableHead>Precio Por Mayor</TableHead></TableRow></TableHeader>
+                              <TableBody>
+                                  {products.map((item: Product) => (
+                                      <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell>{item.sku}</TableCell><TableCell><Badge variant={item.stock <= item.reorderLevel ? "destructive" : "secondary"}>{item.stock} {item.unit}</Badge></TableCell><TableCell>RD${item.salePriceRetail.toFixed(2)}</TableCell><TableCell>RD${item.salePriceWholesale.toFixed(2)}</TableCell></TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </div>
+                  </TabsContent>
+                   <TabsContent value="rawMaterials">
+                      <div className="w-full overflow-x-auto">
+                          <Table>
+                              <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>SKU</TableHead><TableHead>Suplidor</TableHead><TableHead>Stock</TableHead><TableHead>Precio Compra</TableHead><TableHead>Registrado Por</TableHead></TableRow></TableHeader>
+                              <TableBody>
+                                  {rawMaterials.map((item: RawMaterial) => (
+                                      <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell>{item.sku}</TableCell><TableCell>{allSuppliers.find(s=>s.id === item.supplierId)?.name}</TableCell><TableCell><Badge variant={item.stock <= item.reorderLevel ? "destructive" : "secondary"}>{item.stock} {item.unit}</Badge></TableCell><TableCell>RD${item.purchasePrice.toFixed(2)}</TableCell><TableCell>{item.recordedBy}</TableCell></TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </div>
+                  </TabsContent>
+                   <TabsContent value="clients">
+                      <div className="w-full overflow-x-auto">
+                          <Table>
+                              <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Email</TableHead><TableHead>Teléfono</TableHead><TableHead>Dirección</TableHead></TableRow></TableHeader>
+                              <TableBody>
+                                  {clients.map((item: Client) => (
+                                      <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell>{item.email}</TableCell><TableCell>{item.phone}</TableCell><TableCell>{item.address}</TableCell></TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </div>
+                  </TabsContent>
+                   <TabsContent value="suppliers">
+                      <div className="w-full overflow-x-auto">
+                          <Table>
+                              <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Email</TableHead><TableHead>Teléfono</TableHead><TableHead>Dirección</TableHead></TableRow></TableHeader>
+                              <TableBody>
+                                  {suppliers.map((item: Supplier) => (
+                                      <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell>{item.email}</TableCell><TableCell>{item.phone}</TableCell><TableCell>{item.address}</TableCell></TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </div>
+                  </TabsContent>
+                </div>
             </Tabs>
         </CardContent>
       </Card>

@@ -125,7 +125,7 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
     );
 };
 
-export default function EgresosPage() {
+export default function EgresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { expenses, addExpense, deleteExpense, updateExpense, addMultipleExpenses, suppliers } = useAppData();
     const { user } = useAuth();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -347,7 +347,6 @@ export default function EgresosPage() {
 
     return (
         <>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />

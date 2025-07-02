@@ -132,7 +132,7 @@ const PaymentForm = ({
 };
 
 
-export default function CuentasPage() {
+export default function CuentasPage({ params, searchParams }: { params: any; searchParams: any; }) {
   const { incomes, clients } = useAppData();
   
   const [paymentIncome, setPaymentIncome] = useState<Income | null>(null);
@@ -197,11 +197,6 @@ export default function CuentasPage() {
 
   return (
     <div className="w-full space-y-6">
-        <div>
-            <h1 className="text-2xl font-bold">Cuentas por Cobrar</h1>
-            <p className="text-muted-foreground">Gestiona las facturas pendientes de pago de tus clientes.</p>
-        </div>
-
       <Card>
         <CardHeader>
           <CardTitle>Filtros</CardTitle>

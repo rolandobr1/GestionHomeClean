@@ -47,7 +47,7 @@ import { useAppData } from '@/hooks/use-app-data';
 import type { Product } from '@/components/app-provider';
 
 
-export default function ProductosPage() {
+export default function ProductosPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { products, addProduct, updateProduct, deleteProduct, addMultipleProducts } = useAppData();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -255,7 +255,6 @@ export default function ProductosPage() {
 
     return (
         <>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
             <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />

@@ -116,7 +116,7 @@ const MaterialForm = ({
     );
 };
 
-export default function MateriaPrimaPage() {
+export default function MateriaPrimaPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { rawMaterials, suppliers, addRawMaterial, updateRawMaterial, deleteRawMaterial, addMultipleRawMaterials } = useAppData();
     const { user } = useAuth();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -280,7 +280,6 @@ export default function MateriaPrimaPage() {
 
     return (
         <>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
             <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />
