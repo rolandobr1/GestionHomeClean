@@ -255,111 +255,113 @@ export default function ProductosPage() {
     };
 
     return (
-        <TooltipProvider>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
-             <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleImportClick}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Imp.
-                </Button>
-                <Button variant="outline" onClick={handleExport}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Exp.
-                </Button>
-                <Button onClick={() => { setEditingProduct(null); setIsDialogOpen(true); }}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Producto
-                </Button>
-            </div>
+        <div className="space-y-6">
+            <TooltipProvider>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
+                <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={handleImportClick}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Imp.
+                    </Button>
+                    <Button variant="outline" onClick={handleExport}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Exp.
+                    </Button>
+                    <Button onClick={() => { setEditingProduct(null); setIsDialogOpen(true); }}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Producto
+                    </Button>
+                </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Productos Terminados</CardTitle>
-                    <CardDescription>Un listado de todos tus productos listos para la venta.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Nombre</TableHead>
-                                <TableHead className="hidden sm:table-cell">SKU</TableHead>
-                                <TableHead className="text-right">Stock</TableHead>
-                                <TableHead className="text-right hidden md:table-cell">Precio Detalle</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {products.map((product) => (
-                                <TableRow key={product.id}>
-                                    <TableCell className="font-medium">{product.name}</TableCell>
-                                    <TableCell className="hidden sm:table-cell">
-                                        {product.sku ? (
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <span className="block max-w-[150px] truncate cursor-default">{product.sku}</span>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{product.sku}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        ) : null}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {product.stock <= product.reorderLevel ? (
-                                            <Badge variant="destructive">{product.stock} {product.unit}</Badge>
-                                        ) : (
-                                            <Badge variant="secondary">{product.stock} {product.unit}</Badge>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-right hidden md:table-cell">RD${product.salePriceRetail.toFixed(2)}</TableCell>
-                                    <TableCell className="text-right">
-                                        <AlertDialog>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                                        <span className="sr-only">Abrir menú</span>
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleEdit(product)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                                    <AlertDialogTrigger asChild>
-                                                        <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                                                    </AlertDialogTrigger>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                <AlertDialogTitle>¿Estás seguro de que quieres eliminar este producto?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Esta acción no se puede deshacer. Esto eliminará permanentemente el producto de tus registros.
-                                                </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(product.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Productos Terminados</CardTitle>
+                        <CardDescription>Un listado de todos tus productos listos para la venta.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Nombre</TableHead>
+                                    <TableHead className="hidden sm:table-cell">SKU</TableHead>
+                                    <TableHead className="text-right">Stock</TableHead>
+                                    <TableHead className="text-right hidden md:table-cell">Precio Detalle</TableHead>
+                                    <TableHead className="text-right">Acciones</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                            </TableHeader>
+                            <TableBody>
+                                {products.map((product) => (
+                                    <TableRow key={product.id}>
+                                        <TableCell className="font-medium">{product.name}</TableCell>
+                                        <TableCell className="hidden sm:table-cell">
+                                            {product.sku ? (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <span className="block max-w-[150px] truncate cursor-default">{product.sku}</span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>{product.sku}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            ) : null}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {product.stock <= product.reorderLevel ? (
+                                                <Badge variant="destructive">{product.stock} {product.unit}</Badge>
+                                            ) : (
+                                                <Badge variant="secondary">{product.stock} {product.unit}</Badge>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-right hidden md:table-cell">RD${product.salePriceRetail.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right">
+                                            <AlertDialog>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                                            <span className="sr-only">Abrir menú</span>
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => handleEdit(product)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                                        <AlertDialogTrigger asChild>
+                                                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                        </AlertDialogTrigger>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                    <AlertDialogTitle>¿Estás seguro de que quieres eliminar este producto?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Esta acción no se puede deshacer. Esto eliminará permanentemente el producto de tus registros.
+                                                    </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(product.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
 
-             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>{editingProduct ? 'Editar Producto' : 'Añadir Producto'}</DialogTitle>
-                        <DialogDescription>
-                            {editingProduct ? 'Actualiza los detalles de tu producto.' : 'Añade un nuevo producto a tu inventario.'}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <ProductForm product={editingProduct} onSave={handleSave} />
-                </DialogContent>
-            </Dialog>
-        </TooltipProvider>
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>{editingProduct ? 'Editar Producto' : 'Añadir Producto'}</DialogTitle>
+                            <DialogDescription>
+                                {editingProduct ? 'Actualiza los detalles de tu producto.' : 'Añade un nuevo producto a tu inventario.'}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <ProductForm product={editingProduct} onSave={handleSave} />
+                    </DialogContent>
+                </Dialog>
+            </TooltipProvider>
+        </div>
     );
 }

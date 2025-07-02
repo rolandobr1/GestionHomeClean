@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -28,7 +29,7 @@ export default function RegistrosLayout({
                 <TabsTrigger value="ingresos">Ingresos</TabsTrigger>
                 <TabsTrigger value="egresos">Egresos</TabsTrigger>
             </TabsList>
-            <TabsContent value={activeTab} className="mt-4 space-y-6">
+            <TabsContent value={activeTab} className="mt-4">
                 {children}
             </TabsContent>
         </Tabs>
