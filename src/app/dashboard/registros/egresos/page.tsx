@@ -27,7 +27,7 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
     const [isSaving, setIsSaving] = useState(false);
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState(0);
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState('');
     const [category, setCategory] = useState('Materia Prima');
     const [supplierId, setSupplierId] = useState('generic');
 

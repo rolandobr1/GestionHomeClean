@@ -58,12 +58,16 @@ const IncomeForm = ({ onClose }: { onClose: () => void }) => {
     const [isSaving, setIsSaving] = useState(false);
     const [clientId, setClientId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState('');
     const [soldProducts, setSoldProducts] = useState<SoldProduct[]>([]);
     
     const [currentProduct, setCurrentProduct] = useState('');
     const [currentQuantity, setCurrentQuantity] = useState(1);
     const [currentPriceType, setCurrentPriceType] = useState<'retail' | 'wholesale'>('retail');
+
+    useEffect(() => {
+        setDate(new Date().toISOString().split('T')[0]);
+    }, []);
 
     const handleAddProduct = () => {
         const product = allProducts.find(p => p.id === currentProduct);
@@ -281,8 +285,12 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({
-        description: '', amount: 0, date: new Date().toISOString().split('T')[0], category: 'Materia Prima', supplierId: 'generic'
+        description: '', amount: 0, date: '', category: 'Materia Prima', supplierId: 'generic'
     });
+
+    useEffect(() => {
+        setFormData(prev => ({ ...prev, date: new Date().toISOString().split('T')[0] }));
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value, type } = e.target;

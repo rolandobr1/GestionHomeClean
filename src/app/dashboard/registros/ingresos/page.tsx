@@ -34,7 +34,7 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
     const [isSaving, setIsSaving] = useState(false);
     const [clientId, setClientId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState('');
     const [soldProducts, setSoldProducts] = useState<SoldProduct[]>([]);
     
     const [currentProduct, setCurrentProduct] = useState('');

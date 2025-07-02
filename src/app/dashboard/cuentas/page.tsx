@@ -35,7 +35,11 @@ const PaymentForm = ({
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [amount, setAmount] = useState<number | string>('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState('');
+
+  useEffect(() => {
+    setDate(new Date().toISOString().split('T')[0]);
+  }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
