@@ -1,6 +1,6 @@
 "use client";
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { usePathname, useRouter } from "next/navigation";
 
 export default function ContactosLayout({
@@ -28,9 +28,9 @@ export default function ContactosLayout({
                 <TabsTrigger value="clientes">Clientes</TabsTrigger>
                 <TabsTrigger value="suplidores">Suplidores</TabsTrigger>
             </TabsList>
-            <div className="pt-4">
+            <TabsContent value={activeTab} className="mt-4">
                 {children}
-            </div>
+            </TabsContent>
         </Tabs>
     </div>
   );

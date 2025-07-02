@@ -1,6 +1,6 @@
 "use client";
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { usePathname, useRouter } from "next/navigation";
 
 export default function InventarioLayout({
@@ -28,9 +28,9 @@ export default function InventarioLayout({
                 <TabsTrigger value="productos">Productos Terminados</TabsTrigger>
                 <TabsTrigger value="materia-prima">Materia Prima</TabsTrigger>
             </TabsList>
-            <div className="pt-4">
+            <TabsContent value={activeTab} className="mt-4">
                 {children}
-            </div>
+            </TabsContent>
         </Tabs>
     </div>
   );
