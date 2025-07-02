@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
@@ -16,6 +17,7 @@ import { useAppData } from '@/hooks/use-app-data';
 import { useAuth } from '@/hooks/use-auth';
 import type { RawMaterial, Supplier } from '@/components/app-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const MaterialForm = ({
     material,
@@ -278,7 +280,7 @@ export default function MateriaPrimaPage() {
     };
 
     return (
-        <>
+        <TooltipProvider>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
@@ -317,7 +319,20 @@ export default function MateriaPrimaPage() {
                                 return (
                                 <TableRow key={material.id}>
                                     <TableCell className="font-medium">{material.name}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{supplier?.name || 'N/A'}</TableCell>
+                                    <TableCell className="hidden md:table-cell">
+                                        {(supplier?.name && supplier?.name !== 'N/A') ? (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span className="block max-w-[200px] truncate cursor-default">{supplier?.name}</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>{supplier?.name}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        ) : (
+                                            <span>{supplier?.name || 'N/A'}</span>
+                                        )}
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         {material.stock <= material.reorderLevel ? (
                                             <Badge variant="destructive">{material.stock} {material.unit}</Badge>
@@ -374,6 +389,6 @@ export default function MateriaPrimaPage() {
                     <MaterialForm material={editingMaterial} onSave={handleSave} suppliers={allSuppliers} />
                 </DialogContent>
             </Dialog>
-        </>
+        </TooltipProvider>
     );
 }

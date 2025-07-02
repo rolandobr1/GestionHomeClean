@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -13,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAppData } from '@/hooks/use-app-data';
 import type { Client } from '@/components/app-provider';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const ContactForm = ({
@@ -238,7 +240,7 @@ export default function ClientesPage() {
     };
 
     return (
-        <>
+        <TooltipProvider>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
@@ -274,7 +276,18 @@ export default function ClientesPage() {
                             {clients.map((client) => (
                                 <TableRow key={client.id}>
                                     <TableCell className="font-medium">{client.name}</TableCell>
-                                    <TableCell className="hidden sm:table-cell">{client.email}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">
+                                        {client.email ? (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span className="block max-w-[200px] truncate cursor-default">{client.email}</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>{client.email}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        ) : null}
+                                    </TableCell>
                                     <TableCell className="hidden md:table-cell">{client.phone}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
@@ -324,6 +337,6 @@ export default function ClientesPage() {
                     <ContactForm contact={editingClient} onSave={handleSave} onClose={() => handleDialogChange(false)} />
                 </DialogContent>
             </Dialog>
-        </>
+        </TooltipProvider>
     );
 }

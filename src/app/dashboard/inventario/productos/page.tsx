@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef } from 'react';
@@ -44,6 +45,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAppData } from '@/hooks/use-app-data';
 import type { Product } from '@/components/app-provider';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 export default function ProductosPage() {
@@ -253,7 +255,7 @@ export default function ProductosPage() {
     };
 
     return (
-        <>
+        <TooltipProvider>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
@@ -290,7 +292,18 @@ export default function ProductosPage() {
                             {products.map((product) => (
                                 <TableRow key={product.id}>
                                     <TableCell className="font-medium">{product.name}</TableCell>
-                                    <TableCell className="hidden sm:table-cell">{product.sku}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">
+                                        {product.sku ? (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span className="block max-w-[150px] truncate cursor-default">{product.sku}</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>{product.sku}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        ) : null}
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         {product.stock <= product.reorderLevel ? (
                                             <Badge variant="destructive">{product.stock} {product.unit}</Badge>
@@ -347,6 +360,6 @@ export default function ProductosPage() {
                     <ProductForm product={editingProduct} onSave={handleSave} />
                 </DialogContent>
             </Dialog>
-        </>
+        </TooltipProvider>
     );
 }
