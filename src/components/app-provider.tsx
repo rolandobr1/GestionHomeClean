@@ -1,8 +1,9 @@
+
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import { db, isConfigured, firebaseConfig } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, increment } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, increment, setDoc } from 'firebase/firestore';
 import { FirebaseConfigStatus } from './config-status';
 
 // Type definitions
@@ -114,7 +115,7 @@ interface AppContextType {
   addMultipleSuppliers: (suppliers: Supplier[]) => Promise<void>;
   updateSupplier: (supplier: Supplier) => Promise<void>;
   deleteSupplier: (id: string) => Promise<void>;
-  updateInvoiceSettings: (settings: Partial<InvoiceSettings>) => void;
+  updateInvoiceSettings: (settings: InvoiceSettings) => Promise<void>;
 }
 
 // Create context
@@ -167,12 +168,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       unsubscribers.push(unsubscribe);
     });
 
+    const settingsDocRef = doc(db, 'settings', 'invoice');
+    const unsubscribeSettings = onSnapshot(settingsDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setInvoiceSettings(docSnap.data() as InvoiceSettings);
+        }
+    }, (error) => {
+        console.error("Error al escuchar los ajustes:", error);
+    });
+    unsubscribers.push(unsubscribeSettings);
+
     return () => unsubscribers.forEach(unsub => unsub());
   }, []);
 
 
-  const updateInvoiceSettings = (settings: Partial<InvoiceSettings>) => {
-    setInvoiceSettings(prev => ({ ...prev, ...settings }));
+  const updateInvoiceSettings = async (settings: InvoiceSettings) => {
+    if (!db) throw new Error("Firestore no está inicializado.");
+    const settingsDocRef = doc(db, 'settings', 'invoice');
+    await setDoc(settingsDocRef, settings, { merge: true });
   };
   
   // --- Income Management with Firestore ---
