@@ -280,8 +280,8 @@ export default function MateriaPrimaPage() {
     };
 
     return (
-        <div className="space-y-6">
-            <TooltipProvider>
+        <TooltipProvider>
+            <div className="space-y-6">
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
                 <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={handleImportClick}>
@@ -390,7 +390,9 @@ export default function MateriaPrimaPage() {
                         <MaterialForm material={editingMaterial} onSave={handleSave} suppliers={allSuppliers} />
                     </DialogContent>
                 </Dialog>
-            </TooltipProvider>
-        </div>
+            </div>
+        </TooltipProvider>
     );
 }
+
+    
