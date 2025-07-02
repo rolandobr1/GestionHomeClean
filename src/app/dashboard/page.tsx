@@ -384,14 +384,13 @@ export default function DashboardPage() {
   const [chartData, setChartData] = useState<{ month: string, income: number, expense: number }[]>([]);
 
   useEffect(() => {
-    // Financial calculations
     const today = new Date();
     const firstDayOfMonth = startOfMonth(today);
     const lastDayOfMonth = endOfMonth(today);
     
     const currentMonthIncome = incomes
       .filter(i => {
-        const incomeDate = new Date(i.date);
+        const incomeDate = new Date(i.date + "T00:00:00");
         return incomeDate >= firstDayOfMonth && incomeDate <= lastDayOfMonth;
       })
       .reduce((acc, income) => acc + income.totalAmount, 0);
@@ -403,13 +402,12 @@ export default function DashboardPage() {
 
     const currentMonthExpenses = expenses
       .filter(e => {
-        const expenseDate = new Date(e.date);
+        const expenseDate = new Date(e.date + "T00:00:00");
         return expenseDate >= firstDayOfMonth && expenseDate <= lastDayOfMonth;
       })
       .reduce((acc, expense) => acc + expense.amount, 0);
     setTotalExpenses(currentMonthExpenses);
 
-    // Chart data calculation
     const monthlyData: { [key: string]: { income: number, expense: number } } = {};
     const monthLabels: { [key: string]: string } = {};
 
@@ -423,7 +421,7 @@ export default function DashboardPage() {
     }
 
     incomes.forEach(income => {
-      const incomeDate = new Date(income.date);
+      const incomeDate = new Date(income.date + "T00:00:00");
       const year = getYear(incomeDate);
       const month = getMonth(incomeDate);
       const key = `${year}-${month}`;
@@ -433,7 +431,7 @@ export default function DashboardPage() {
     });
 
     expenses.forEach(expense => {
-      const expenseDate = new Date(expense.date);
+      const expenseDate = new Date(expense.date + "T00:00:00");
       const year = getYear(expenseDate);
       const month = getMonth(expenseDate);
       const key = `${year}-${month}`;
@@ -449,7 +447,6 @@ export default function DashboardPage() {
 
     setChartData(formattedChartData);
 
-    // Inventory calculations
     const calculatedInventoryValue = products.reduce((acc, product) => acc + (product.salePriceWholesale * product.stock), 0);
     setInventoryValue(calculatedInventoryValue);
     
