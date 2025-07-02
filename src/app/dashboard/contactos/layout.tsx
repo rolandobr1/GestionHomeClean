@@ -19,20 +19,20 @@ export default function ContactosLayout({
   };
 
   return (
-    <div className="space-y-6 w-full">
-        <div>
-            <h1 className="text-2xl font-bold">Gestión de Contactos</h1>
-            <p className="text-muted-foreground">Administra tus clientes y suplidores.</p>
-        </div>
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="clientes">Clientes</TabsTrigger>
-                <TabsTrigger value="suplidores">Suplidores</TabsTrigger>
-            </TabsList>
-            <div className="mt-4">
-                {children}
-            </div>
-        </Tabs>
+    <div className="w-full space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Gestión de Contactos</h1>
+        <p className="text-muted-foreground">
+          Administra tus clientes y suplidores.
+        </p>
+      </div>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="clientes">Clientes</TabsTrigger>
+          <TabsTrigger value="suplidores">Suplidores</TabsTrigger>
+        </TabsList>
+        <div className="mt-4 w-full">{children}</div>
+      </Tabs>
     </div>
   );
 }

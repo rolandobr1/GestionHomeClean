@@ -19,7 +19,7 @@ export default function InventarioLayout({
   };
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="w-full space-y-6">
         <div>
             <h1 className="text-2xl font-bold">Gestión de Inventario</h1>
             <p className="text-muted-foreground">Administra tus productos y materias primas.</p>
@@ -29,7 +29,7 @@ export default function InventarioLayout({
                 <TabsTrigger value="productos">Productos Terminados</TabsTrigger>
                 <TabsTrigger value="materia-prima">Materia Prima</TabsTrigger>
             </TabsList>
-            <div className="mt-4">
+            <div className="mt-4 w-full">
                 {children}
             </div>
         </Tabs>
