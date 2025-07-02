@@ -29,7 +29,7 @@ export default function RegistrosLayout({
                 <TabsTrigger value="ingresos">Ingresos</TabsTrigger>
                 <TabsTrigger value="egresos">Egresos</TabsTrigger>
             </TabsList>
-            <div className="mt-4">
+            <div className="mt-4 space-y-6">
                 {children}
             </div>
         </Tabs>

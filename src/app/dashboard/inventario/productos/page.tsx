@@ -254,7 +254,7 @@ export default function ProductosPage() {
     };
 
     return (
-        <div className="space-y-6">
+        <>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
             <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
@@ -348,8 +348,6 @@ export default function ProductosPage() {
                     <ProductForm product={editingProduct} onSave={handleSave} />
                 </DialogContent>
             </Dialog>
-        </div>
+        </>
     );
 }
-
-    
