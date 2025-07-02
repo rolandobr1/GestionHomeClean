@@ -91,6 +91,7 @@ interface AppContextType {
   clients: Client[];
   suppliers: Supplier[];
   invoiceSettings: InvoiceSettings;
+  loading: boolean;
   addIncome: (income: Omit<Income, 'id'>) => Promise<void>;
   addMultipleIncomes: (incomes: Income[]) => Promise<void>;
   deleteIncome: (id: string) => Promise<void>;
@@ -123,6 +124,7 @@ export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Provider component
 export const AppProvider = ({ children }: { children: ReactNode }) => {
+  const [loading, setLoading] = useState(true);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -139,33 +141,61 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   // --- Firestore Listeners ---
   useEffect(() => {
-    if (!db) return;
+    if (!db) {
+        setLoading(false);
+        return;
+    }
+
     const unsubscribers: (() => void)[] = [];
 
     const collectionsToSync: { name: string, setter: React.Dispatch<any> }[] = [
-      { name: 'incomes', setter: setIncomes },
-      { name: 'expenses', setter: setExpenses },
-      { name: 'products', setter: setProducts },
-      { name: 'clients', setter: setClients },
-      { name: 'suppliers', setter: setSuppliers },
-      { name: 'rawMaterials', setter: setRawMaterials },
+        { name: 'incomes', setter: setIncomes },
+        { name: 'expenses', setter: setExpenses },
+        { name: 'products', setter: setProducts },
+        { name: 'clients', setter: setClients },
+        { name: 'suppliers', setter: setSuppliers },
+        { name: 'rawMaterials', setter: setRawMaterials },
     ];
 
-    collectionsToSync.forEach(({ name, setter }) => {
-      const q = collection(db, name);
-      const unsubscribe = onSnapshot(q,
-        (querySnapshot) => {
-          const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setter(data);
-        },
-        (error) => {
-          console.error(`Error al escuchar la colección ${name}:`, error);
-          if (error.code === 'permission-denied' || error.code === 'unauthenticated') {
-            console.error("FIREBASE: ¡Permiso denegado! Revisa las reglas de seguridad de Firestore y que las APIs necesarias estén habilitadas.");
-          }
+    const loadStatus: Record<string, boolean> = {
+        incomes: false,
+        expenses: false,
+        products: false,
+        clients: false,
+        suppliers: false,
+        rawMaterials: false,
+        settings: false,
+    };
+    
+    const checkAllLoaded = () => {
+        if (Object.values(loadStatus).every(Boolean)) {
+            setLoading(false);
         }
-      );
-      unsubscribers.push(unsubscribe);
+    };
+
+    const createUnsubscriber = (name: string, setter: React.Dispatch<any>) => {
+        const q = collection(db, name);
+        return onSnapshot(q,
+            (querySnapshot) => {
+                const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setter(data);
+                if (!loadStatus[name]) {
+                    loadStatus[name] = true;
+                    checkAllLoaded();
+                }
+            },
+            (error) => {
+                console.error(`Error al escuchar la colección ${name}:`, error);
+                if (!loadStatus[name]) {
+                    loadStatus[name] = true;
+                    checkAllLoaded();
+                }
+            }
+        );
+    };
+
+    collectionsToSync.forEach(({ name, setter }) => {
+        unsubscribers.push(createUnsubscriber(name, setter));
     });
 
     const settingsDocRef = doc(db, 'settings', 'invoice');
@@ -173,8 +203,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         if (docSnap.exists()) {
             setInvoiceSettings(docSnap.data() as InvoiceSettings);
         }
+        if (!loadStatus.settings) {
+            loadStatus.settings = true;
+            checkAllLoaded();
+        }
     }, (error) => {
         console.error("Error al escuchar los ajustes:", error);
+        if (!loadStatus.settings) {
+            loadStatus.settings = true;
+            checkAllLoaded();
+        }
     });
     unsubscribers.push(unsubscribeSettings);
 
@@ -436,6 +474,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AppContext.Provider value={{
+        loading,
         incomes, expenses, products, rawMaterials, clients, suppliers, invoiceSettings,
         addIncome, addMultipleIncomes, deleteIncome, updateIncome,
         addExpense, addMultipleExpenses, deleteExpense, updateExpense,
