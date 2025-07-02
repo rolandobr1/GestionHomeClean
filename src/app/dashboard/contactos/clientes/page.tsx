@@ -240,24 +240,24 @@ export default function ClientesPage() {
     };
 
     return (
-        <TooltipProvider>
-            <div className="space-y-6">
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
-                <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={handleImportClick}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Imp.
-                    </Button>
-                    <Button variant="outline" onClick={handleExport}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Exp.
-                    </Button>
-                    <Button onClick={handleAddNew}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Cliente
-                    </Button>
-                </div>
+        <div className="space-y-6">
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
+            <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={handleImportClick}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Imp.
+                </Button>
+                <Button variant="outline" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exp.
+                </Button>
+                <Button onClick={handleAddNew}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Cliente
+                </Button>
+            </div>
 
+            <TooltipProvider>
                 <Card>
                     <CardHeader>
                         <CardTitle>Lista de Clientes</CardTitle>
@@ -326,21 +326,19 @@ export default function ClientesPage() {
                         </Table>
                     </CardContent>
                 </Card>
+            </TooltipProvider>
 
-                <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                            <DialogTitle>{editingClient ? 'Editar Cliente' : 'Añadir Cliente'}</DialogTitle>
-                            <DialogDescription>
-                                {editingClient ? 'Actualiza los detalles de tu cliente.' : 'Añade un nuevo cliente a tus registros.'}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <ContactForm contact={editingClient} onSave={handleSave} onClose={() => handleDialogChange(false)} />
-                    </DialogContent>
-                </Dialog>
-            </div>
-        </TooltipProvider>
+            <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>{editingClient ? 'Editar Cliente' : 'Añadir Cliente'}</DialogTitle>
+                        <DialogDescription>
+                            {editingClient ? 'Actualiza los detalles de tu cliente.' : 'Añade un nuevo cliente a tus registros.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ContactForm contact={editingClient} onSave={handleSave} onClose={() => handleDialogChange(false)} />
+                </DialogContent>
+            </Dialog>
+        </div>
     );
 }
-
-    

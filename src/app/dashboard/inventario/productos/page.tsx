@@ -255,24 +255,24 @@ export default function ProductosPage() {
     };
 
     return (
-        <TooltipProvider>
-            <div className="space-y-6">
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
-                <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={handleImportClick}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Imp.
-                    </Button>
-                    <Button variant="outline" onClick={handleExport}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Exp.
-                    </Button>
-                    <Button onClick={() => { setEditingProduct(null); setIsDialogOpen(true); }}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Producto
-                    </Button>
-                </div>
+        <div className="space-y-6">
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
+            <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={handleImportClick}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Imp.
+                </Button>
+                <Button variant="outline" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exp.
+                </Button>
+                <Button onClick={() => { setEditingProduct(null); setIsDialogOpen(true); }}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Producto
+                </Button>
+            </div>
 
+            <TooltipProvider>
                 <Card>
                     <CardHeader>
                         <CardTitle>Productos Terminados</CardTitle>
@@ -349,21 +349,19 @@ export default function ProductosPage() {
                         </Table>
                     </CardContent>
                 </Card>
+            </TooltipProvider>
 
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                            <DialogTitle>{editingProduct ? 'Editar Producto' : 'Añadir Producto'}</DialogTitle>
-                            <DialogDescription>
-                                {editingProduct ? 'Actualiza los detalles de tu producto.' : 'Añade un nuevo producto a tu inventario.'}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <ProductForm product={editingProduct} onSave={handleSave} />
-                    </DialogContent>
-                </Dialog>
-            </div>
-        </TooltipProvider>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>{editingProduct ? 'Editar Producto' : 'Añadir Producto'}</DialogTitle>
+                        <DialogDescription>
+                            {editingProduct ? 'Actualiza los detalles de tu producto.' : 'Añade un nuevo producto a tu inventario.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ProductForm product={editingProduct} onSave={handleSave} />
+                </DialogContent>
+            </Dialog>
+        </div>
     );
 }
-
-    

@@ -280,24 +280,24 @@ export default function MateriaPrimaPage() {
     };
 
     return (
-        <TooltipProvider>
-            <div className="space-y-6">
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
-                <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={handleImportClick}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Imp.
-                    </Button>
-                    <Button variant="outline" onClick={handleExport}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Exp.
-                    </Button>
-                    <Button onClick={() => { setEditingMaterial(null); setIsDialogOpen(true); }}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        M. Prima
-                    </Button>
-                </div>
+        <div className="space-y-6">
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
+            <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={handleImportClick}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Imp.
+                </Button>
+                <Button variant="outline" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exp.
+                </Button>
+                <Button onClick={() => { setEditingMaterial(null); setIsDialogOpen(true); }}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    M. Prima
+                </Button>
+            </div>
 
+            <TooltipProvider>
                 <Card>
                     <CardHeader>
                         <CardTitle>Materia Prima</CardTitle>
@@ -378,21 +378,19 @@ export default function MateriaPrimaPage() {
                         </Table>
                     </CardContent>
                 </Card>
+            </TooltipProvider>
 
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>{editingMaterial ? 'Editar Materia Prima' : 'Añadir Materia Prima'}</DialogTitle>
-                            <DialogDescription>
-                                {editingMaterial ? 'Actualiza los detalles de tu material.' : 'Añade un nuevo material a tu inventario.'}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <MaterialForm material={editingMaterial} onSave={handleSave} suppliers={allSuppliers} />
-                    </DialogContent>
-                </Dialog>
-            </div>
-        </TooltipProvider>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{editingMaterial ? 'Editar Materia Prima' : 'Añadir Materia Prima'}</DialogTitle>
+                        <DialogDescription>
+                            {editingMaterial ? 'Actualiza los detalles de tu material.' : 'Añade un nuevo material a tu inventario.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <MaterialForm material={editingMaterial} onSave={handleSave} suppliers={allSuppliers} />
+                </DialogContent>
+            </Dialog>
+        </div>
     );
 }
-
-    
