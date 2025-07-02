@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -29,7 +28,7 @@ export default function InventarioLayout({
                 <TabsTrigger value="productos">Productos Terminados</TabsTrigger>
                 <TabsTrigger value="materia-prima">Materia Prima</TabsTrigger>
             </TabsList>
-            <TabsContent value={activeTab} className="mt-4">
+            <TabsContent value={activeTab} className="mt-4 space-y-6">
                 {children}
             </TabsContent>
         </Tabs>
