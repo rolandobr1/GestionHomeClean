@@ -31,7 +31,7 @@ export default function ContactosLayout({
           <TabsTrigger value="clientes">Clientes</TabsTrigger>
           <TabsTrigger value="suplidores">Suplidores</TabsTrigger>
         </TabsList>
-        <div className="mt-4 w-full">{children}</div>
+        <div className="mt-4">{children}</div>
       </Tabs>
     </div>
   );

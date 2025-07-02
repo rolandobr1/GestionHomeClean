@@ -29,7 +29,7 @@ export default function InventarioLayout({
                 <TabsTrigger value="productos">Productos Terminados</TabsTrigger>
                 <TabsTrigger value="materia-prima">Materia Prima</TabsTrigger>
             </TabsList>
-            <div className="mt-4 w-full">
+            <div className="mt-4">
                 {children}
             </div>
         </Tabs>
