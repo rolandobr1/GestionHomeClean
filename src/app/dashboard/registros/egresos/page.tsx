@@ -346,7 +346,7 @@ export default function EgresosPage() {
     };
 
     return (
-        <div className="space-y-6 w-full">
+        <>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
@@ -479,6 +479,6 @@ export default function EgresosPage() {
                     <ExpenseForm expense={editingExpense} onSave={handleSave} suppliers={allSuppliers} onClose={() => handleDialogChange(false)} />
                 </DialogContent>
             </Dialog>
-        </div>
+        </>
     );
 }
