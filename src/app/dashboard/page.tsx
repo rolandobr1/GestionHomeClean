@@ -450,6 +450,9 @@ export default function DashboardPage() {
     setChartData(formattedChartData);
 
     // Inventory calculations
+    const calculatedInventoryValue = products.reduce((acc, product) => acc + (product.salePriceWholesale * product.stock), 0);
+    setInventoryValue(calculatedInventoryValue);
+    
     const lowStock = products.filter(p => p.stock <= p.reorderLevel);
     setLowStockItems(lowStock);
 
@@ -504,7 +507,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">RD${inventoryValue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">Valor de costo total</p>
+            <p className="text-xs text-muted-foreground">Valor a precio por mayor</p>
           </CardContent>
         </Card>
         <Card>
