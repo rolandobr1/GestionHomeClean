@@ -28,7 +28,7 @@ export default function RegistrosLayout({
                 <TabsTrigger value="ingresos">Ingresos</TabsTrigger>
                 <TabsTrigger value="egresos">Egresos</TabsTrigger>
             </TabsList>
-            <TabsContent value={activeTab} className="mt-4 space-y-6 w-full">
+            <TabsContent value={activeTab} className="mt-4 w-full">
                 {children}
             </TabsContent>
         </Tabs>

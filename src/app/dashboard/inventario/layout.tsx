@@ -28,7 +28,7 @@ export default function InventarioLayout({
                 <TabsTrigger value="productos">Productos Terminados</TabsTrigger>
                 <TabsTrigger value="materia-prima">Materia Prima</TabsTrigger>
             </TabsList>
-            <TabsContent value={activeTab} className="mt-4 space-y-6 w-full">
+            <TabsContent value={activeTab} className="mt-4 w-full">
                 {children}
             </TabsContent>
         </Tabs>
