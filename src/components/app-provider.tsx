@@ -290,8 +290,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     batch.set(incomeRef, newIncomeData);
 
     income.products.forEach(soldProduct => {
-        const productRef = doc(db, "products", soldProduct.productId);
-        batch.update(productRef, { stock: increment(-soldProduct.quantity) });
+        if (!soldProduct.productId.startsWith('generic_')) {
+            const productRef = doc(db, "products", soldProduct.productId);
+            batch.update(productRef, { stock: increment(-soldProduct.quantity) });
+        }
     });
 
     await batch.commit();
@@ -309,7 +311,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const oldIncome = { id: docSnap.id, ...docSnap.data() } as Income;
             if (oldIncome.products) {
                 oldIncome.products.forEach(p => {
-                    stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+                    if (!p.productId.startsWith('generic_')) {
+                        stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+                    }
                 });
             }
             batch.delete(docSnap.ref);
@@ -323,13 +327,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
              const originalIncome = existingIncomesMap.get(id);
              if (originalIncome) {
                 originalIncome.products.forEach(p => {
-                    stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+                    if (!p.productId.startsWith('generic_')) {
+                        stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+                    }
                 });
              }
         }
         
         income.products.forEach(p => {
-            stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+            if (!p.productId.startsWith('generic_')) {
+                stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+            }
         });
 
         const docRef = id && mode === 'append' ? doc(db, 'incomes', id) : doc(collection(db, 'incomes'));
@@ -368,11 +376,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const stockChanges = new Map<string, number>();
       
       originalIncome.products.forEach(p => {
-          stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+          if (!p.productId.startsWith('generic_')) {
+            stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+          }
       });
 
       updatedIncome.products.forEach(p => {
-          stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+          if (!p.productId.startsWith('generic_')) {
+            stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+          }
       });
       
       for (const [productId, quantityChange] of stockChanges.entries()) {
@@ -399,8 +411,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     batch.delete(incomeRef);
 
     incomeToDelete.products.forEach(p => {
-        const productRef = doc(db, "products", p.productId);
-        batch.update(productRef, { stock: increment(p.quantity) });
+        if (!p.productId.startsWith('generic_')) {
+            const productRef = doc(db, "products", p.productId);
+            batch.update(productRef, { stock: increment(p.quantity) });
+        }
     });
 
     await batch.commit();
@@ -514,7 +528,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // --- Client Management with Firestore ---
   const addClient = async (client: Omit<Client, 'id' | 'code'>): Promise<Client | undefined> => {
     if (!db) return undefined;
-    const existingCodes = clients.map(c => parseInt(c.code.split('-')[1] || '0')).filter(n => !isNaN(n));
+    const existingCodes = clients
+      .filter(c => c.code && typeof c.code === 'string' && c.code.startsWith('CLI-'))
+      .map(c => parseInt(c.code.split('-')[1], 10))
+      .filter(n => !isNaN(n));
     const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
     const newCode = `CLI-${(maxCode + 1).toString().padStart(3, '0')}`;
     const clientData = { ...client, code: newCode };
@@ -557,7 +574,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // --- Supplier Management with Firestore ---
   const addSupplier = async (supplier: Omit<Supplier, 'id' | 'code'>): Promise<Supplier | undefined> => {
     if (!db) return undefined;
-    const existingCodes = suppliers.map(s => parseInt(s.code.split('-')[1] || '0')).filter(n => !isNaN(n));
+    const existingCodes = suppliers
+      .filter(s => s.code && typeof s.code === 'string' && s.code.startsWith('SUP-'))
+      .map(s => parseInt(s.code.split('-')[1], 10))
+      .filter(n => !isNaN(n));
     const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
     const newCode = `SUP-${(maxCode + 1).toString().padStart(3, '0')}`;
     const supplierData = { ...supplier, code: newCode };
