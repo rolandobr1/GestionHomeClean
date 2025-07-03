@@ -166,12 +166,13 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
   }, [incomes]);
 
   const accountsReceivable = useMemo(() => {
-    return incomes.filter(income => income.balance > 0.01);
+    return incomes.filter(income => income.balance > 0.01)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [incomes]);
 
   const filteredAccounts = useMemo(() => {
     return accountsReceivable.filter(income => {
-        const incomeDate = new Date(income.date + 'T00:00:00');
+        const incomeDate = new Date(income.date);
         
         if (dateRange?.from && dateRange?.to) {
             const fromDate = new Date(dateRange.from.setHours(0,0,0,0));
@@ -184,7 +185,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
         if (recordedByFilter && income.recordedBy !== recordedByFilter) return false;
         
         return true;
-    }).sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
+    });
   }, [accountsReceivable, dateRange, clientFilter, recordedByFilter]);
 
   const filteredTotal = useMemo(() => {
@@ -244,7 +245,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     // Table
     const tableData = filteredAccounts.map(income => [
         allClients.find(c => c.id === income.clientId)?.name || 'N/A',
-        format(new Date(income.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es }),
+        format(new Date(income.date), 'dd/MM/yyyy', { locale: es }),
         `RD$${income.totalAmount.toFixed(2)}`,
         `RD$${income.balance.toFixed(2)}`,
         income.recordedBy
@@ -295,7 +296,9 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                   variant="outline"
                   role="combobox"
                   aria-expanded={isClientPopoverOpen}
-                  className="w-full md:w-[240px] justify-between text-left font-normal"
+                  className={cn("w-full md:w-[240px] justify-between text-left font-normal",
+                    !clientFilter && "text-muted-foreground"
+                  )}
                 >
                   <span className="truncate">
                     {clientFilter
@@ -329,7 +332,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                         key={client.id}
                         value={client.name}
                         onSelect={() => {
-                          setClientFilter(client.id === clientFilter ? "" : client.id);
+                          setClientFilter(client.id);
                           setIsClientPopoverOpen(false);
                         }}
                       >
@@ -406,7 +409,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                           return (
                               <TableRow key={income.id}>
                                   <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
-                                  <TableCell className="hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}</TableCell>
+                                  <TableCell className="hidden md:table-cell">{format(new Date(income.date), 'dd/MM/yyyy', { locale: es })}</TableCell>
                                   <TableCell className="hidden sm:table-cell text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
                                   <TableCell className="text-right font-semibold">RD${income.balance.toFixed(2)}</TableCell>
                                   <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
@@ -425,7 +428,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                                                 </TooltipTrigger>
                                                 <TooltipContent><p className="font-semibold mb-1">Historial de Pagos</p>
                                                   {income.payments.map(p=>(<div key={p.id} className="text-xs">
-                                                    {format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy', { locale: es })}: RD${p.amount.toFixed(2)} ({p.recordedBy})
+                                                    {format(new Date(p.date), 'dd/MM/yy', { locale: es })}: RD${p.amount.toFixed(2)} ({p.recordedBy})
                                                   </div>))}
                                                 </TooltipContent>
                                                 </Tooltip>

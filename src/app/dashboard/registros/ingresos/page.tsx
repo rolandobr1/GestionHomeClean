@@ -46,7 +46,7 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
         if (income) {
             setClientId(income.clientId);
             setPaymentMethod(income.paymentMethod);
-            setDate(format(new Date(income.date + 'T00:00:00'), 'yyyy-MM-dd'));
+            setDate(format(new Date(income.date), 'yyyy-MM-dd'));
             setSoldProducts(income.products);
         } else {
             setClientId('generic');
@@ -292,7 +292,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
 
     const filteredIncomes = useMemo(() => {
         return incomes.filter(income => {
-            const incomeDate = new Date(income.date + 'T00:00:00');
+            const incomeDate = new Date(income.date);
             
             if (dateRange?.from && dateRange?.to) {
                 const fromDate = new Date(dateRange.from.setHours(0,0,0,0));
@@ -317,7 +317,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
             }
             
             return true;
-        }).sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [incomes, dateRange, clientFilter, searchTerm, allClients]);
 
     const clearFilters = () => {
@@ -384,7 +384,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
 
         doc.setFontSize(10);
         doc.text(`Nº: ${incomeToExport.id.slice(-6).toUpperCase()}`, pageWidth - margin, 75, { align: 'right' });
-        doc.text(`Fecha: ${format(new Date(incomeToExport.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}`, pageWidth - margin, 85, { align: 'right' });
+        doc.text(`Fecha: ${format(new Date(incomeToExport.date), 'dd/MM/yyyy', { locale: es })}`, pageWidth - margin, 85, { align: 'right' });
         
         doc.setLineWidth(1);
         doc.line(margin, 110, pageWidth - margin, 110);
@@ -734,7 +734,9 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={isClientPopoverOpen}
-                                className="w-full md:w-[280px] justify-between text-left font-normal"
+                                className={cn("w-full md:w-[280px] justify-between text-left font-normal",
+                                    !clientFilter && "text-muted-foreground"
+                                )}
                                 >
                                 <span className="truncate">
                                     {clientFilter
@@ -768,8 +770,8 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                         key={client.id}
                                         value={client.name}
                                         onSelect={() => {
-                                        setClientFilter(client.id === clientFilter ? "" : client.id);
-                                        setIsClientPopoverOpen(false);
+                                            setClientFilter(client.id);
+                                            setIsClientPopoverOpen(false);
                                         }}
                                     >
                                         <Check
@@ -846,7 +848,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                     <TableCell className="capitalize hidden sm:table-cell">{income.paymentMethod}</TableCell>
                                     <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
                                     <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
-                                    <TableCell className="text-right hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'PPP', { locale: es })}</TableCell>
+                                    <TableCell className="text-right hidden md:table-cell">{format(new Date(income.date), 'PPP', { locale: es })}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <DropdownMenu>
