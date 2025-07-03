@@ -69,6 +69,7 @@ export type RawMaterial = {
 
 export type Client = {
   id: string;
+  code: string;
   name: string;
   email: string;
   phone: string;
@@ -77,6 +78,7 @@ export type Client = {
 
 export type Supplier = {
   id: string;
+  code: string;
   name: string;
   email: string;
   phone: string;
@@ -118,12 +120,12 @@ interface AppContextType {
   addMultipleRawMaterials: (materials: RawMaterial[]) => Promise<void>;
   updateRawMaterial: (material: RawMaterial) => Promise<void>;
   deleteRawMaterial: (id: string) => Promise<void>;
-  addClient: (client: Omit<Client, 'id'>) => Promise<void>;
-  addMultipleClients: (clients: Client[]) => Promise<void>;
+  addClient: (client: Omit<Client, 'id' | 'code'>) => Promise<void>;
+  addMultipleClients: (clients: Omit<Client, 'id' | 'code'>[]) => Promise<void>;
   updateClient: (client: Client) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
-  addSupplier: (supplier: Omit<Supplier, 'id'>) => Promise<void>;
-  addMultipleSuppliers: (suppliers: Supplier[]) => Promise<void>;
+  addSupplier: (supplier: Omit<Supplier, 'id' | 'code'>) => Promise<void>;
+  addMultipleSuppliers: (suppliers: Omit<Supplier, 'id' | 'code'>[]) => Promise<void>;
   updateSupplier: (supplier: Supplier) => Promise<void>;
   deleteSupplier: (id: string) => Promise<void>;
   updateInvoiceSettings: (settings: InvoiceSettings) => Promise<void>;
@@ -335,7 +337,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (!originalIncome) {
           console.error("No se encontró el ingreso original a actualizar.");
           const { id, ...incomeData } = updatedIncome;
-          await updateDoc(doc(db, 'incomes', id), incomeData);
+          await updateDoc(doc(db, 'incomes', id), incomeData as any);
           return;
       }
       
@@ -346,7 +348,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       
       const { id, ...incomeData } = updatedIncome;
       const incomeRef = doc(db, 'incomes', id);
-      batch.update(incomeRef, incomeData);
+      batch.update(incomeRef, incomeData as any);
 
       const stockChanges = new Map<string, number>();
       
@@ -420,7 +422,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateExpense = async (updatedExpense: Expense) => {
     if(db) {
         const { id, ...expenseData } = updatedExpense;
-        await updateDoc(doc(db, 'expenses', id), expenseData);
+        await updateDoc(doc(db, 'expenses', id), expenseData as any);
     }
   };
 
@@ -448,7 +450,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!db) return;
     const { id, ...productData } = updatedProduct;
     const productRef = doc(db, 'products', id);
-    await updateDoc(productRef, productData);
+    await updateDoc(productRef, productData as any);
   }
 
   const deleteProduct = async (id: string) => {
@@ -475,7 +477,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!db) return;
     const { id, ...materialData } = updatedMaterial;
     const materialRef = doc(db, 'rawMaterials', id);
-    await updateDoc(materialRef, materialData);
+    await updateDoc(materialRef, materialData as any);
   };
 
   const deleteRawMaterial = async (id: string) => {
@@ -483,17 +485,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // --- Client Management with Firestore ---
-  const addClient = async (client: Omit<Client, 'id'>) => {
-    if (db) await addDoc(collection(db, 'clients'), client);
+  const addClient = async (client: Omit<Client, 'id' | 'code'>) => {
+    if (!db) return;
+    const existingCodes = clients.map(c => parseInt(c.code.split('-')[1] || '0')).filter(n => !isNaN(n));
+    const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+    const newCode = `CLI-${(maxCode + 1).toString().padStart(3, '0')}`;
+    const clientData = { ...client, code: newCode };
+    await addDoc(collection(db, 'clients'), clientData);
   };
 
-  const addMultipleClients = async (clientsToUpsert: Client[]) => {
+  const addMultipleClients = async (clientsToAdd: Omit<Client, 'id' | 'code'>[]) => {
     if (!db) return;
     const batch = writeBatch(db);
-    clientsToUpsert.forEach(client => {
-      const { id, ...clientData } = client;
-      const docRef = id ? doc(db, 'clients', id) : doc(collection(db, 'clients'));
-      batch.set(docRef, clientData);
+    const existingCodes = clients.map(c => parseInt(c.code.split('-')[1] || '0')).filter(n => !isNaN(n));
+    let maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+    
+    clientsToAdd.forEach(client => {
+      maxCode++;
+      const newCode = `CLI-${maxCode.toString().padStart(3, '0')}`;
+      const docRef = doc(collection(db, 'clients'));
+      batch.set(docRef, { ...client, code: newCode });
     });
     await batch.commit();
   };
@@ -502,7 +513,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!db) return;
     const { id, ...clientData } = updatedClient;
     const clientRef = doc(db, 'clients', id);
-    await updateDoc(clientRef, clientData);
+    await updateDoc(clientRef, clientData as any);
   };
 
   const deleteClient = async (id: string) => {
@@ -510,17 +521,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // --- Supplier Management with Firestore ---
-  const addSupplier = async (supplier: Omit<Supplier, 'id'>) => {
-    if (db) await addDoc(collection(db, 'suppliers'), supplier);
+  const addSupplier = async (supplier: Omit<Supplier, 'id' | 'code'>) => {
+    if (!db) return;
+    const existingCodes = suppliers.map(s => parseInt(s.code.split('-')[1] || '0')).filter(n => !isNaN(n));
+    const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+    const newCode = `SUP-${(maxCode + 1).toString().padStart(3, '0')}`;
+    const supplierData = { ...supplier, code: newCode };
+    await addDoc(collection(db, 'suppliers'), supplierData);
   };
 
-  const addMultipleSuppliers = async (suppliersToUpsert: Supplier[]) => {
+  const addMultipleSuppliers = async (suppliersToAdd: Omit<Supplier, 'id' | 'code'>[]) => {
     if (!db) return;
     const batch = writeBatch(db);
-    suppliersToUpsert.forEach(supplier => {
-      const { id, ...supplierData } = supplier;
-      const docRef = id ? doc(db, 'suppliers', id) : doc(collection(db, 'suppliers'));
-      batch.set(docRef, supplierData);
+    const existingCodes = suppliers.map(s => parseInt(s.code.split('-')[1] || '0')).filter(n => !isNaN(n));
+    let maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+
+    suppliersToAdd.forEach(supplier => {
+        maxCode++;
+        const newCode = `SUP-${maxCode.toString().padStart(3, '0')}`;
+        const docRef = doc(collection(db, 'suppliers'));
+        batch.set(docRef, { ...supplier, code: newCode });
     });
     await batch.commit();
   };
@@ -529,7 +549,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!db) return;
     const { id, ...supplierData } = updatedSupplier;
     const supplierRef = doc(db, 'suppliers', id);
-    await updateDoc(supplierRef, supplierData);
+    await updateDoc(supplierRef, supplierData as any);
   };
 
   const deleteSupplier = async (id: string) => {
@@ -556,5 +576,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
-
-    

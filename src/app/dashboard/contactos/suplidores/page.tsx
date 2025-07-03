@@ -21,18 +21,23 @@ const ContactForm = ({
   onSave,
   onClose,
 }: {
-  contact: Omit<Supplier, 'id'> | Supplier | null;
-  onSave: (supplier: Omit<Supplier, 'id'> | Supplier) => Promise<void>;
+  contact: Supplier | null;
+  onSave: (supplier: Omit<Supplier, 'id' | 'code'> | Supplier) => Promise<void>;
   onClose: () => void;
 }) => {
-  const [formData, setFormData] = useState<Omit<Supplier, 'id'>>({
+  const [formData, setFormData] = useState({
     name: '', email: '', phone: '', address: ''
   });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (contact) {
-      setFormData(contact);
+      setFormData({
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone,
+        address: contact.address,
+      });
     } else {
       setFormData({ name: '', email: '', phone: '', address: '' });
     }
@@ -47,7 +52,11 @@ const ContactForm = ({
     e.preventDefault();
     setIsSaving(true);
     try {
-      await onSave(formData);
+      if (contact) {
+        await onSave({ ...contact, ...formData });
+      } else {
+        await onSave(formData);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -113,7 +122,7 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                 throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
             }
 
-            const newSuppliers: Omit<Supplier, 'id'>[] = [];
+            const newSuppliers: Omit<Supplier, 'id' | 'code'>[] = [];
             for (let i = 1; i < lines.length; i++) {
                 const values = lines[i].split(',');
                 const supplierData: any = {};
@@ -129,7 +138,7 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                 });
             }
             
-            await addMultipleSuppliers(newSuppliers as Supplier[]);
+            await addMultipleSuppliers(newSuppliers);
 
             toast({
             title: "Importación Exitosa",
@@ -202,7 +211,13 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
             toast({ title: 'No hay datos', description: 'No hay suplidores para exportar.', variant: 'destructive' });
             return;
         }
-        const dataToExport = suppliers.map(({ id, ...rest }) => rest);
+        const dataToExport = suppliers.map(s => ({
+            code: s.code,
+            name: s.name,
+            email: s.email,
+            phone: s.phone,
+            address: s.address
+        }));
         const csvString = convertArrayOfObjectsToCSV(dataToExport);
         downloadCSV(csvString, 'suplidores.csv');
         toast({ title: 'Exportación Exitosa', description: 'Tus suplidores han sido descargados.' });
@@ -222,11 +237,11 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
         deleteSupplier(supplierId);
     };
 
-    const handleSave = async (supplierData: Omit<Supplier, 'id'> | Supplier) => {
+    const handleSave = async (supplierData: Omit<Supplier, 'id' | 'code'> | Supplier) => {
         if ('id' in supplierData && supplierData.id) {
             await updateSupplier(supplierData as Supplier);
         } else {
-            await addSupplier(supplierData);
+            await addSupplier(supplierData as Omit<Supplier, 'id' | 'code'>);
         }
         setIsDialogOpen(false);
     };
@@ -264,6 +279,7 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead>Código</TableHead>
                                 <TableHead>Nombre</TableHead>
                                 <TableHead className="hidden sm:table-cell">Correo</TableHead>
                                 <TableHead className="hidden md:table-cell">Teléfono</TableHead>
@@ -273,6 +289,7 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                         <TableBody>
                             {suppliers.map((supplier) => (
                                 <TableRow key={supplier.id}>
+                                    <TableCell className="font-mono">{supplier.code}</TableCell>
                                     <TableCell className="font-medium">{supplier.name}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{supplier.email}</TableCell>
                                     <TableCell className="hidden md:table-cell">{supplier.phone}</TableCell>

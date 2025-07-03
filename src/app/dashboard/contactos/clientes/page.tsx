@@ -21,18 +21,23 @@ const ContactForm = ({
   onSave,
   onClose,
 }: {
-  contact: Omit<Client, 'id'> | Client | null;
-  onSave: (client: Omit<Client, 'id'> | Client) => Promise<void>;
+  contact: Client | null;
+  onSave: (client: Omit<Client, 'id' | 'code'> | Client) => Promise<void>;
   onClose: () => void;
 }) => {
-  const [formData, setFormData] = useState<Omit<Client, 'id'>>({
+  const [formData, setFormData] = useState({
     name: '', email: '', phone: '', address: ''
   });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (contact) {
-      setFormData(contact);
+      setFormData({
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone,
+        address: contact.address,
+      });
     } else {
       setFormData({ name: '', email: '', phone: '', address: '' });
     }
@@ -47,7 +52,11 @@ const ContactForm = ({
     e.preventDefault();
     setIsSaving(true);
     try {
-      await onSave(formData);
+      if (contact) {
+        await onSave({ ...contact, ...formData });
+      } else {
+        await onSave(formData);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -113,7 +122,7 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
                 throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
             }
 
-            const newClients: Omit<Client, 'id'>[] = [];
+            const newClients: Omit<Client, 'id' | 'code'>[] = [];
             for (let i = 1; i < lines.length; i++) {
                 const values = lines[i].split(',');
                 const clientData: any = {};
@@ -129,7 +138,7 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
                 });
             }
             
-            await addMultipleClients(newClients as Client[]);
+            await addMultipleClients(newClients);
 
             toast({
             title: "Importación Exitosa",
@@ -202,7 +211,13 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
             toast({ title: 'No hay datos', description: 'No hay clientes para exportar.', variant: 'destructive' });
             return;
         }
-        const dataToExport = clients.map(({ id, ...rest }) => rest);
+        const dataToExport = clients.map(c => ({
+            code: c.code,
+            name: c.name,
+            email: c.email,
+            phone: c.phone,
+            address: c.address,
+        }));
         const csvString = convertArrayOfObjectsToCSV(dataToExport);
         downloadCSV(csvString, 'clientes.csv');
         toast({ title: 'Exportación Exitosa', description: 'Tus clientes han sido descargados.' });
@@ -222,11 +237,11 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
         deleteClient(clientId);
     };
 
-    const handleSave = async (clientData: Omit<Client, 'id'> | Client) => {
+    const handleSave = async (clientData: Omit<Client, 'id' | 'code'> | Client) => {
         if ('id' in clientData && clientData.id) {
             await updateClient(clientData as Client);
         } else {
-            await addClient(clientData);
+            await addClient(clientData as Omit<Client, 'id' | 'code'>);
         }
         setIsDialogOpen(false);
     };
@@ -264,6 +279,7 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead>Código</TableHead>
                             <TableHead>Nombre</TableHead>
                             <TableHead className="hidden sm:table-cell">Correo</TableHead>
                             <TableHead className="hidden md:table-cell">Teléfono</TableHead>
@@ -273,6 +289,7 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
                     <TableBody>
                         {clients.map((client) => (
                             <TableRow key={client.id}>
+                                <TableCell className="font-mono">{client.code}</TableCell>
                                 <TableCell className="font-medium">{client.name}</TableCell>
                                 <TableCell className="hidden sm:table-cell">{client.email}</TableCell>
                                 <TableCell className="hidden md:table-cell">{client.phone}</TableCell>
