@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -111,8 +110,8 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
         }
         const lowercasedTerm = searchTerm.toLowerCase();
         return suppliers.filter(supplier =>
-            supplier.name.toLowerCase().includes(lowercasedTerm) ||
-            supplier.code.toLowerCase().includes(lowercasedTerm) ||
+            (supplier.name && supplier.name.toLowerCase().includes(lowercasedTerm)) ||
+            (supplier.code && supplier.code.toLowerCase().includes(lowercasedTerm)) ||
             (supplier.email && supplier.email.toLowerCase().includes(lowercasedTerm)) ||
             (supplier.phone && supplier.phone.toLowerCase().includes(lowercasedTerm))
         );
@@ -375,5 +374,7 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
         </>
     );
 }
+
+    
 
     

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -111,8 +110,8 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
         }
         const lowercasedTerm = searchTerm.toLowerCase();
         return clients.filter(client =>
-            client.name.toLowerCase().includes(lowercasedTerm) ||
-            client.code.toLowerCase().includes(lowercasedTerm) ||
+            (client.name && client.name.toLowerCase().includes(lowercasedTerm)) ||
+            (client.code && client.code.toLowerCase().includes(lowercasedTerm)) ||
             (client.email && client.email.toLowerCase().includes(lowercasedTerm)) ||
             (client.phone && client.phone.toLowerCase().includes(lowercasedTerm))
         );
@@ -375,5 +374,7 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
       </>
     );
 }
+
+    
 
     
