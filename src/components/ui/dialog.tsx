@@ -37,6 +37,15 @@ const DialogContent = React.forwardRef<
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      onInteractOutside={(event) => {
+        // This prevents the dialog from closing when interacting with other Radix primitives within.
+        // Specifically, this is to fix an issue where selecting an item in a `cmdk` Command palette
+        // inside a dialog would close the dialog before the selection could be registered.
+        const target = event.target as HTMLElement;
+        if (target.closest('[cmdk-root]')) {
+          event.preventDefault();
+        }
+      }}
       className={cn(
         "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
         className
