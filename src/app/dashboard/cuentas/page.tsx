@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Wallet, MoreHorizontal, X, Info, Sigma, Download } from "lucide-react";
+import { Wallet, MoreHorizontal, X, Info, Sigma, Download, ChevronsUpDown, Check } from "lucide-react";
 import { useAppData } from '@/hooks/use-app-data';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -22,6 +22,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 
 const PaymentForm = ({
@@ -143,6 +146,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
   
   const [paymentIncome, setPaymentIncome] = useState<Income | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isClientPopoverOpen, setIsClientPopoverOpen] = useState(false);
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 90),
@@ -285,15 +289,63 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
           <div className="flex flex-col md:flex-row gap-4">
             <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             
-            <Select value={clientFilter || 'all'} onValueChange={(value) => setClientFilter(value === 'all' ? '' : value)}>
-              <SelectTrigger className="w-full md:w-[240px]">
-                <SelectValue placeholder="Filtrar por cliente..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los clientes</SelectItem>
-                {allClients.map(client => <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Popover open={isClientPopoverOpen} onOpenChange={setIsClientPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={isClientPopoverOpen}
+                  className="w-full md:w-[240px] justify-between text-left font-normal"
+                >
+                  <span className="truncate">
+                    {clientFilter
+                      ? clients.find((client) => client.id === clientFilter)?.name
+                      : "Selecciona un cliente..."}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[240px] p-0">
+                <Command>
+                  <CommandInput placeholder="Buscar cliente..." />
+                  <CommandEmpty>No se encontró ningún cliente.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={() => {
+                        setClientFilter("");
+                        setIsClientPopoverOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          !clientFilter ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      Todos los clientes
+                    </CommandItem>
+                    {clients.map((client) => (
+                      <CommandItem
+                        key={client.id}
+                        value={client.name}
+                        onSelect={() => {
+                          setClientFilter(client.id === clientFilter ? "" : client.id);
+                          setIsClientPopoverOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            clientFilter === client.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {client.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
 
             <Select value={recordedByFilter || 'all'} onValueChange={(value) => setRecordedByFilter(value === 'all' ? '' : value)}>
               <SelectTrigger className="w-full md:w-[240px]">
