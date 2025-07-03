@@ -39,6 +39,9 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
     const [currentQuantity, setCurrentQuantity] = useState(1);
     const [currentPriceType, setCurrentPriceType] = useState<'retail' | 'wholesale'>('retail');
 
+    const [genericProductName, setGenericProductName] = useState('');
+    const [genericProductPrice, setGenericProductPrice] = useState<number | string>('');
+
     useEffect(() => {
         if (income) {
             setClientId(income.clientId);
@@ -54,26 +57,42 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
     }, [income]);
 
     const handleAddProduct = () => {
-        const product = allProducts.find(p => p.id === currentProduct);
-        if (!product || currentQuantity <= 0) return;
-
-        const price = currentPriceType === 'retail' ? product.salePriceRetail : product.salePriceWholesale;
-        
-        const existingProduct = soldProducts.find(p => p.productId === product.id && p.price === price);
-
-        if (existingProduct) {
-            setSoldProducts(soldProducts.map(p => 
-                p.productId === product.id && p.price === price
-                ? { ...p, quantity: p.quantity + currentQuantity } 
-                : p
-            ));
-        } else {
-            setSoldProducts([...soldProducts, {
-                productId: product.id,
-                name: product.name,
+        if (currentProduct === 'generic') {
+             if (!genericProductName || Number(genericProductPrice) <= 0 || currentQuantity <= 0) {
+                alert('Por favor, ingresa un nombre, precio mayor a cero y cantidad para el producto genérico.');
+                return;
+            }
+            const newProduct: SoldProduct = {
+                productId: `generic_${Date.now()}`,
+                name: genericProductName,
                 quantity: currentQuantity,
-                price: price,
-            }]);
+                price: Number(genericProductPrice),
+            };
+            setSoldProducts([...soldProducts, newProduct]);
+            setGenericProductName('');
+            setGenericProductPrice('');
+        } else {
+            const product = allProducts.find(p => p.id === currentProduct);
+            if (!product || currentQuantity <= 0) return;
+
+            const price = currentPriceType === 'retail' ? product.salePriceRetail : product.salePriceWholesale;
+            
+            const existingProduct = soldProducts.find(p => p.productId === product.id && p.price === price);
+
+            if (existingProduct) {
+                setSoldProducts(soldProducts.map(p => 
+                    p.productId === product.id && p.price === price
+                    ? { ...p, quantity: p.quantity + currentQuantity } 
+                    : p
+                ));
+            } else {
+                setSoldProducts([...soldProducts, {
+                    productId: product.id,
+                    name: product.name,
+                    quantity: currentQuantity,
+                    price: price,
+                }]);
+            }
         }
         
         setCurrentProduct('');
@@ -163,32 +182,47 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
                 <div className="space-y-2">
                     <Label>Añadir Productos</Label>
                     <Card className="p-4 space-y-4 bg-muted/50">
-                        <div className="grid grid-cols-3 gap-4">
-                             <div className="space-y-2 col-span-2">
-                                <Label htmlFor="productId-form">Producto</Label>
-                                <Select onValueChange={setCurrentProduct} value={currentProduct} disabled={isSaving}>
-                                    <SelectTrigger id="productId-form">
-                                        <SelectValue placeholder="Selecciona un producto" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {allProducts.map(product => (
-                                            <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="quantity">Cantidad</Label>
-                                <Input id="quantity" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
-                            </div>
-                        </div>
                         <div className="space-y-2">
-                             <Label>Tipo de Precio</Label>
-                            <RadioGroup value={currentPriceType} onValueChange={(value: 'retail' | 'wholesale') => setCurrentPriceType(value)} className="flex gap-4" disabled={isSaving}>
-                                <div className="flex items-center space-x-2"><RadioGroupItem value="retail" id="retail" /><Label htmlFor="retail">Detalle</Label></div>
-                                <div className="flex items-center space-x-2"><RadioGroupItem value="wholesale" id="wholesale" /><Label htmlFor="wholesale">Por Mayor</Label></div>
-                            </RadioGroup>
+                            <Label htmlFor="productId-form">Producto</Label>
+                            <Select onValueChange={setCurrentProduct} value={currentProduct}>
+                                <SelectTrigger id="productId-form">
+                                    <SelectValue placeholder="Selecciona un producto" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="generic">-- Producto Genérico (Entrada Manual) --</SelectItem>
+                                    {allProducts.map(product => (
+                                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
+                        {currentProduct === 'generic' ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="generic-name">Nombre del Producto</Label>
+                                    <Input id="generic-name" value={genericProductName} onChange={e => setGenericProductName(e.target.value)} placeholder="Ej: Vaso Desechable" disabled={isSaving}/>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="generic-price">Precio Unitario</Label>
+                                    <Input id="generic-price" type="number" value={genericProductPrice} onChange={e => setGenericProductPrice(e.target.value)} placeholder="0.00" inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
+                                </div>
+                            </div>
+                        ) : (
+                            currentProduct && (
+                                <div className="space-y-2">
+                                    <Label>Tipo de Precio</Label>
+                                    <RadioGroup value={currentPriceType} onValueChange={(value: 'retail' | 'wholesale') => setCurrentPriceType(value)} className="flex gap-4" disabled={isSaving}>
+                                        <div className="flex items-center space-x-2"><RadioGroupItem value="retail" id="retail" /><Label htmlFor="retail">Detalle</Label></div>
+                                        <div className="flex items-center space-x-2"><RadioGroupItem value="wholesale" id="wholesale" /><Label htmlFor="wholesale">Por Mayor</Label></div>
+                                    </RadioGroup>
+                                </div>
+                            )
+                        )}
+                        <div className="space-y-2">
+                            <Label htmlFor="quantity">Cantidad</Label>
+                            <Input id="quantity" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
+                        </div>
+
                         <Button type="button" onClick={handleAddProduct} className="w-full" disabled={!currentProduct || isSaving}>Añadir Producto a la Venta</Button>
                     </Card>
                 </div>
