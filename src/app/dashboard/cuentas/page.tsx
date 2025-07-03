@@ -144,10 +144,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
   const [paymentIncome, setPaymentIncome] = useState<Income | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 90),
-    to: new Date(),
-  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [recordedByFilter, setRecordedByFilter] = useState('');
 
@@ -194,7 +191,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
   }, [filteredAccounts]);
 
   const clearFilters = () => {
-    setDateRange({ from: undefined, to: undefined });
+    setDateRange(undefined);
     setClientSearchTerm('');
     setRecordedByFilter('');
   };
