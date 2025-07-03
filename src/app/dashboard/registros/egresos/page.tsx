@@ -35,13 +35,13 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
         if (expense) {
             setDescription(expense.description);
             setAmount(expense.amount);
-            setDate(format(new Date(expense.date), 'yyyy-MM-dd'));
+            setDate(format(new Date(expense.date + 'T00:00:00'), 'yyyy-MM-dd'));
             setCategory(expense.category);
             setSupplierId(expense.supplierId || 'generic');
         } else {
             setDescription('');
             setAmount(0);
-            setDate(new Date().toISOString().split('T')[0]);
+            setDate(format(new Date(), 'yyyy-MM-dd'));
             setCategory('Materia Prima');
             setSupplierId('generic');
         }
@@ -147,7 +147,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
 
     const filteredExpenses = useMemo(() => {
         return expenses.filter(expense => {
-            const expenseDate = new Date(expense.date);
+            const expenseDate = new Date(expense.date + 'T00:00:00');
             
             // Date filter
             if (dateRange?.from && dateRange?.to) {
@@ -308,7 +308,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                         id: expenseData.id || '',
                         description: expenseData.description || 'N/A',
                         amount: parseFloat(expenseData.amount) || 0,
-                        date: expenseData.date || new Date().toISOString().split('T')[0],
+                        date: expenseData.date || format(new Date(), 'yyyy-MM-dd'),
                         category: expenseData.category || 'Otro',
                         supplierId: supplier!.id,
                         recordedBy: user.name,
@@ -423,7 +423,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                                     <TableCell className="hidden md:table-cell">{supplier?.name || 'Suplidor Genérico'}</TableCell>
                                     <TableCell className="hidden lg:table-cell">{expense.recordedBy}</TableCell>
                                     <TableCell className="text-right">RD${expense.amount.toFixed(2)}</TableCell>
-                                    <TableCell className="text-right hidden md:table-cell">{format(new Date(expense.date), 'PPP', { locale: es })}</TableCell>
+                                    <TableCell className="text-right hidden md:table-cell">{format(new Date(expense.date + 'T00:00:00'), 'PPP', { locale: es })}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <DropdownMenu>

@@ -66,7 +66,7 @@ const IncomeForm = ({ onClose }: { onClose: () => void }) => {
     const [currentPriceType, setCurrentPriceType] = useState<'retail' | 'wholesale'>('retail');
 
     useEffect(() => {
-        setDate(new Date().toISOString().split('T')[0]);
+        setDate(format(new Date(), 'yyyy-MM-dd'));
     }, []);
 
     const handleAddProduct = () => {
@@ -289,7 +289,7 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
     });
 
     useEffect(() => {
-        setFormData(prev => ({ ...prev, date: new Date().toISOString().split('T')[0] }));
+        setFormData(prev => ({ ...prev, date: format(new Date(), 'yyyy-MM-dd') }));
     }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -45,12 +45,12 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
         if (income) {
             setClientId(income.clientId);
             setPaymentMethod(income.paymentMethod);
-            setDate(format(new Date(income.date), 'yyyy-MM-dd'));
+            setDate(format(new Date(income.date + 'T00:00:00'), 'yyyy-MM-dd'));
             setSoldProducts(income.products);
         } else {
             setClientId('generic');
             setPaymentMethod('contado');
-            setDate(new Date().toISOString().split('T')[0]);
+            setDate(format(new Date(), 'yyyy-MM-dd'));
             setSoldProducts([]);
         }
     }, [income]);
@@ -291,7 +291,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
 
     const filteredIncomes = useMemo(() => {
         return incomes.filter(income => {
-            const incomeDate = new Date(income.date);
+            const incomeDate = new Date(income.date + 'T00:00:00');
             
             if (dateRange?.from && dateRange?.to) {
                 const fromDate = new Date(dateRange.from.setHours(0,0,0,0));
@@ -383,7 +383,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
 
         doc.setFontSize(10);
         doc.text(`Nº: ${incomeToExport.id.slice(-6).toUpperCase()}`, pageWidth - margin, 75, { align: 'right' });
-        doc.text(`Fecha: ${format(new Date(incomeToExport.date), 'dd/MM/yyyy', { locale: es })}`, pageWidth - margin, 85, { align: 'right' });
+        doc.text(`Fecha: ${format(new Date(incomeToExport.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}`, pageWidth - margin, 85, { align: 'right' });
         
         doc.setLineWidth(1);
         doc.line(margin, 110, pageWidth - margin, 110);
@@ -598,7 +598,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     if (rows.length === 0) continue;
 
                     const firstRow = rows[0];
-                    const date = firstRow.fecha || new Date().toISOString().split('T')[0];
+                    const date = firstRow.fecha || format(new Date(), 'yyyy-MM-dd');
                     const clientName = firstRow.cliente || 'Cliente Genérico';
                     const paymentMethodRaw = (firstRow.metododepago || 'contado').toLowerCase();
                     const paymentMethod = (paymentMethodRaw === 'credito' || paymentMethodRaw === 'contado') ? paymentMethodRaw : 'contado';
@@ -837,7 +837,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                     <TableCell className="capitalize hidden sm:table-cell">{income.paymentMethod}</TableCell>
                                     <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
                                     <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
-                                    <TableCell className="text-right hidden md:table-cell">{format(new Date(income.date), 'PPP', { locale: es })}</TableCell>
+                                    <TableCell className="text-right hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'PPP', { locale: es })}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <DropdownMenu>

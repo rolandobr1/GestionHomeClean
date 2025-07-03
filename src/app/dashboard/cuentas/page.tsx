@@ -38,7 +38,7 @@ const PaymentForm = ({
   const [date, setDate] = useState('');
 
   useEffect(() => {
-    setDate(new Date().toISOString().split('T')[0]);
+    setDate(format(new Date(), 'yyyy-MM-dd'));
   }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -166,7 +166,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
 
   const filteredAccounts = useMemo(() => {
     return accountsReceivable.filter(income => {
-        const incomeDate = new Date(income.date);
+        const incomeDate = new Date(income.date + 'T00:00:00');
         
         if (dateRange?.from && dateRange?.to) {
             const fromDate = new Date(dateRange.from.setHours(0,0,0,0));
@@ -272,7 +272,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                           return (
                               <TableRow key={income.id}>
                                   <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
-                                  <TableCell className="hidden md:table-cell">{format(new Date(income.date), 'dd/MM/yyyy', { locale: es })}</TableCell>
+                                  <TableCell className="hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}</TableCell>
                                   <TableCell className="hidden sm:table-cell text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
                                   <TableCell className="text-right font-semibold">RD${income.balance.toFixed(2)}</TableCell>
                                   <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
@@ -291,7 +291,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                                                 </TooltipTrigger>
                                                 <TooltipContent><p className="font-semibold mb-1">Historial de Pagos</p>
                                                   {income.payments.map(p=>(<div key={p.id} className="text-xs">
-                                                    {format(new Date(p.date), 'dd/MM/yy')}: RD${p.amount.toFixed(2)} ({p.recordedBy})
+                                                    {format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy')}: RD${p.amount.toFixed(2)} ({p.recordedBy})
                                                   </div>))}
                                                 </TooltipContent>
                                                 </Tooltip>
@@ -326,5 +326,3 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     </div>
   );
 }
-
-    
