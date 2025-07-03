@@ -354,6 +354,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                     title: "Importación Exitosa",
                     description: `${newExpenses.length} egresos han sido importados en modo '${importMode === 'append' ? 'Añadir' : 'Reemplazar'}'.`,
                 });
+                clearFilters();
             } catch (error: any) {
                 toast({
                     variant: "destructive",
@@ -542,5 +543,3 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
         </>
     );
 }
-
-    

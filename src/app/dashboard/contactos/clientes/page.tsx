@@ -166,6 +166,7 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
             title: "Importación Exitosa",
             description: `${newClients.length} clientes han sido importados en modo '${importMode === 'append' ? 'Añadir' : 'Reemplazar'}'.`,
             });
+            setSearchTerm('');
 
         } catch (error: any) {
             toast({
@@ -411,5 +412,3 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
       </>
     );
 }
-
-    

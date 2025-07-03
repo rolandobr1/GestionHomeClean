@@ -775,6 +775,8 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     title: "Importación Exitosa",
                     description: `${newIncomes.length} transacciones han sido importadas en modo '${importMode === 'append' ? 'Añadir' : 'Reemplazar'}'.`,
                 });
+                
+                clearFilters();
 
             } catch (error: any) {
                 toast({

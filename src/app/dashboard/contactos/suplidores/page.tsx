@@ -165,6 +165,7 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
             title: "Importación Exitosa",
             description: `${newSuppliers.length} suplidores han sido importados en modo '${importMode === 'append' ? 'Añadir' : 'Reemplazar'}'.`,
             });
+            setSearchTerm('');
 
         } catch (error: any) {
             toast({
@@ -410,5 +411,3 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
         </>
     );
 }
-
-    
