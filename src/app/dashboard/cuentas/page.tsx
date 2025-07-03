@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Wallet, MoreHorizontal, X, ChevronsUpDown, Check, Info } from "lucide-react";
+import { Wallet, MoreHorizontal, X, Info } from "lucide-react";
 import { useAppData } from '@/hooks/use-app-data';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -14,15 +14,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import type { Income, Client, Payment } from '@/components/app-provider';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import type { DateRange } from 'react-day-picker';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
 
 const PaymentForm = ({
   income,
@@ -149,7 +146,6 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
   });
   const [clientFilter, setClientFilter] = useState('');
   const [recordedByFilter, setRecordedByFilter] = useState('');
-  const [openClientPopover, setOpenClientPopover] = useState(false);
 
   const allClients = useMemo(() => [
     { id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' },
@@ -210,31 +206,15 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
           <div className="flex flex-col md:flex-row gap-4">
             <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             
-            <Popover open={openClientPopover} onOpenChange={setOpenClientPopover}>
-                <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" className={cn("w-full md:w-[240px] justify-between", !clientFilter && "text-muted-foreground")}>
-                        {clientFilter ? allClients.find(c => c.id === clientFilter)?.name : "Filtrar por cliente..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                    <Command><CommandInput placeholder="Buscar cliente..." />
-                        <CommandList><CommandEmpty>No se encontró.</CommandEmpty>
-                        <CommandGroup>
-                            <CommandItem key="all" value="todos-los-clientes" onSelect={() => {setClientFilter(''); setOpenClientPopover(false);}}>
-                                <Check className={cn("mr-2 h-4 w-4", clientFilter === '' ? "opacity-100" : "opacity-0")} />
-                                Todos los clientes
-                            </CommandItem>
-                            {allClients.map((client) => (
-                                <CommandItem key={client.id} value={client.name} onSelect={() => {setClientFilter(client.id); setOpenClientPopover(false);}}>
-                                    <Check className={cn("mr-2 h-4 w-4", clientFilter === client.id ? "opacity-100" : "opacity-0")} />
-                                    {client.name}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup></CommandList>
-                    </Command>
-                </PopoverContent>
-            </Popover>
+            <Select value={clientFilter || 'all'} onValueChange={(value) => setClientFilter(value === 'all' ? '' : value)}>
+              <SelectTrigger className="w-full md:w-[240px]">
+                <SelectValue placeholder="Filtrar por cliente..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los clientes</SelectItem>
+                {allClients.map(client => <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
 
             <Select value={recordedByFilter || 'all'} onValueChange={(value) => setRecordedByFilter(value === 'all' ? '' : value)}>
               <SelectTrigger className="w-full md:w-[240px]">

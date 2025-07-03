@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, ChevronsUpDown, Check, Upload } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, Upload } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -23,12 +23,9 @@ import { InvoiceTemplate } from '@/components/invoice-template';
 import { useToast } from "@/hooks/use-toast";
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import type { DateRange } from 'react-day-picker';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useAuth } from '@/hooks/use-auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { cn } from '@/lib/utils';
 
 const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | null, onSave: (income: Income | Omit<Income, 'id'>) => Promise<void>, clients: Client[], onClose: () => void }) => {
     const { products: allProducts } = useAppData();
@@ -283,7 +280,6 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     });
     const [clientFilter, setClientFilter] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
-    const [openClientPopover, setOpenClientPopover] = useState(false);
 
     const allClients = useMemo(() => [
         { id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' },
@@ -728,58 +724,15 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     <div className="flex flex-col md:flex-row gap-4">
                         <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
                         
-                        <Popover open={openClientPopover} onOpenChange={setOpenClientPopover}>
-                            <PopoverTrigger asChild>
-                                <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={openClientPopover}
-                                className={cn(
-                                    "w-full md:w-[280px] justify-between",
-                                    !clientFilter && "text-muted-foreground"
-                                )}
-                                >
-                                {clientFilter
-                                    ? allClients.find((client) => client.id === clientFilter)?.name
-                                    : "Filtrar por cliente..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                <Command>
-                                <CommandInput placeholder="Buscar cliente..." />
-                                <CommandList>
-                                <CommandEmpty>No se encontró el cliente.</CommandEmpty>
-                                <CommandGroup>
-                                    <CommandItem
-                                        key="all"
-                                        value="todos-los-clientes"
-                                        onSelect={() => {
-                                            setClientFilter('');
-                                            setOpenClientPopover(false);
-                                        }}
-                                    >
-                                         <Check className={cn("mr-2 h-4 w-4", clientFilter === '' ? "opacity-100" : "opacity-0")} />
-                                        Todos los clientes
-                                    </CommandItem>
-                                    {allClients.map((client) => (
-                                        <CommandItem
-                                            key={client.id}
-                                            value={client.name}
-                                            onSelect={() => {
-                                                setClientFilter(client.id);
-                                                setOpenClientPopover(false);
-                                            }}
-                                        >
-                                             <Check className={cn("mr-2 h-4 w-4", clientFilter === client.id ? "opacity-100" : "opacity-0")} />
-                                            {client.name}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                                </CommandList>
-                                </Command>
-                            </PopoverContent>
-                        </Popover>
+                        <Select value={clientFilter || 'all'} onValueChange={(value) => setClientFilter(value === 'all' ? '' : value)}>
+                          <SelectTrigger className="w-full md:w-[280px]">
+                            <SelectValue placeholder="Filtrar por cliente..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos los clientes</SelectItem>
+                            {allClients.map(client => <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                         
                         <Input 
                             placeholder="Buscar por producto..." 
