@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from '@/components/ui/separator';
 import { format, subDays } from 'date-fns';
@@ -26,6 +25,7 @@ import type { DateRange } from 'react-day-picker';
 import { useAuth } from '@/hooks/use-auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 
 const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | null, onSave: (income: Income | Omit<Income, 'id'>) => Promise<void>, clients: Client[], onClose: () => void }) => {
     const { products: allProducts } = useAppData();
@@ -278,12 +278,20 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         from: subDays(new Date(), 90),
         to: new Date(),
     });
-    const [clientFilter, setClientFilter] = useState<string>('');
+    const [clientFilter, setClientFilter] = useState<string>('all');
     const [searchTerm, setSearchTerm] = useState('');
 
     const allClients = useMemo(() => [
         { id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' },
         ...clients
+    ], [clients]);
+
+    const clientOptions: ComboboxOption[] = useMemo(() => [
+      { value: "all", label: "Todos los clientes" },
+      ...clients.map(client => ({
+        value: client.id,
+        label: client.name,
+      }))
     ], [clients]);
 
     const filteredIncomes = useMemo(() => {
@@ -298,7 +306,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                 }
             }
             
-            if (clientFilter && income.clientId !== clientFilter) {
+            if (clientFilter && clientFilter !== 'all' && income.clientId !== clientFilter) {
                 return false;
             }
 
@@ -318,7 +326,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
 
     const clearFilters = () => {
         setDateRange({ from: undefined, to: undefined });
-        setClientFilter('');
+        setClientFilter('all');
         setSearchTerm('');
     };
 
@@ -724,15 +732,17 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     <div className="flex flex-col md:flex-row gap-4">
                         <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
                         
-                        <Select value={clientFilter || 'all'} onValueChange={(value) => setClientFilter(value === 'all' ? '' : value)}>
-                            <SelectTrigger className="w-full md:w-[280px]">
-                                <SelectValue placeholder="Selecciona un cliente..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos los clientes</SelectItem>
-                                {clients.map(client => <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={clientOptions}
+                            value={clientFilter}
+                            onValueChange={(value) => {
+                                setClientFilter(value || 'all');
+                            }}
+                            placeholder="Filtrar por cliente..."
+                            searchPlaceholder="Buscar cliente..."
+                            emptyMessage="No se encontró ningún cliente."
+                            triggerClassName="w-full md:w-[280px]"
+                        />
                         
                         <Input 
                             placeholder="Buscar por producto..." 
@@ -877,5 +887,3 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         </div>
     );
 }
-
-    

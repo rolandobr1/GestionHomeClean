@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 
 
 const PaymentForm = ({
@@ -148,7 +149,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     from: subDays(new Date(), 90),
     to: new Date(),
   });
-  const [clientFilter, setClientFilter] = useState('');
+  const [clientFilter, setClientFilter] = useState('all');
   const [recordedByFilter, setRecordedByFilter] = useState('');
 
   const allClients = useMemo(() => [
@@ -160,6 +161,14 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     const users = new Set(incomes.map(i => i.recordedBy));
     return Array.from(users);
   }, [incomes]);
+
+  const clientOptions: ComboboxOption[] = useMemo(() => [
+    { value: "all", label: "Todos los clientes" },
+    ...clients.map(client => ({
+      value: client.id,
+      label: client.name,
+    }))
+  ], [clients]);
 
   const accountsReceivable = useMemo(() => {
     return incomes.filter(income => income.balance > 0.01)
@@ -176,7 +185,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
             if (incomeDate < fromDate || incomeDate > toDate) return false;
         }
         
-        if (clientFilter && income.clientId !== clientFilter) return false;
+        if (clientFilter && clientFilter !== 'all' && income.clientId !== clientFilter) return false;
 
         if (recordedByFilter && income.recordedBy !== recordedByFilter) return false;
         
@@ -190,7 +199,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
 
   const clearFilters = () => {
     setDateRange({ from: undefined, to: undefined });
-    setClientFilter('');
+    setClientFilter('all');
     setRecordedByFilter('');
   };
 
@@ -225,7 +234,9 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     doc.text("Filtros Aplicados:", 14, 45);
     let filterY = 50;
     
-    const clientName = clientFilter ? allClients.find(c => c.id === clientFilter)?.name : 'Todos';
+    const clientName = clientFilter && clientFilter !== 'all'
+        ? clients.find(c => c.id === clientFilter)?.name
+        : 'Todos';
     doc.text(`- Cliente: ${clientName}`, 14, filterY);
     filterY += 5;
 
@@ -286,15 +297,17 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
           <div className="flex flex-col md:flex-row gap-4">
             <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             
-            <Select value={clientFilter || 'all'} onValueChange={(value) => setClientFilter(value === 'all' ? '' : value)}>
-              <SelectTrigger className="w-full md:w-[240px]">
-                <SelectValue placeholder="Selecciona un cliente..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los clientes</SelectItem>
-                {clients.map(client => <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={clientOptions}
+              value={clientFilter}
+              onValueChange={(value) => {
+                setClientFilter(value || 'all')
+              }}
+              placeholder="Filtrar por cliente..."
+              searchPlaceholder="Buscar cliente..."
+              emptyMessage="No se encontró ningún cliente."
+              triggerClassName="w-full md:w-[240px]"
+            />
 
             <Select value={recordedByFilter || 'all'} onValueChange={(value) => setRecordedByFilter(value === 'all' ? '' : value)}>
               <SelectTrigger className="w-full md:w-[240px]">
@@ -409,5 +422,3 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     </div>
   );
 }
-
-    
