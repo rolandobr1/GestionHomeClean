@@ -34,6 +34,9 @@ export default function AjustesPage({ params, searchParams }: { params: any; sea
   const allClients = useMemo(() => [{ id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' }, ...clients], [clients]);
   const allSuppliers = useMemo(() => [{ id: 'generic', name: 'Suplidor Genérico', email: '', phone: '', address: '' }, ...suppliers], [suppliers]);
 
+  const sortedIncomes = useMemo(() => [...incomes].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [incomes]);
+  const sortedExpenses = useMemo(() => [...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [expenses]);
+
   useEffect(() => {
     setFormData(invoiceSettings);
   }, [invoiceSettings]);
@@ -129,7 +132,7 @@ export default function AjustesPage({ params, searchParams }: { params: any; sea
                           <Table>
                               <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Fecha</TableHead><TableHead>Monto</TableHead><TableHead>Registrado Por</TableHead></TableRow></TableHeader>
                               <TableBody>
-                                  {incomes.map((item: Income) => (
+                                  {sortedIncomes.map((item: Income) => (
                                       <TableRow key={item.id}><TableCell>{item.id.slice(-6)}</TableCell><TableCell>{allClients.find(c=>c.id === item.clientId)?.name}</TableCell><TableCell>{format(new Date(item.date), 'P', { locale: es })}</TableCell><TableCell>RD${item.totalAmount.toFixed(2)}</TableCell><TableCell>{item.recordedBy}</TableCell></TableRow>
                                   ))}
                               </TableBody>
@@ -141,7 +144,7 @@ export default function AjustesPage({ params, searchParams }: { params: any; sea
                           <Table>
                               <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Descripción</TableHead><TableHead>Suplidor</TableHead><TableHead>Fecha</TableHead><TableHead>Monto</TableHead><TableHead>Registrado Por</TableHead></TableRow></TableHeader>
                               <TableBody>
-                                  {expenses.map((item: Expense) => (
+                                  {sortedExpenses.map((item: Expense) => (
                                       <TableRow key={item.id}><TableCell>{item.id.slice(-6)}</TableCell><TableCell>{item.description}</TableCell><TableCell>{allSuppliers.find(s=>s.id === item.supplierId)?.name}</TableCell><TableCell>{format(new Date(item.date), 'P', { locale: es })}</TableCell><TableCell>RD${item.amount.toFixed(2)}</TableCell><TableCell>{item.recordedBy}</TableCell></TableRow>
                                   ))}
                               </TableBody>
@@ -203,3 +206,5 @@ export default function AjustesPage({ params, searchParams }: { params: any; sea
     </div>
   );
 }
+
+    

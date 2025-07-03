@@ -179,7 +179,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
         if (recordedByFilter && income.recordedBy !== recordedByFilter) return false;
         
         return true;
-    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [accountsReceivable, dateRange, clientFilter, recordedByFilter]);
 
   const clearFilters = () => {
@@ -326,3 +326,5 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     </div>
   );
 }
+
+    
