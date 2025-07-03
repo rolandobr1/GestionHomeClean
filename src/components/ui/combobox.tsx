@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -47,7 +46,7 @@ export function Combobox({
   const [open, setOpen] = React.useState(false)
 
   const selectedOption = options.find(
-    (option) => option.value.toLowerCase() === value?.toLowerCase()
+    (option) => option.value === value
   )
 
   return (
@@ -77,15 +76,19 @@ export function Combobox({
                 <CommandItem
                   key={option.value}
                   value={option.value}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
                   onSelect={(currentValue) => {
-                    onValueChange(currentValue.toLowerCase() === value?.toLowerCase() ? "" : currentValue)
+                    onValueChange(currentValue === value ? "" : currentValue)
                     setOpen(false)
                   }}
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      value?.toLowerCase() === option.value.toLowerCase()
+                      value === option.value
                         ? "opacity-100"
                         : "opacity-0"
                     )}
