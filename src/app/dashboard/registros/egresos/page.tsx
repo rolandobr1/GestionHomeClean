@@ -288,7 +288,12 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                 const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
                 if (lines.length < 2) throw new Error("El archivo CSV está vacío o solo contiene la cabecera.");
 
-                const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                const headerLine = lines[0];
+                const commaCount = (headerLine.match(/,/g) || []).length;
+                const semicolonCount = (headerLine.match(/;/g) || []).length;
+                const delimiter = semicolonCount > commaCount ? ';' : ',';
+
+                const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase());
                 const requiredHeaders = ['description', 'amount', 'date', 'category'];
                 const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
                 if (missingHeaders.length > 0) {
@@ -300,7 +305,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                 let allSuppliersCurrentList = [...allSuppliers];
 
                 for (let i = 1; i < lines.length; i++) {
-                    const values = lines[i].split(',');
+                    const values = lines[i].split(delimiter);
                     const expenseData: any = {};
                     headers.forEach((header, index) => {
                         expenseData[header] = values[index]?.trim() || '';
@@ -537,3 +542,5 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
         </>
     );
 }
+
+    

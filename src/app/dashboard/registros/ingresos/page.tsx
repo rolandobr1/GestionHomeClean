@@ -604,7 +604,12 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                 const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
                 if (lines.length < 2) throw new Error("El archivo CSV está vacío o solo contiene la cabecera.");
 
-                const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
+                const headerLine = lines[0];
+                const commaCount = (headerLine.match(/,/g) || []).length;
+                const semicolonCount = (headerLine.match(/;/g) || []).length;
+                const delimiter = semicolonCount > commaCount ? ';' : ',';
+
+                const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
                 const requiredHeaders = ['producto', 'cantidad', 'preciounitario'];
                 const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
                 if (missingHeaders.length > 0) {
@@ -615,7 +620,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                 let newTransactionCounter = 0;
 
                 for (let i = 1; i < lines.length; i++) {
-                    const values = lines[i].split(',');
+                    const values = lines[i].split(delimiter);
                     const rowData: any = {};
                     headers.forEach((header, index) => {
                         rowData[header] = values[index]?.trim() || '';

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -129,8 +130,13 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
             const text = e.target?.result as string;
             const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
             if (lines.length < 2) throw new Error("El archivo CSV está vacío o solo contiene la cabecera.");
+            
+            const headerLine = lines[0];
+            const commaCount = (headerLine.match(/,/g) || []).length;
+            const semicolonCount = (headerLine.match(/;/g) || []).length;
+            const delimiter = semicolonCount > commaCount ? ';' : ',';
 
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase());
             const requiredHeaders = ['name', 'email', 'phone', 'address'];
             const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
             if (missingHeaders.length > 0) {
@@ -139,7 +145,7 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
 
             const newSuppliers: Omit<Supplier, 'id' | 'code'>[] = [];
             for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',');
+                const values = lines[i].split(delimiter);
                 const supplierData: any = {};
                 headers.forEach((header, index) => {
                     supplierData[header] = values[index]?.trim() || '';
@@ -404,7 +410,5 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
         </>
     );
 }
-
-    
 
     

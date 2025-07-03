@@ -67,7 +67,12 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
             const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
             if (lines.length < 2) throw new Error("El archivo CSV está vacío o solo contiene la cabecera.");
 
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const headerLine = lines[0];
+            const commaCount = (headerLine.match(/,/g) || []).length;
+            const semicolonCount = (headerLine.match(/;/g) || []).length;
+            const delimiter = semicolonCount > commaCount ? ';' : ',';
+
+            const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
             const requiredHeaders = ['name', 'sku', 'unit', 'salepriceretail', 'salepricewholesale', 'stock', 'reorderlevel'];
             const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh.replace(/\s+/g, '')));
             if (missingHeaders.length > 0) {
@@ -76,7 +81,7 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
 
             const newProducts: Product[] = [];
             for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',');
+                const values = lines[i].split(delimiter);
                 const productData: any = {};
                 headers.forEach((header, index) => {
                     productData[header.replace(/\s+/g, '')] = values[index]?.trim() || '';
@@ -380,3 +385,5 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
         </>
     );
 }
+
+    
