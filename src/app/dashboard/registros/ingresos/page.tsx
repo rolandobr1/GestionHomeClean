@@ -264,7 +264,7 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
 };
 
 export default function IngresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
-    const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes, invoiceSettings } = useAppData();
+    const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes, invoiceSettings, addClient } = useAppData();
     const { user } = useAuth();
     const { toast } = useToast();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -284,7 +284,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
 
     const allClients = useMemo(() => [
-        { id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' },
+        { id: 'generic', name: 'Cliente Genérico', code: 'CLI-000', email: '', phone: '', address: '' },
         ...clients
     ], [clients]);
 
@@ -599,13 +599,15 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                 }
 
                 const newIncomes: Income[] = [];
+                const newClientsCache = new Map<string, Client>();
+                let allClientsCurrentList = [...allClients];
                 
                 for (const [transactionId, rows] of transactionsMap.entries()) {
                     if (rows.length === 0) continue;
 
                     const firstRow = rows[0];
                     const date = firstRow.fecha || format(new Date(), 'yyyy-MM-dd');
-                    const clientName = firstRow.cliente || 'Cliente Genérico';
+                    const clientName = (firstRow.cliente || 'Cliente Genérico').trim();
                     const paymentMethodRaw = (firstRow.metododepago || 'contado').toLowerCase();
                     const paymentMethod = (paymentMethodRaw === 'credito' || paymentMethodRaw === 'contado') ? paymentMethodRaw : 'contado';
                     
@@ -620,7 +622,29 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                         if (row.metododepago && row.metododepago.toLowerCase() !== paymentMethod) throw new Error(`Métodos de pago inconsistentes para transacción ${transactionId}.`);
                     }
                     
-                    const client = allClients.find(c => c.name.toLowerCase() === clientName.toLowerCase()) || allClients.find(c => c.id === 'generic');
+                    let client: Client | undefined;
+                    client = allClientsCurrentList.find(c => c.name.toLowerCase() === clientName.toLowerCase());
+
+                    if (!client) {
+                        client = newClientsCache.get(clientName.toLowerCase());
+                    }
+
+                    if (!client && clientName !== 'Cliente Genérico') {
+                        const newClient = await addClient({ name: clientName, email: '', phone: '', address: '' });
+                        if (newClient) {
+                            client = newClient;
+                            newClientsCache.set(clientName.toLowerCase(), newClient);
+                            allClientsCurrentList.push(newClient);
+                        }
+                    }
+
+                    if (!client) {
+                        client = allClients.find(c => c.id === 'generic');
+                    }
+
+                    if (!client) {
+                        throw new Error(`No se pudo encontrar o crear el cliente "${clientName}" para la transacción ${transactionId}.`);
+                    }
                     
                     const soldProducts: SoldProduct[] = [];
                     let calculatedTotal = 0;
@@ -676,13 +700,15 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
 
                     newIncomes.push({
                         id: isNewTransaction ? '' : transactionId,
-                        clientId: client!.id,
+                        clientId: client.id,
                         paymentMethod: paymentMethod as 'credito' | 'contado',
                         date,
                         products: soldProducts,
                         totalAmount: calculatedTotal,
                         category: 'Venta de Producto',
-                        recordedBy: user.name
+                        recordedBy: user.name,
+                        balance: 0, // Placeholder, will be calculated by provider
+                        payments: [] // Placeholder, will be calculated by provider
                     });
                 }
                 

@@ -120,11 +120,11 @@ interface AppContextType {
   addMultipleRawMaterials: (materials: RawMaterial[], mode: 'append' | 'replace') => Promise<void>;
   updateRawMaterial: (material: RawMaterial) => Promise<void>;
   deleteRawMaterial: (id: string) => Promise<void>;
-  addClient: (client: Omit<Client, 'id' | 'code'>) => Promise<void>;
+  addClient: (client: Omit<Client, 'id' | 'code'>) => Promise<Client | undefined>;
   addMultipleClients: (clients: Omit<Client, 'id' | 'code'>[], mode: 'append' | 'replace') => Promise<void>;
   updateClient: (client: Client) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
-  addSupplier: (supplier: Omit<Supplier, 'id' | 'code'>) => Promise<void>;
+  addSupplier: (supplier: Omit<Supplier, 'id' | 'code'>) => Promise<Supplier | undefined>;
   addMultipleSuppliers: (suppliers: Omit<Supplier, 'id' | 'code'>[], mode: 'append' | 'replace') => Promise<void>;
   updateSupplier: (supplier: Supplier) => Promise<void>;
   deleteSupplier: (id: string) => Promise<void>;
@@ -512,13 +512,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // --- Client Management with Firestore ---
-  const addClient = async (client: Omit<Client, 'id' | 'code'>) => {
-    if (!db) return;
+  const addClient = async (client: Omit<Client, 'id' | 'code'>): Promise<Client | undefined> => {
+    if (!db) return undefined;
     const existingCodes = clients.map(c => parseInt(c.code.split('-')[1] || '0')).filter(n => !isNaN(n));
     const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
     const newCode = `CLI-${(maxCode + 1).toString().padStart(3, '0')}`;
     const clientData = { ...client, code: newCode };
-    await addDoc(collection(db, 'clients'), clientData);
+    const docRef = await addDoc(collection(db, 'clients'), clientData);
+    return { id: docRef.id, ...clientData };
   };
 
   const addMultipleClients = async (clientsToAdd: Omit<Client, 'id' | 'code'>[], mode: 'append' | 'replace' = 'append') => {
@@ -554,13 +555,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // --- Supplier Management with Firestore ---
-  const addSupplier = async (supplier: Omit<Supplier, 'id' | 'code'>) => {
-    if (!db) return;
+  const addSupplier = async (supplier: Omit<Supplier, 'id' | 'code'>): Promise<Supplier | undefined> => {
+    if (!db) return undefined;
     const existingCodes = suppliers.map(s => parseInt(s.code.split('-')[1] || '0')).filter(n => !isNaN(n));
     const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
     const newCode = `SUP-${(maxCode + 1).toString().padStart(3, '0')}`;
     const supplierData = { ...supplier, code: newCode };
-    await addDoc(collection(db, 'suppliers'), supplierData);
+    const docRef = await addDoc(collection(db, 'suppliers'), supplierData);
+    return { id: docRef.id, ...supplierData };
   };
 
   const addMultipleSuppliers = async (suppliersToAdd: Omit<Supplier, 'id' | 'code'>[], mode: 'append' | 'replace' = 'append') => {

@@ -126,7 +126,7 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
 };
 
 export default function EgresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
-    const { expenses, addExpense, deleteExpense, updateExpense, addMultipleExpenses, suppliers } = useAppData();
+    const { expenses, addExpense, deleteExpense, updateExpense, addMultipleExpenses, suppliers, addSupplier } = useAppData();
     const { user } = useAuth();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -143,7 +143,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
     
     const allSuppliers = useMemo(() => [
-        { id: 'generic', name: 'Suplidor Genérico', email: '', phone: '', address: '' },
+        { id: 'generic', name: 'Suplidor Genérico', code: 'SUP-000', email: '', phone: '', address: '' },
         ...suppliers
     ], [suppliers]);
 
@@ -296,6 +296,9 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                 }
 
                 const newExpenses: Expense[] = [];
+                const newSuppliersCache = new Map<string, Supplier>();
+                let allSuppliersCurrentList = [...allSuppliers];
+
                 for (let i = 1; i < lines.length; i++) {
                     const values = lines[i].split(',');
                     const expenseData: any = {};
@@ -303,8 +306,31 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                         expenseData[header] = values[index]?.trim() || '';
                     });
 
-                    const supplierName = expenseData.supplier || 'Suplidor Genérico';
-                    const supplier = allSuppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase()) || allSuppliers.find(s => s.id === 'generic');
+                    const supplierName = (expenseData.supplier || 'Suplidor Genérico').trim();
+                    let supplier: Supplier | undefined;
+
+                    supplier = allSuppliersCurrentList.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
+
+                    if (!supplier) {
+                        supplier = newSuppliersCache.get(supplierName.toLowerCase());
+                    }
+
+                    if (!supplier && supplierName !== 'Suplidor Genérico') {
+                        const newSupplier = await addSupplier({ name: supplierName, email: '', phone: '', address: '' });
+                        if (newSupplier) {
+                            supplier = newSupplier;
+                            newSuppliersCache.set(supplierName.toLowerCase(), newSupplier);
+                            allSuppliersCurrentList.push(newSupplier);
+                        }
+                    }
+
+                    if (!supplier) {
+                        supplier = allSuppliers.find(s => s.id === 'generic');
+                    }
+
+                    if (!supplier) {
+                        throw new Error(`No se pudo encontrar o crear el suplidor "${supplierName}".`);
+                    }
 
                     newExpenses.push({
                         id: expenseData.id || '',
@@ -312,7 +338,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                         amount: parseFloat(expenseData.amount) || 0,
                         date: expenseData.date || format(new Date(), 'yyyy-MM-dd'),
                         category: expenseData.category || 'Otro',
-                        supplierId: supplier!.id,
+                        supplierId: supplier.id,
                         recordedBy: user.name,
                     });
                 }

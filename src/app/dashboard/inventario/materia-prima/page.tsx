@@ -117,7 +117,7 @@ const MaterialForm = ({
 };
 
 export default function MateriaPrimaPage({ params, searchParams }: { params: any; searchParams: any; }) {
-    const { rawMaterials, suppliers, addRawMaterial, updateRawMaterial, deleteRawMaterial, addMultipleRawMaterials } = useAppData();
+    const { rawMaterials, suppliers, addRawMaterial, updateRawMaterial, deleteRawMaterial, addMultipleRawMaterials, addSupplier } = useAppData();
     const { user } = useAuth();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
@@ -127,7 +127,7 @@ export default function MateriaPrimaPage({ params, searchParams }: { params: any
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
 
     const allSuppliers = useMemo(() => [
-        { id: 'generic', name: 'Suplidor Genérico', email: '', phone: '', address: '' },
+        { id: 'generic', name: 'Suplidor Genérico', code: 'SUP-000', email: '', phone: '', address: '' },
         ...suppliers
     ], [suppliers]);
 
@@ -150,6 +150,9 @@ export default function MateriaPrimaPage({ params, searchParams }: { params: any
                 }
 
                 const newMaterials: Omit<RawMaterial, 'id'>[] = [];
+                const newSuppliersCache = new Map<string, Supplier>();
+                let allSuppliersCurrentList = [...allSuppliers];
+
                 for (let i = 1; i < lines.length; i++) {
                     const values = lines[i].split(',');
                     const materialData: any = {};
@@ -157,8 +160,27 @@ export default function MateriaPrimaPage({ params, searchParams }: { params: any
                         materialData[header] = values[index]?.trim() || '';
                     });
                     
-                    const supplierName = materialData.supplier || 'Suplidor Genérico';
-                    const supplier = allSuppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase()) || allSuppliers.find(s => s.id === 'generic');
+                    const supplierName = (materialData.supplier || 'Suplidor Genérico').trim();
+                    let supplier: Supplier | undefined;
+
+                    supplier = allSuppliersCurrentList.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
+
+                    if (!supplier) {
+                        supplier = newSuppliersCache.get(supplierName.toLowerCase());
+                    }
+                    
+                    if (!supplier && supplierName !== 'Suplidor Genérico') {
+                        const newSupplier = await addSupplier({ name: supplierName, email: '', phone: '', address: '' });
+                        if (newSupplier) {
+                            supplier = newSupplier;
+                            newSuppliersCache.set(supplierName.toLowerCase(), newSupplier);
+                            allSuppliersCurrentList.push(newSupplier);
+                        }
+                    }
+
+                    if (!supplier) {
+                        supplier = allSuppliers.find(s => s.id === 'generic');
+                    }
                     
                     newMaterials.push({
                         name: materialData.name || 'N/A',
