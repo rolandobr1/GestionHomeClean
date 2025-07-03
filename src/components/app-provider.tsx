@@ -3,7 +3,7 @@
 
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import { db, isConfigured, firebaseConfig } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, increment, setDoc, arrayUnion } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, increment, setDoc, arrayUnion, getDocs } from 'firebase/firestore';
 import { FirebaseConfigStatus } from './config-status';
 
 // Type definitions
@@ -104,28 +104,28 @@ interface AppContextType {
   invoiceSettings: InvoiceSettings;
   loading: boolean;
   addIncome: (income: Omit<Income, 'id' | 'balance' | 'payments'>) => Promise<void>;
-  addMultipleIncomes: (incomes: Income[]) => Promise<void>;
+  addMultipleIncomes: (incomes: Income[], mode: 'append' | 'replace') => Promise<void>;
   deleteIncome: (id: string) => Promise<void>;
   updateIncome: (income: Income) => Promise<void>;
   addPayment: (incomeId: string, payment: Omit<Payment, 'id'>) => Promise<void>;
   addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
-  addMultipleExpenses: (expenses: Expense[]) => Promise<void>;
+  addMultipleExpenses: (expenses: Expense[], mode: 'append' | 'replace') => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   updateExpense: (expense: Expense) => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
-  addMultipleProducts: (products: Product[]) => Promise<void>;
+  addMultipleProducts: (products: Product[], mode: 'append' | 'replace') => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
   addRawMaterial: (material: Omit<RawMaterial, 'id'>) => Promise<void>;
-  addMultipleRawMaterials: (materials: RawMaterial[]) => Promise<void>;
+  addMultipleRawMaterials: (materials: RawMaterial[], mode: 'append' | 'replace') => Promise<void>;
   updateRawMaterial: (material: RawMaterial) => Promise<void>;
   deleteRawMaterial: (id: string) => Promise<void>;
   addClient: (client: Omit<Client, 'id' | 'code'>) => Promise<void>;
-  addMultipleClients: (clients: Omit<Client, 'id' | 'code'>[]) => Promise<void>;
+  addMultipleClients: (clients: Omit<Client, 'id' | 'code'>[], mode: 'append' | 'replace') => Promise<void>;
   updateClient: (client: Client) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
   addSupplier: (supplier: Omit<Supplier, 'id' | 'code'>) => Promise<void>;
-  addMultipleSuppliers: (suppliers: Omit<Supplier, 'id' | 'code'>[]) => Promise<void>;
+  addMultipleSuppliers: (suppliers: Omit<Supplier, 'id' | 'code'>[], mode: 'append' | 'replace') => Promise<void>;
   updateSupplier: (supplier: Supplier) => Promise<void>;
   deleteSupplier: (id: string) => Promise<void>;
   updateInvoiceSettings: (settings: InvoiceSettings) => Promise<void>;
@@ -297,38 +297,53 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     await batch.commit();
   };
 
-  const addMultipleIncomes = async (incomesToUpsert: Income[]) => {
-      if (!db) throw new Error("Firestore no está inicializado.");
-      const batch = writeBatch(db);
-      const stockChanges = new Map<string, number>();
-      const existingIncomesMap = new Map(incomes.map(i => [i.id, i]));
+  const addMultipleIncomes = async (incomesToProcess: Income[], mode: 'append' | 'replace' = 'append') => {
+    if (!db) throw new Error("Firestore no está inicializado.");
+    const batch = writeBatch(db);
+    const stockChanges = new Map<string, number>();
+    const existingIncomesMap = new Map(incomes.map(i => [i.id, i]));
 
-      for (const income of incomesToUpsert) {
-          const originalIncome = income.id ? existingIncomesMap.get(income.id) : null;
-          const { id, ...incomeData } = income;
-          const docRef = id ? doc(db, 'incomes', id) : doc(collection(db, 'incomes'));
+    if (mode === 'replace') {
+        const allIncomesSnapshot = await getDocs(collection(db, "incomes"));
+        for (const docSnap of allIncomesSnapshot.docs) {
+            const oldIncome = { id: docSnap.id, ...docSnap.data() } as Income;
+            if (oldIncome.products) {
+                oldIncome.products.forEach(p => {
+                    stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+                });
+            }
+            batch.delete(docSnap.ref);
+        }
+    }
 
-          if (originalIncome) {
-              originalIncome.products.forEach(p => {
-                  stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
-              });
-          }
+    for (const income of incomesToProcess) {
+        const { id, ...incomeData } = income;
 
-          income.products.forEach(p => {
-              stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
-          });
+        if (mode === 'append' && id) {
+             const originalIncome = existingIncomesMap.get(id);
+             if (originalIncome) {
+                originalIncome.products.forEach(p => {
+                    stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+                });
+             }
+        }
+        
+        income.products.forEach(p => {
+            stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+        });
 
-          batch.set(docRef, incomeData);
-      }
-      
-      for (const [productId, quantityChange] of stockChanges.entries()) {
-          if (quantityChange !== 0) {
-              const productRef = doc(db, "products", productId);
-              batch.update(productRef, { stock: increment(quantityChange) });
-          }
-      }
+        const docRef = id && mode === 'append' ? doc(db, 'incomes', id) : doc(collection(db, 'incomes'));
+        batch.set(docRef, incomeData);
+    }
+    
+    for (const [productId, quantityChange] of stockChanges.entries()) {
+        if (quantityChange !== 0) {
+            const productRef = doc(db, "products", productId);
+            batch.update(productRef, { stock: increment(quantityChange) });
+        }
+    }
 
-      await batch.commit();
+    await batch.commit();
   };
 
   const updateIncome = async (updatedIncome: Income) => {
@@ -408,12 +423,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if(db) await addDoc(collection(db, 'expenses'), expense);
   };
 
-  const addMultipleExpenses = async (expensesToUpsert: Expense[]) => {
+  const addMultipleExpenses = async (expensesToProcess: Expense[], mode: 'append' | 'replace' = 'append') => {
       if (!db) return;
       const batch = writeBatch(db);
-      expensesToUpsert.forEach(expense => {
+      if (mode === 'replace') {
+        const existingDocsSnapshot = await getDocs(collection(db, 'expenses'));
+        existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+      }
+      expensesToProcess.forEach(expense => {
           const { id, ...expenseData } = expense;
-          const docRef = id ? doc(db, 'expenses', id) : doc(collection(db, 'expenses'));
+          const docRef = id && mode === 'append' ? doc(db, 'expenses', id) : doc(collection(db, 'expenses'));
           batch.set(docRef, expenseData);
       });
       await batch.commit();
@@ -435,12 +454,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (db) await addDoc(collection(db, 'products'), product);
   }
 
-  const addMultipleProducts = async (productsToUpsert: Product[]) => {
+  const addMultipleProducts = async (productsToProcess: Product[], mode: 'append' | 'replace' = 'append') => {
     if (!db) return;
     const batch = writeBatch(db);
-    productsToUpsert.forEach(product => {
+    if (mode === 'replace') {
+        const existingDocsSnapshot = await getDocs(collection(db, 'products'));
+        existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+    }
+    productsToProcess.forEach(product => {
       const { id, ...productData } = product;
-      const docRef = id ? doc(db, 'products', id) : doc(collection(db, 'products'));
+      const docRef = id && mode === 'append' ? doc(db, 'products', id) : doc(collection(db, 'products'));
       batch.set(docRef, productData);
     });
     await batch.commit();
@@ -462,12 +485,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (db) await addDoc(collection(db, 'rawMaterials'), material);
   };
 
-  const addMultipleRawMaterials = async (materialsToUpsert: RawMaterial[]) => {
+  const addMultipleRawMaterials = async (materialsToProcess: RawMaterial[], mode: 'append' | 'replace' = 'append') => {
     if (!db) return;
     const batch = writeBatch(db);
-    materialsToUpsert.forEach(material => {
+    if (mode === 'replace') {
+        const existingDocsSnapshot = await getDocs(collection(db, 'rawMaterials'));
+        existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+    }
+    materialsToProcess.forEach(material => {
         const { id, ...materialData } = material;
-        const docRef = id ? doc(db, 'rawMaterials', id) : doc(collection(db, 'rawMaterials'));
+        const docRef = id && mode === 'append' ? doc(db, 'rawMaterials', id) : doc(collection(db, 'rawMaterials'));
         batch.set(docRef, materialData);
     });
     await batch.commit();
@@ -494,10 +521,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     await addDoc(collection(db, 'clients'), clientData);
   };
 
-  const addMultipleClients = async (clientsToAdd: Omit<Client, 'id' | 'code'>[]) => {
+  const addMultipleClients = async (clientsToAdd: Omit<Client, 'id' | 'code'>[], mode: 'append' | 'replace' = 'append') => {
     if (!db) return;
     const batch = writeBatch(db);
-    const existingCodes = clients.map(c => parseInt(c.code.split('-')[1] || '0')).filter(n => !isNaN(n));
+    
+    if (mode === 'replace') {
+        const existingDocsSnapshot = await getDocs(collection(db, 'clients'));
+        existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+    }
+
+    const existingCodes = (mode === 'append') ? clients.map(c => parseInt(c.code.split('-')[1] || '0')).filter(n => !isNaN(n)) : [];
     let maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
     
     clientsToAdd.forEach(client => {
@@ -530,10 +563,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     await addDoc(collection(db, 'suppliers'), supplierData);
   };
 
-  const addMultipleSuppliers = async (suppliersToAdd: Omit<Supplier, 'id' | 'code'>[]) => {
+  const addMultipleSuppliers = async (suppliersToAdd: Omit<Supplier, 'id' | 'code'>[], mode: 'append' | 'replace' = 'append') => {
     if (!db) return;
     const batch = writeBatch(db);
-    const existingCodes = suppliers.map(s => parseInt(s.code.split('-')[1] || '0')).filter(n => !isNaN(n));
+    
+    if (mode === 'replace') {
+        const existingDocsSnapshot = await getDocs(collection(db, 'suppliers'));
+        existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+    }
+
+    const existingCodes = (mode === 'append') ? suppliers.map(s => parseInt(s.code.split('-')[1] || '0')).filter(n => !isNaN(n)) : [];
     let maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
 
     suppliersToAdd.forEach(supplier => {

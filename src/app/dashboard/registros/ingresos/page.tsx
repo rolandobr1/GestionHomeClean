@@ -280,6 +280,8 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     });
     const [clientSearchTerm, setClientSearchTerm] = useState('');
     const [productSearchTerm, setProductSearchTerm] = useState('');
+    const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
+    const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
 
     const allClients = useMemo(() => [
         { id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' },
@@ -548,8 +550,14 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     };
 
     const handleImportClick = () => {
+        setIsImportAlertOpen(true);
+    };
+
+    const triggerFileInput = (mode: 'append' | 'replace') => {
+        setImportMode(mode);
         fileInputRef.current?.click();
     };
+
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -678,11 +686,11 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     });
                 }
                 
-                await addMultipleIncomes(newIncomes);
+                await addMultipleIncomes(newIncomes, importMode);
 
                 toast({
                     title: "Importación Exitosa",
-                    description: `${newIncomes.length} transacciones han sido importadas/actualizadas.`,
+                    description: `${newIncomes.length} transacciones han sido importadas en modo '${importMode === 'append' ? 'Añadir' : 'Reemplazar'}'.`,
                 });
 
             } catch (error: any) {
@@ -701,6 +709,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
 
     return (
         <div className="space-y-6">
+             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv" />
              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />
@@ -872,8 +881,28 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <AlertDialog open={isImportAlertOpen} onOpenChange={setIsImportAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Selecciona el modo de importación</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Puedes añadir los nuevos ingresos a los existentes o reemplazar todos los datos actuales con los del archivo.
+                            <br/>
+                            <span className="font-bold text-destructive">¡La opción de reemplazar borrará permanentemente todos los ingresos actuales y ajustará el stock!</span>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => triggerFileInput('append')}>
+                            Añadir a Registros
+                        </AlertDialogAction>
+                        <AlertDialogAction onClick={() => triggerFileInput('replace')} className="bg-destructive hover:bg-destructive/90">
+                            Reemplazar Todo
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
-
-    

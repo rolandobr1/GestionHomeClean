@@ -103,6 +103,8 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
+    const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
 
     const filteredSuppliers = useMemo(() => {
         if (!searchTerm) {
@@ -151,11 +153,11 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                 });
             }
             
-            await addMultipleSuppliers(newSuppliers);
+            await addMultipleSuppliers(newSuppliers, importMode);
 
             toast({
             title: "Importación Exitosa",
-            description: `${newSuppliers.length} suplidores han sido importados.`,
+            description: `${newSuppliers.length} suplidores han sido importados en modo '${importMode === 'append' ? 'Añadir' : 'Reemplazar'}'.`,
             });
 
         } catch (error: any) {
@@ -179,6 +181,11 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
     };
 
     const handleImportClick = () => {
+        setIsImportAlertOpen(true);
+    };
+
+    const triggerFileInput = (mode: 'append' | 'replace') => {
+        setImportMode(mode);
         fileInputRef.current?.click();
     };
 
@@ -268,6 +275,7 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
 
     return (
         <>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv" />
             <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />
@@ -371,6 +379,28 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                     <ContactForm contact={editingSupplier} onSave={handleSave} onClose={() => handleDialogChange(false)} />
                 </DialogContent>
             </Dialog>
+
+            <AlertDialog open={isImportAlertOpen} onOpenChange={setIsImportAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Selecciona el modo de importación</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Puedes añadir los nuevos suplidores a los existentes o reemplazar todos los datos actuales con los del archivo.
+                            <br/>
+                            <span className="font-bold text-destructive">¡La opción de reemplazar borrará permanentemente todos los suplidores actuales!</span>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => triggerFileInput('append')}>
+                            Añadir a Registros
+                        </AlertDialogAction>
+                        <AlertDialogAction onClick={() => triggerFileInput('replace')} className="bg-destructive hover:bg-destructive/90">
+                            Reemplazar Todo
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

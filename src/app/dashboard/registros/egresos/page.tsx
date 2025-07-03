@@ -139,6 +139,8 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
     });
     const [categoryFilter, setCategoryFilter] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
+    const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
     
     const allSuppliers = useMemo(() => [
         { id: 'generic', name: 'Suplidor Genérico', email: '', phone: '', address: '' },
@@ -315,11 +317,11 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                     });
                 }
                 
-                await addMultipleExpenses(newExpenses);
+                await addMultipleExpenses(newExpenses, importMode);
 
                 toast({
                     title: "Importación Exitosa",
-                    description: `${newExpenses.length} egresos han sido importados.`,
+                    description: `${newExpenses.length} egresos han sido importados en modo '${importMode === 'append' ? 'Añadir' : 'Reemplazar'}'.`,
                 });
             } catch (error: any) {
                 toast({
@@ -342,11 +344,18 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
     };
 
     const handleImportClick = () => {
+        setIsImportAlertOpen(true);
+    };
+
+    const triggerFileInput = (mode: 'append' | 'replace') => {
+        setImportMode(mode);
         fileInputRef.current?.click();
     };
 
+
     return (
         <>
+             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv" />
              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />
@@ -478,6 +487,27 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                     <ExpenseForm expense={editingExpense} onSave={handleSave} suppliers={allSuppliers} onClose={() => handleDialogChange(false)} />
                 </DialogContent>
             </Dialog>
+             <AlertDialog open={isImportAlertOpen} onOpenChange={setIsImportAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Selecciona el modo de importación</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Puedes añadir los nuevos egresos a los existentes o reemplazar todos los datos actuales con los del archivo.
+                            <br/>
+                            <span className="font-bold text-destructive">¡La opción de reemplazar borrará permanentemente todos los egresos actuales!</span>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => triggerFileInput('append')}>
+                            Añadir a Registros
+                        </AlertDialogAction>
+                        <AlertDialogAction onClick={() => triggerFileInput('replace')} className="bg-destructive hover:bg-destructive/90">
+                            Reemplazar Todo
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

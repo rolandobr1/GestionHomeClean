@@ -53,13 +53,15 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
+    const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
         try {
             const text = e.target?.result as string;
             const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -92,11 +94,11 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
                 });
             }
             
-            addMultipleProducts(newProducts);
+            await addMultipleProducts(newProducts, importMode);
 
             toast({
                 title: "Importación Exitosa",
-                description: `${newProducts.length} productos han sido importados.`,
+                description: `${newProducts.length} productos han sido importados en modo '${importMode === 'append' ? 'Añadir' : 'Reemplazar'}'.`,
             });
 
         } catch (error: any) {
@@ -121,6 +123,11 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
 
 
     const handleImportClick = () => {
+        setIsImportAlertOpen(true);
+    };
+    
+    const triggerFileInput = (mode: 'append' | 'replace') => {
+        setImportMode(mode);
         fileInputRef.current?.click();
     };
 
@@ -255,6 +262,7 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
 
     return (
         <>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv" />
             <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleImportClick}>
                     <Upload className="mr-2 h-4 w-4" />
@@ -347,6 +355,28 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
                     <ProductForm product={editingProduct} onSave={handleSave} />
                 </DialogContent>
             </Dialog>
+
+            <AlertDialog open={isImportAlertOpen} onOpenChange={setIsImportAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Selecciona el modo de importación</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Puedes añadir los nuevos productos a los existentes o reemplazar todos los datos actuales con los del archivo.
+                            <br/>
+                            <span className="font-bold text-destructive">¡La opción de reemplazar borrará permanentemente todos los productos actuales!</span>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => triggerFileInput('append')}>
+                            Añadir a Registros
+                        </AlertDialogAction>
+                        <AlertDialogAction onClick={() => triggerFileInput('replace')} className="bg-destructive hover:bg-destructive/90">
+                            Reemplazar Todo
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }
