@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Wallet, MoreHorizontal, X, Info, Sigma } from "lucide-react";
+import { Wallet, MoreHorizontal, X, Info, Sigma, Download } from "lucide-react";
 import { useAppData } from '@/hooks/use-app-data';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -20,6 +20,9 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
 
 const PaymentForm = ({
   income,
@@ -135,7 +138,8 @@ const PaymentForm = ({
 
 
 export default function CuentasPage({ params, searchParams }: { params: any; searchParams: any; }) {
-  const { incomes, clients } = useAppData();
+  const { incomes, clients, invoiceSettings } = useAppData();
+  const { toast } = useToast();
   
   const [paymentIncome, setPaymentIncome] = useState<Income | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -194,6 +198,77 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     setIsPaymentDialogOpen(true);
   };
 
+  const handleExportPdf = () => {
+    if (filteredAccounts.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "No hay datos para exportar",
+            description: "No hay cuentas que coincidan con los filtros seleccionados.",
+        });
+        return;
+    }
+
+    const doc = new jsPDF();
+    const { companyName } = invoiceSettings;
+
+    // Header
+    doc.setFontSize(20);
+    doc.text(companyName, 14, 22);
+    doc.setFontSize(12);
+    doc.text("Reporte de Cuentas por Cobrar", 14, 30);
+    doc.setFontSize(8);
+    doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es })}`, 14, 35);
+    
+    // Filter Details
+    doc.setFontSize(10);
+    doc.text("Filtros Aplicados:", 14, 45);
+    let filterY = 50;
+    
+    const clientName = clientFilter ? allClients.find(c => c.id === clientFilter)?.name : 'Todos';
+    doc.text(`- Cliente: ${clientName}`, 14, filterY);
+    filterY += 5;
+
+    const dateRangeString = dateRange?.from 
+        ? `${format(dateRange.from, 'P', { locale: es })} - ${dateRange.to ? format(dateRange.to, 'P', { locale: es }) : ''}`
+        : 'Cualquier fecha';
+    doc.text(`- Rango de Fechas: ${dateRangeString}`, 14, filterY);
+    filterY += 5;
+
+    doc.text(`- Usuario Registrador: ${recordedByFilter || 'Todos'}`, 14, filterY);
+    filterY += 10;
+
+    // Table
+    const tableData = filteredAccounts.map(income => [
+        allClients.find(c => c.id === income.clientId)?.name || 'N/A',
+        format(new Date(income.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es }),
+        `RD$${income.totalAmount.toFixed(2)}`,
+        `RD$${income.balance.toFixed(2)}`,
+        income.recordedBy
+    ]);
+    
+    autoTable(doc, {
+        startY: filterY,
+        head: [['Cliente', 'Fecha', 'Monto Total', 'Saldo Pendiente', 'Registrado por']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [34, 197, 94] } // Tailwind green-500
+    });
+
+    // Total
+    const finalY = (doc as any).lastAutoTable.finalY || filterY + tableData.length * 10;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Total Filtrado:', 14, finalY + 15);
+    doc.text(`RD$${filteredTotal.toFixed(2)}`, doc.internal.pageSize.getWidth() - 14, finalY + 15, { align: 'right' });
+
+    doc.save(`reporte-cuentas-por-cobrar-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+
+    toast({
+        title: "Exportación Exitosa",
+        description: "El reporte de cuentas por cobrar ha sido generado.",
+    });
+};
+
   useEffect(() => {
     if (!isPaymentDialogOpen) {
       setPaymentIncome(null);
@@ -250,9 +325,15 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
       </Card>
 
       <Card>
-          <CardHeader>
-              <CardTitle>Facturas a Crédito Pendientes</CardTitle>
-              <CardDescription>Un listado de todas las ventas a crédito con saldo pendiente.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Facturas a Crédito Pendientes</CardTitle>
+                <CardDescription>Un listado de todas las ventas a crédito con saldo pendiente.</CardDescription>
+              </div>
+              <Button onClick={handleExportPdf} variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Exportar PDF
+              </Button>
           </CardHeader>
           <CardContent>
             {filteredAccounts.length > 0 ? (
