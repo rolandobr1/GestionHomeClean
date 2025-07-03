@@ -281,8 +281,8 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
                         <TableRow>
                             <TableHead>Código</TableHead>
                             <TableHead>Nombre</TableHead>
-                            <TableHead className="hidden sm:table-cell">Correo</TableHead>
-                            <TableHead className="hidden md:table-cell">Teléfono</TableHead>
+                            <TableHead>Teléfono</TableHead>
+                            <TableHead className="hidden md:table-cell">Correo</TableHead>
                             <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -291,8 +291,8 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
                             <TableRow key={client.id}>
                                 <TableCell className="font-mono">{client.code}</TableCell>
                                 <TableCell className="font-medium">{client.name}</TableCell>
-                                <TableCell className="hidden sm:table-cell">{client.email}</TableCell>
-                                <TableCell className="hidden md:table-cell">{client.phone}</TableCell>
+                                <TableCell>{client.phone}</TableCell>
+                                <TableCell className="hidden md:table-cell">{client.email}</TableCell>
                                 <TableCell className="text-right">
                                     <AlertDialog>
                                         <DropdownMenu>

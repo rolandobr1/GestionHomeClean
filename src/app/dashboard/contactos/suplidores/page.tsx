@@ -281,8 +281,8 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                             <TableRow>
                                 <TableHead>Código</TableHead>
                                 <TableHead>Nombre</TableHead>
-                                <TableHead className="hidden sm:table-cell">Correo</TableHead>
-                                <TableHead className="hidden md:table-cell">Teléfono</TableHead>
+                                <TableHead>Teléfono</TableHead>
+                                <TableHead className="hidden md:table-cell">Correo</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -291,8 +291,8 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                                 <TableRow key={supplier.id}>
                                     <TableCell className="font-mono">{supplier.code}</TableCell>
                                     <TableCell className="font-medium">{supplier.name}</TableCell>
-                                    <TableCell className="hidden sm:table-cell">{supplier.email}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{supplier.phone}</TableCell>
+                                    <TableCell>{supplier.phone}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{supplier.email}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <DropdownMenu>
