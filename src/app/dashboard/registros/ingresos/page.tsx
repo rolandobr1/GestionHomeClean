@@ -687,17 +687,14 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     
                     const soldProducts: SoldProduct[] = [];
                     let calculatedTotal = 0;
+                    let rowIndex = 0;
 
                     for (const row of rows) {
+                        rowIndex++;
                         const productName = row.producto;
                         
                         if (!productName || !row.cantidad || !row.preciounitario) {
                             continue; 
-                        }
-
-                        const product = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
-                        if (!product) {
-                            throw new Error(`Producto "${productName}" no encontrado en inventario para transacción ${transactionId}.`);
                         }
 
                         const quantity = parseFloat(row.cantidad);
@@ -706,6 +703,10 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                         if (isNaN(quantity) || quantity <= 0 || isNaN(unitPrice) || unitPrice < 0) {
                             continue;
                         }
+                        
+                        const existingProduct = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
+                        const productId = existingProduct ? existingProduct.id : `generic_${transactionId}_${rowIndex}`;
+                        const resolvedProductName = existingProduct ? existingProduct.name : productName;
 
                         const subtotalFromFile = row.subtotalproducto ? parseFloat(row.subtotalproducto) : null;
                         if (subtotalFromFile !== null) {
@@ -719,8 +720,8 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                         }
 
                         soldProducts.push({
-                            productId: product.id,
-                            name: product.name,
+                            productId: productId,
+                            name: resolvedProductName,
                             quantity,
                             price: unitPrice,
                         });
@@ -971,5 +972,3 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         </div>
     );
 }
-
-    
