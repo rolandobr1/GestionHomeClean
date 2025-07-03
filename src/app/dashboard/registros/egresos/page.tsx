@@ -176,7 +176,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
             }
             
             return true;
-        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }).sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
     }, [expenses, dateRange, categoryFilter, searchTerm, allSuppliers]);
     
     const clearFilters = () => {

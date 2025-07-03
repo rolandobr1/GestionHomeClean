@@ -34,8 +34,8 @@ export default function AjustesPage({ params, searchParams }: { params: any; sea
   const allClients = useMemo(() => [{ id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' }, ...clients], [clients]);
   const allSuppliers = useMemo(() => [{ id: 'generic', name: 'Suplidor Genérico', email: '', phone: '', address: '' }, ...suppliers], [suppliers]);
 
-  const sortedIncomes = useMemo(() => [...incomes].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [incomes]);
-  const sortedExpenses = useMemo(() => [...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [expenses]);
+  const sortedIncomes = useMemo(() => [...incomes].sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime()), [incomes]);
+  const sortedExpenses = useMemo(() => [...expenses].sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime()), [expenses]);
 
   useEffect(() => {
     setFormData(invoiceSettings);

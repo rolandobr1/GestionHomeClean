@@ -316,7 +316,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
             }
             
             return true;
-        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }).sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
     }, [incomes, dateRange, clientFilter, searchTerm, allClients]);
 
     const clearFilters = () => {

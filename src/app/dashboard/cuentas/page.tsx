@@ -179,7 +179,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
         if (recordedByFilter && income.recordedBy !== recordedByFilter) return false;
         
         return true;
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }).sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
   }, [accountsReceivable, dateRange, clientFilter, recordedByFilter]);
 
   const clearFilters = () => {
@@ -220,7 +220,10 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                     <Command><CommandInput placeholder="Buscar cliente..." />
                         <CommandList><CommandEmpty>No se encontró.</CommandEmpty>
                         <CommandGroup>
-                            <CommandItem value="" onSelect={() => {setClientFilter(''); setOpenClientPopover(false);}}>Todos los clientes</CommandItem>
+                            <CommandItem value="" onSelect={() => {setClientFilter(''); setOpenClientPopover(false);}}>
+                                <Check className={`mr-2 h-4 w-4 ${clientFilter === '' ? "opacity-100" : "opacity-0"}`} />
+                                Todos los clientes
+                            </CommandItem>
                             {allClients.map((client) => (
                                 <CommandItem key={client.id} value={client.name} onSelect={() => {setClientFilter(client.id); setOpenClientPopover(false);}}>
                                     <Check className={`mr-2 h-4 w-4 ${clientFilter === client.id ? "opacity-100" : "opacity-0"}`} />
@@ -291,7 +294,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                                                 </TooltipTrigger>
                                                 <TooltipContent><p className="font-semibold mb-1">Historial de Pagos</p>
                                                   {income.payments.map(p=>(<div key={p.id} className="text-xs">
-                                                    {format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy')}: RD${p.amount.toFixed(2)} ({p.recordedBy})
+                                                    {format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy', { locale: es })}: RD${p.amount.toFixed(2)} ({p.recordedBy})
                                                   </div>))}
                                                 </TooltipContent>
                                                 </Tooltip>
