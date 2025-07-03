@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Wallet, MoreHorizontal, X, Info, Sigma, Download } from "lucide-react";
+import { Wallet, MoreHorizontal, X, Info, Sigma, Download, Share2 } from "lucide-react";
 import { useAppData } from '@/hooks/use-app-data';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -204,16 +204,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     setIsPaymentDialogOpen(true);
   };
 
-  const handleExportPdf = () => {
-    if (filteredAccounts.length === 0) {
-        toast({
-            variant: "destructive",
-            title: "No hay datos para exportar",
-            description: "No hay cuentas que coincidan con los filtros seleccionados.",
-        });
-        return;
-    }
-
+  const generatePdfDoc = () => {
     const doc = new jsPDF();
     const { companyName } = invoiceSettings;
 
@@ -266,13 +257,69 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     doc.text('Total Filtrado:', 14, finalY + 15);
     doc.text(`RD$${filteredTotal.toFixed(2)}`, doc.internal.pageSize.getWidth() - 14, finalY + 15, { align: 'right' });
 
+    return doc;
+  };
+
+  const handleExportPdf = () => {
+    if (filteredAccounts.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "No hay datos para exportar",
+            description: "No hay cuentas que coincidan con los filtros seleccionados.",
+        });
+        return;
+    }
+
+    const doc = generatePdfDoc();
     doc.save(`reporte-cuentas-por-cobrar-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
 
     toast({
         title: "Exportación Exitosa",
         description: "El reporte de cuentas por cobrar ha sido generado.",
     });
-};
+  };
+
+  const handleShare = async () => {
+    if (filteredAccounts.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "No hay datos para compartir",
+            description: "No hay cuentas que coincidan con los filtros seleccionados.",
+        });
+        return;
+    }
+
+    if (!navigator.share) {
+        toast({
+          variant: 'destructive',
+          title: 'No Soportado',
+          description: 'Tu navegador no soporta la función de compartir.',
+        });
+        return;
+    }
+
+    const doc = generatePdfDoc();
+    try {
+      const pdfBlob = doc.output('blob');
+      const fileName = `reporte-cuentas-por-cobrar-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      
+      await navigator.share({
+        title: `Reporte de Cuentas por Cobrar - ${invoiceSettings.companyName}`,
+        text: `Aquí está el reporte de cuentas por cobrar de ${invoiceSettings.companyName}.`,
+        files: [file],
+      });
+    } catch (error: any) {
+        if (error.name !== 'AbortError') {
+             toast({
+                variant: 'destructive',
+                title: 'Error al Compartir',
+                description: 'No se pudo compartir el reporte.',
+             });
+        }
+    }
+  };
+
 
   useEffect(() => {
     if (!isPaymentDialogOpen) {
@@ -332,10 +379,16 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                 <CardTitle>Facturas a Crédito Pendientes</CardTitle>
                 <CardDescription>Un listado de todas las ventas a crédito con saldo pendiente.</CardDescription>
               </div>
-              <Button onClick={handleExportPdf} variant="outline">
-                <Download className="mr-2 h-4 w-4" />
-                Exportar PDF
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button onClick={handleShare} variant="outline">
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Compartir
+                </Button>
+                <Button onClick={handleExportPdf} variant="outline">
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar PDF
+                </Button>
+              </div>
           </CardHeader>
           <CardContent>
             {filteredAccounts.length > 0 ? (
@@ -410,5 +463,3 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     </div>
   );
 }
-
-    
