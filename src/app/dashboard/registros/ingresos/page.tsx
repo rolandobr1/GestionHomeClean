@@ -25,7 +25,8 @@ import type { DateRange } from 'react-day-picker';
 import { useAuth } from '@/hooks/use-auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Combobox, ComboboxOption } from '@/components/ui/combobox';
+import { ClientSelector } from '@/components/client-selector';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | null, onSave: (income: Income | Omit<Income, 'id'>) => Promise<void>, clients: Client[], onClose: () => void }) => {
     const { products: allProducts } = useAppData();
@@ -284,14 +285,6 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     const allClients = useMemo(() => [
         { id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' },
         ...clients
-    ], [clients]);
-
-    const clientOptions: ComboboxOption[] = useMemo(() => [
-      { value: "all", label: "Todos los clientes" },
-      ...clients.map(client => ({
-        value: client.id,
-        label: client.name,
-      }))
     ], [clients]);
 
     const filteredIncomes = useMemo(() => {
@@ -732,16 +725,11 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     <div className="flex flex-col md:flex-row gap-4">
                         <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
                         
-                        <Combobox
-                            options={clientOptions}
-                            value={clientFilter}
-                            onValueChange={(value) => {
-                                setClientFilter(value || 'all');
-                            }}
-                            placeholder="Filtrar por cliente..."
-                            searchPlaceholder="Buscar cliente..."
-                            emptyMessage="No se encontró ningún cliente."
-                            triggerClassName="w-full md:w-[280px]"
+                        <ClientSelector
+                          clients={clients}
+                          selectedClientId={clientFilter}
+                          onClientSelect={setClientFilter}
+                          triggerClassName="w-full md:w-[280px]"
                         />
                         
                         <Input 

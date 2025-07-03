@@ -22,7 +22,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Combobox, ComboboxOption } from '@/components/ui/combobox';
+import { ClientSelector } from '@/components/client-selector';
 
 
 const PaymentForm = ({
@@ -162,14 +162,6 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     return Array.from(users);
   }, [incomes]);
 
-  const clientOptions: ComboboxOption[] = useMemo(() => [
-    { value: "all", label: "Todos los clientes" },
-    ...clients.map(client => ({
-      value: client.id,
-      label: client.name,
-    }))
-  ], [clients]);
-
   const accountsReceivable = useMemo(() => {
     return incomes.filter(income => income.balance > 0.01)
       .sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
@@ -297,15 +289,10 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
           <div className="flex flex-col md:flex-row gap-4">
             <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             
-            <Combobox
-              options={clientOptions}
-              value={clientFilter}
-              onValueChange={(value) => {
-                setClientFilter(value || 'all')
-              }}
-              placeholder="Filtrar por cliente..."
-              searchPlaceholder="Buscar cliente..."
-              emptyMessage="No se encontró ningún cliente."
+            <ClientSelector
+              clients={clients}
+              selectedClientId={clientFilter}
+              onClientSelect={setClientFilter}
               triggerClassName="w-full md:w-[240px]"
             />
 
