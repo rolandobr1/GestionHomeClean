@@ -438,9 +438,9 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
       .reduce((acc, income) => acc + income.totalAmount, 0);
     setTotalIncome(currentMonthIncome);
 
-    const creditIncomes = incomes.filter(i => i.paymentMethod === 'credito');
-    const arTotal = creditIncomes.reduce((acc, income) => acc + income.totalAmount, 0);
-    setAccountsReceivable({ total: arTotal, count: creditIncomes.length });
+    const receivableIncomes = incomes.filter(i => i.balance > 0.01);
+    const arTotal = receivableIncomes.reduce((acc, income) => acc + income.balance, 0);
+    setAccountsReceivable({ total: arTotal, count: receivableIncomes.length });
 
     const currentMonthExpenses = expenses
       .filter(e => {
@@ -642,5 +642,3 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
     </div>
   );
 }
-
-    

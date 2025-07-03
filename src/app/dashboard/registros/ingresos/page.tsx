@@ -16,7 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppData } from '@/hooks/use-app-data';
-import type { Income, SoldProduct, Client } from '@/components/app-provider';
+import type { Income, SoldProduct, Client, Payment } from '@/components/app-provider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { InvoiceTemplate } from '@/components/invoice-template';
 import { useToast } from "@/hooks/use-toast";
@@ -644,7 +644,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     transactionsMap.set(`new_transaction_${Date.now()}_${index}`, [rowData]);
                 });
                 
-                const newIncomes: Income[] = [];
+                const newIncomes: Omit<Income, 'id'>[] = [];
                 const newClientsCache = new Map<string, Client>();
                 let allClientsCurrentList = [...allClients];
                 
@@ -751,6 +751,14 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     
                     const isNewTransaction = transactionId.startsWith('new_transaction_');
 
+                    const balance = paymentMethod === 'credito' ? calculatedTotal : 0;
+                    const payments: Payment[] = paymentMethod === 'contado' ? [{
+                        id: `payment_${Date.now()}`,
+                        amount: calculatedTotal,
+                        date: date,
+                        recordedBy: user.name,
+                    }] : [];
+
                     newIncomes.push({
                         id: isNewTransaction ? '' : transactionId,
                         clientId: client.id,
@@ -760,8 +768,8 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                         totalAmount: calculatedTotal,
                         category: 'Venta de Producto',
                         recordedBy: user.name,
-                        balance: 0, // Placeholder, will be calculated by provider
-                        payments: [] // Placeholder, will be calculated by provider
+                        balance: balance,
+                        payments: payments
                     });
                 }
                 
@@ -769,7 +777,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     throw new Error("No se encontraron transacciones válidas para importar en el archivo. Verifica el formato y los datos.");
                 }
 
-                await addMultipleIncomes(newIncomes, importMode);
+                await addMultipleIncomes(newIncomes as Income[], importMode);
 
                 toast({
                     title: "Importación Exitosa",
