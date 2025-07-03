@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Wallet, MoreHorizontal, X, Info, Sigma, Download, ChevronsUpDown, Check } from "lucide-react";
+import { Wallet, MoreHorizontal, X, Info, Sigma, Download } from "lucide-react";
 import { useAppData } from '@/hooks/use-app-data';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -22,9 +22,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
-import { cn } from '@/lib/utils';
 
 
 const PaymentForm = ({
@@ -146,8 +143,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
   
   const [paymentIncome, setPaymentIncome] = useState<Income | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [isClientPopoverOpen, setIsClientPopoverOpen] = useState(false);
-
+  
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 90),
     to: new Date(),
@@ -167,12 +163,12 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
 
   const accountsReceivable = useMemo(() => {
     return incomes.filter(income => income.balance > 0.01)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
   }, [incomes]);
 
   const filteredAccounts = useMemo(() => {
     return accountsReceivable.filter(income => {
-        const incomeDate = new Date(income.date);
+        const incomeDate = new Date(income.date + 'T00:00:00');
         
         if (dateRange?.from && dateRange?.to) {
             const fromDate = new Date(dateRange.from.setHours(0,0,0,0));
@@ -245,7 +241,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     // Table
     const tableData = filteredAccounts.map(income => [
         allClients.find(c => c.id === income.clientId)?.name || 'N/A',
-        format(new Date(income.date), 'dd/MM/yyyy', { locale: es }),
+        format(new Date(income.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es }),
         `RD$${income.totalAmount.toFixed(2)}`,
         `RD$${income.balance.toFixed(2)}`,
         income.recordedBy
@@ -290,65 +286,15 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
           <div className="flex flex-col md:flex-row gap-4">
             <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             
-            <Popover open={isClientPopoverOpen} onOpenChange={setIsClientPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={isClientPopoverOpen}
-                  className={cn("w-full md:w-[240px] justify-between text-left font-normal",
-                    !clientFilter && "text-muted-foreground"
-                  )}
-                >
-                  <span className="truncate">
-                    {clientFilter
-                      ? clients.find((client) => client.id === clientFilter)?.name
-                      : "Selecciona un cliente..."}
-                  </span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[240px] p-0">
-                <Command>
-                  <CommandInput placeholder="Buscar cliente..." />
-                  <CommandEmpty>No se encontró ningún cliente.</CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem
-                      onSelect={() => {
-                        setClientFilter("");
-                        setIsClientPopoverOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          !clientFilter ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      Todos los clientes
-                    </CommandItem>
-                    {clients.map((client) => (
-                      <CommandItem
-                        key={client.id}
-                        value={client.name}
-                        onSelect={() => {
-                          setClientFilter(client.id);
-                          setIsClientPopoverOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            clientFilter === client.id ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {client.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <Select value={clientFilter || 'all'} onValueChange={(value) => setClientFilter(value === 'all' ? '' : value)}>
+              <SelectTrigger className="w-full md:w-[240px]">
+                <SelectValue placeholder="Selecciona un cliente..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los clientes</SelectItem>
+                {clients.map(client => <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
 
             <Select value={recordedByFilter || 'all'} onValueChange={(value) => setRecordedByFilter(value === 'all' ? '' : value)}>
               <SelectTrigger className="w-full md:w-[240px]">
@@ -409,7 +355,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                           return (
                               <TableRow key={income.id}>
                                   <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
-                                  <TableCell className="hidden md:table-cell">{format(new Date(income.date), 'dd/MM/yyyy', { locale: es })}</TableCell>
+                                  <TableCell className="hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}</TableCell>
                                   <TableCell className="hidden sm:table-cell text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
                                   <TableCell className="text-right font-semibold">RD${income.balance.toFixed(2)}</TableCell>
                                   <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
@@ -428,7 +374,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                                                 </TooltipTrigger>
                                                 <TooltipContent><p className="font-semibold mb-1">Historial de Pagos</p>
                                                   {income.payments.map(p=>(<div key={p.id} className="text-xs">
-                                                    {format(new Date(p.date), 'dd/MM/yy', { locale: es })}: RD${p.amount.toFixed(2)} ({p.recordedBy})
+                                                    {format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy', { locale: es })}: RD${p.amount.toFixed(2)} ({p.recordedBy})
                                                   </div>))}
                                                 </TooltipContent>
                                                 </Tooltip>
@@ -463,3 +409,5 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     </div>
   );
 }
+
+    
