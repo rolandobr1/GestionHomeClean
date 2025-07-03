@@ -58,13 +58,13 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
 
     const handleAddProduct = () => {
         if (currentProduct === 'generic') {
-             if (!genericProductName || Number(genericProductPrice) <= 0 || currentQuantity <= 0) {
-                alert('Por favor, ingresa un nombre, precio mayor a cero y cantidad para el producto genérico.');
+            if (Number(genericProductPrice) <= 0 || currentQuantity <= 0) {
+                alert('Por favor, ingresa un precio y cantidad mayor a cero para el producto genérico.');
                 return;
             }
             const newProduct: SoldProduct = {
                 productId: `generic_${Date.now()}`,
-                name: genericProductName,
+                name: genericProductName || 'Producto Genérico',
                 quantity: currentQuantity,
                 price: Number(genericProductPrice),
             };
@@ -966,3 +966,5 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         </div>
     );
 }
+
+    
