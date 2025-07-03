@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Wallet, MoreHorizontal, X, Info } from "lucide-react";
+import { Wallet, MoreHorizontal, X, Info, Sigma } from "lucide-react";
 import { useAppData } from '@/hooks/use-app-data';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -179,6 +179,10 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     }).sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
   }, [accountsReceivable, dateRange, clientFilter, recordedByFilter]);
 
+  const filteredTotal = useMemo(() => {
+    return filteredAccounts.reduce((acc, income) => acc + income.balance, 0);
+  }, [filteredAccounts]);
+
   const clearFilters = () => {
     setDateRange({ from: undefined, to: undefined });
     setClientFilter('');
@@ -230,6 +234,19 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
         <CardFooter>
           <Button variant="ghost" onClick={clearFilters}><X className="mr-2 h-4 w-4"/>Limpiar Filtros</Button>
         </CardFooter>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Filtrado</CardTitle>
+          <Sigma className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">RD${filteredTotal.toFixed(2)}</div>
+          <p className="text-xs text-muted-foreground">
+            Suma de los saldos pendientes según los filtros aplicados.
+          </p>
+        </CardContent>
       </Card>
 
       <Card>
