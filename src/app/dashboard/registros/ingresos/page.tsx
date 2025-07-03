@@ -610,7 +610,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                 const delimiter = semicolonCount > commaCount ? ';' : ',';
 
                 const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
-                const requiredHeaders = ['producto', 'cantidad', 'preciounitario'];
+                const requiredHeaders = ['cantidad', 'preciounitario'];
                 const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
                 if (missingHeaders.length > 0) {
                     throw new Error(`Faltan las siguientes columnas obligatorias en el CSV: ${missingHeaders.join(', ')}`);
@@ -619,6 +619,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                 const transactionsMap = new Map<string, any[]>();
                 const rowsWithoutId: any[] = [];
 
+                // Group rows by transaction ID
                 for (let i = 1; i < lines.length; i++) {
                     const values = lines[i].split(delimiter);
                     const rowData: any = {};
@@ -634,12 +635,13 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                         }
                         transactionsMap.get(transactionId)!.push(rowData);
                     } else {
+                        // Each row without an ID is its own transaction
                         rowsWithoutId.push(rowData);
                     }
                 }
-
+                
                 rowsWithoutId.forEach((rowData, index) => {
-                    transactionsMap.set(`new_transaction_${index}`, [rowData]);
+                    transactionsMap.set(`new_transaction_${Date.now()}_${index}`, [rowData]);
                 });
                 
                 const newIncomes: Income[] = [];
@@ -660,6 +662,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                         throw new Error(`El Total Factura para la transacción ${transactionId.startsWith('new_transaction_') ? 'nueva' : transactionId} no es un número válido.`);
                     }
 
+                    // Validate data consistency across rows of the same transaction
                     for (const row of rows) {
                         if (row.fecha && row.fecha !== date) throw new Error(`Fechas inconsistentes para transacción ${transactionId}.`);
                         if (row.cliente && row.cliente !== clientName) throw new Error(`Clientes inconsistentes para transacción ${transactionId}.`);
@@ -683,7 +686,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     }
 
                     if (!client) {
-                        client = allClients.find(c => c.id === 'generic');
+                        client = allClients.find(s => s.id === 'generic');
                     }
 
                     if (!client) {
@@ -696,23 +699,28 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
 
                     for (const row of rows) {
                         rowIndex++;
-                        const productName = row.producto;
+                        const quantityStr = row.cantidad;
+                        const unitPriceStr = row.preciounitario;
                         
-                        if (!productName || !row.cantidad || !row.preciounitario) {
-                            continue; 
+                        // A row is only valid if it has quantity and price.
+                        if (!quantityStr || !unitPriceStr) {
+                            continue;
                         }
 
-                        const quantity = parseFloat(row.cantidad);
-                        const unitPrice = parseFloat(row.preciounitario);
+                        const quantity = parseFloat(quantityStr);
+                        const unitPrice = parseFloat(unitPriceStr);
                         
+                        // Check if parsing was successful and values are valid.
                         if (isNaN(quantity) || quantity <= 0 || isNaN(unitPrice) || unitPrice < 0) {
                             continue;
                         }
+
+                        // Default to 'Venta General' if product name is empty
+                        const productName = row.producto?.trim() || 'Venta General';
                         
                         const existingProduct = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
                         const productId = existingProduct ? existingProduct.id : `generic_${transactionId}_${rowIndex}`;
-                        const resolvedProductName = existingProduct ? existingProduct.name : productName;
-
+                        
                         const subtotalFromFile = row.subtotalproducto ? parseFloat(row.subtotalproducto) : null;
                         if (subtotalFromFile !== null) {
                             if(isNaN(subtotalFromFile)) {
@@ -726,7 +734,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
 
                         soldProducts.push({
                             productId: productId,
-                            name: resolvedProductName,
+                            name: productName,
                             quantity,
                             price: unitPrice,
                         });
@@ -757,6 +765,10 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     });
                 }
                 
+                if (newIncomes.length === 0) {
+                    throw new Error("No se encontraron transacciones válidas para importar en el archivo. Verifica el formato y los datos.");
+                }
+
                 await addMultipleIncomes(newIncomes, importMode);
 
                 toast({
