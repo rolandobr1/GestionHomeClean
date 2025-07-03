@@ -1,10 +1,10 @@
 
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -103,6 +103,20 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredSuppliers = useMemo(() => {
+        if (!searchTerm) {
+            return suppliers;
+        }
+        const lowercasedTerm = searchTerm.toLowerCase();
+        return suppliers.filter(supplier =>
+            supplier.name.toLowerCase().includes(lowercasedTerm) ||
+            supplier.code.toLowerCase().includes(lowercasedTerm) ||
+            (supplier.email && supplier.email.toLowerCase().includes(lowercasedTerm)) ||
+            (supplier.phone && supplier.phone.toLowerCase().includes(lowercasedTerm))
+        );
+    }, [suppliers, searchTerm]);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -276,23 +290,34 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                     <CardDescription>Un listado de todos tus suplidores.</CardDescription>
                 </CardHeader>
                 <CardContent>
+                    <div className="pb-4">
+                        <div className="relative w-full max-w-sm">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar suplidor..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-8"
+                            />
+                        </div>
+                    </div>
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Código</TableHead>
                                 <TableHead>Nombre</TableHead>
                                 <TableHead>Teléfono</TableHead>
-                                <TableHead className="hidden md:table-cell">Correo</TableHead>
+                                <TableHead>Correo</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {suppliers.map((supplier) => (
+                            {filteredSuppliers.length > 0 ? filteredSuppliers.map((supplier) => (
                                 <TableRow key={supplier.id}>
                                     <TableCell className="font-mono">{supplier.code}</TableCell>
                                     <TableCell className="font-medium">{supplier.name}</TableCell>
                                     <TableCell>{supplier.phone}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{supplier.email}</TableCell>
+                                    <TableCell>{supplier.email}</TableCell>
                                     <TableCell className="text-right">
                                         <AlertDialog>
                                             <DropdownMenu>
@@ -324,7 +349,13 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                                         </AlertDialog>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="h-24 text-center">
+                                        No se encontraron suplidores.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
@@ -344,3 +375,5 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
         </>
     );
 }
+
+    

@@ -1,10 +1,10 @@
 
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -103,6 +103,20 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
     const [editingClient, setEditingClient] = useState<Client | null>(null);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredClients = useMemo(() => {
+        if (!searchTerm) {
+            return clients;
+        }
+        const lowercasedTerm = searchTerm.toLowerCase();
+        return clients.filter(client =>
+            client.name.toLowerCase().includes(lowercasedTerm) ||
+            client.code.toLowerCase().includes(lowercasedTerm) ||
+            (client.email && client.email.toLowerCase().includes(lowercasedTerm)) ||
+            (client.phone && client.phone.toLowerCase().includes(lowercasedTerm))
+        );
+    }, [clients, searchTerm]);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -276,23 +290,34 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
                 <CardDescription>Un listado de todos tus clientes.</CardDescription>
             </CardHeader>
             <CardContent>
+                <div className="pb-4">
+                    <div className="relative w-full max-w-sm">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Buscar cliente..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-8"
+                        />
+                    </div>
+                </div>
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>Código</TableHead>
                             <TableHead>Nombre</TableHead>
                             <TableHead>Teléfono</TableHead>
-                            <TableHead className="hidden md:table-cell">Correo</TableHead>
+                            <TableHead>Correo</TableHead>
                             <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {clients.map((client) => (
+                        {filteredClients.length > 0 ? filteredClients.map((client) => (
                             <TableRow key={client.id}>
                                 <TableCell className="font-mono">{client.code}</TableCell>
                                 <TableCell className="font-medium">{client.name}</TableCell>
                                 <TableCell>{client.phone}</TableCell>
-                                <TableCell className="hidden md:table-cell">{client.email}</TableCell>
+                                <TableCell>{client.email}</TableCell>
                                 <TableCell className="text-right">
                                     <AlertDialog>
                                         <DropdownMenu>
@@ -324,7 +349,13 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
                                     </AlertDialog>
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )) : (
+                            <TableRow>
+                                <TableCell colSpan={5} className="h-24 text-center">
+                                    No se encontraron clientes.
+                                </TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </CardContent>
@@ -344,3 +375,5 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
       </>
     );
 }
+
+    
