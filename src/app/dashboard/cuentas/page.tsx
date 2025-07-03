@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const PaymentForm = ({
   income,
@@ -211,7 +212,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
             
             <Popover open={openClientPopover} onOpenChange={setOpenClientPopover}>
                 <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" className="w-full md:w-[240px] justify-between">
+                    <Button variant="outline" role="combobox" className={cn("w-full md:w-[240px] justify-between", !clientFilter && "text-muted-foreground")}>
                         {clientFilter ? allClients.find(c => c.id === clientFilter)?.name : "Filtrar por cliente..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -221,12 +222,12 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                         <CommandList><CommandEmpty>No se encontró.</CommandEmpty>
                         <CommandGroup>
                             <CommandItem key="all" value="todos-los-clientes" onSelect={() => {setClientFilter(''); setOpenClientPopover(false);}}>
-                                <Check className={`mr-2 h-4 w-4 ${clientFilter === '' ? "opacity-100" : "opacity-0"}`} />
+                                <Check className={cn("mr-2 h-4 w-4", clientFilter === '' ? "opacity-100" : "opacity-0")} />
                                 Todos los clientes
                             </CommandItem>
                             {allClients.map((client) => (
                                 <CommandItem key={client.id} value={client.name} onSelect={() => {setClientFilter(client.id); setOpenClientPopover(false);}}>
-                                    <Check className={`mr-2 h-4 w-4 ${clientFilter === client.id ? "opacity-100" : "opacity-0"}`} />
+                                    <Check className={cn("mr-2 h-4 w-4", clientFilter === client.id ? "opacity-100" : "opacity-0")} />
                                     {client.name}
                                 </CommandItem>
                             ))}

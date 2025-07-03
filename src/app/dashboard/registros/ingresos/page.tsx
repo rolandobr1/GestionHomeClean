@@ -28,6 +28,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useAuth } from '@/hooks/use-auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { cn } from '@/lib/utils';
 
 const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | null, onSave: (income: Income | Omit<Income, 'id'>) => Promise<void>, clients: Client[], onClose: () => void }) => {
     const { products: allProducts } = useAppData();
@@ -733,7 +734,10 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={openClientPopover}
-                                className="w-full md:w-[280px] justify-between"
+                                className={cn(
+                                    "w-full md:w-[280px] justify-between",
+                                    !clientFilter && "text-muted-foreground"
+                                )}
                                 >
                                 {clientFilter
                                     ? allClients.find((client) => client.id === clientFilter)?.name
@@ -744,34 +748,34 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                 <Command>
                                 <CommandInput placeholder="Buscar cliente..." />
-                                <CommandEmpty>No se encontró el cliente.</CommandEmpty>
                                 <CommandList>
-                                    <CommandGroup>
+                                <CommandEmpty>No se encontró el cliente.</CommandEmpty>
+                                <CommandGroup>
+                                    <CommandItem
+                                        key="all"
+                                        value="todos-los-clientes"
+                                        onSelect={() => {
+                                            setClientFilter('');
+                                            setOpenClientPopover(false);
+                                        }}
+                                    >
+                                         <Check className={cn("mr-2 h-4 w-4", clientFilter === '' ? "opacity-100" : "opacity-0")} />
+                                        Todos los clientes
+                                    </CommandItem>
+                                    {allClients.map((client) => (
                                         <CommandItem
-                                            key="all"
-                                            value="todos-los-clientes"
+                                            key={client.id}
+                                            value={client.name}
                                             onSelect={() => {
-                                                setClientFilter('');
+                                                setClientFilter(client.id);
                                                 setOpenClientPopover(false);
                                             }}
                                         >
-                                             <Check className={`mr-2 h-4 w-4 ${clientFilter === '' ? "opacity-100" : "opacity-0"}`} />
-                                            Todos los clientes
+                                             <Check className={cn("mr-2 h-4 w-4", clientFilter === client.id ? "opacity-100" : "opacity-0")} />
+                                            {client.name}
                                         </CommandItem>
-                                        {allClients.map((client) => (
-                                            <CommandItem
-                                                key={client.id}
-                                                value={client.name}
-                                                onSelect={() => {
-                                                    setClientFilter(client.id);
-                                                    setOpenClientPopover(false);
-                                                }}
-                                            >
-                                                 <Check className={`mr-2 h-4 w-4 ${clientFilter === client.id ? "opacity-100" : "opacity-0"}`} />
-                                                {client.name}
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
+                                    ))}
+                                </CommandGroup>
                                 </CommandList>
                                 </Command>
                             </PopoverContent>
