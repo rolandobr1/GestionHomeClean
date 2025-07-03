@@ -220,7 +220,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
                     <Command><CommandInput placeholder="Buscar cliente..." />
                         <CommandList><CommandEmpty>No se encontró.</CommandEmpty>
                         <CommandGroup>
-                            <CommandItem value="" onSelect={() => {setClientFilter(''); setOpenClientPopover(false);}}>
+                            <CommandItem key="all" value="todos-los-clientes" onSelect={() => {setClientFilter(''); setOpenClientPopover(false);}}>
                                 <Check className={`mr-2 h-4 w-4 ${clientFilter === '' ? "opacity-100" : "opacity-0"}`} />
                                 Todos los clientes
                             </CommandItem>

@@ -749,7 +749,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                     <CommandGroup>
                                         <CommandItem
                                             key="all"
-                                            value=""
+                                            value="todos-los-clientes"
                                             onSelect={() => {
                                                 setClientFilter('');
                                                 setOpenClientPopover(false);
