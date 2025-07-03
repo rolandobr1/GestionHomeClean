@@ -25,7 +25,6 @@ import type { DateRange } from 'react-day-picker';
 import { useAuth } from '@/hooks/use-auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { ClientSelector } from '@/components/client-selector';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | null, onSave: (income: Income | Omit<Income, 'id'>) => Promise<void>, clients: Client[], onClose: () => void }) => {
@@ -279,8 +278,8 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         from: subDays(new Date(), 90),
         to: new Date(),
     });
-    const [clientFilter, setClientFilter] = useState<string>('all');
-    const [searchTerm, setSearchTerm] = useState('');
+    const [clientSearchTerm, setClientSearchTerm] = useState('');
+    const [productSearchTerm, setProductSearchTerm] = useState('');
 
     const allClients = useMemo(() => [
         { id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' },
@@ -299,28 +298,29 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                 }
             }
             
-            if (clientFilter && clientFilter !== 'all' && income.clientId !== clientFilter) {
-                return false;
+            if (clientSearchTerm) {
+                const client = allClients.find(c => c.id === income.clientId);
+                if (!client || !client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())) {
+                    return false;
+                }
             }
 
-            if (searchTerm) {
-                const client = allClients.find(c => c.id === income.clientId);
-                const lowerCaseSearchTerm = searchTerm.toLowerCase();
-                const inClient = client?.name.toLowerCase().includes(lowerCaseSearchTerm);
+            if (productSearchTerm) {
+                const lowerCaseSearchTerm = productSearchTerm.toLowerCase();
                 const inProducts = income.products.some(p => p.name.toLowerCase().includes(lowerCaseSearchTerm));
-                if (!inClient && !inProducts) {
+                if (!inProducts) {
                     return false;
                 }
             }
             
             return true;
         }).sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
-    }, [incomes, dateRange, clientFilter, searchTerm, allClients]);
+    }, [incomes, dateRange, clientSearchTerm, productSearchTerm, allClients]);
 
     const clearFilters = () => {
         setDateRange({ from: undefined, to: undefined });
-        setClientFilter('all');
-        setSearchTerm('');
+        setClientSearchTerm('');
+        setProductSearchTerm('');
     };
 
     const handleEdit = (income: Income) => {
@@ -725,17 +725,17 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     <div className="flex flex-col md:flex-row gap-4">
                         <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
                         
-                        <ClientSelector
-                          clients={clients}
-                          selectedClientId={clientFilter}
-                          onClientSelect={setClientFilter}
-                          triggerClassName="w-full md:w-[280px]"
+                        <Input
+                            placeholder="Buscar por cliente..."
+                            value={clientSearchTerm}
+                            onChange={(e) => setClientSearchTerm(e.target.value)}
+                            className="w-full md:w-[280px]"
                         />
                         
                         <Input 
                             placeholder="Buscar por producto..." 
-                            value={searchTerm} 
-                            onChange={(e) => setSearchTerm(e.target.value)} 
+                            value={productSearchTerm} 
+                            onChange={(e) => setProductSearchTerm(e.target.value)} 
                             className="w-full md:w-[280px]" 
                         />
                     </div>
@@ -875,3 +875,5 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         </div>
     );
 }
+
+    

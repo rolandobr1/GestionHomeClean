@@ -22,7 +22,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { ClientSelector } from '@/components/client-selector';
 
 
 const PaymentForm = ({
@@ -149,7 +148,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     from: subDays(new Date(), 90),
     to: new Date(),
   });
-  const [clientFilter, setClientFilter] = useState('all');
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [recordedByFilter, setRecordedByFilter] = useState('');
 
   const allClients = useMemo(() => [
@@ -177,13 +176,18 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
             if (incomeDate < fromDate || incomeDate > toDate) return false;
         }
         
-        if (clientFilter && clientFilter !== 'all' && income.clientId !== clientFilter) return false;
+        if (clientSearchTerm) {
+            const client = clients.find(c => c.id === income.clientId);
+            if (!client || !client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())) {
+                return false;
+            }
+        }
 
         if (recordedByFilter && income.recordedBy !== recordedByFilter) return false;
         
         return true;
     });
-  }, [accountsReceivable, dateRange, clientFilter, recordedByFilter]);
+  }, [accountsReceivable, dateRange, clientSearchTerm, recordedByFilter, clients]);
 
   const filteredTotal = useMemo(() => {
     return filteredAccounts.reduce((acc, income) => acc + income.balance, 0);
@@ -191,7 +195,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
 
   const clearFilters = () => {
     setDateRange({ from: undefined, to: undefined });
-    setClientFilter('all');
+    setClientSearchTerm('');
     setRecordedByFilter('');
   };
 
@@ -226,10 +230,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     doc.text("Filtros Aplicados:", 14, 45);
     let filterY = 50;
     
-    const clientName = clientFilter && clientFilter !== 'all'
-        ? clients.find(c => c.id === clientFilter)?.name
-        : 'Todos';
-    doc.text(`- Cliente: ${clientName}`, 14, filterY);
+    doc.text(`- Cliente: ${clientSearchTerm || 'Todos'}`, 14, filterY);
     filterY += 5;
 
     const dateRangeString = dateRange?.from 
@@ -289,11 +290,11 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
           <div className="flex flex-col md:flex-row gap-4">
             <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             
-            <ClientSelector
-              clients={clients}
-              selectedClientId={clientFilter}
-              onClientSelect={setClientFilter}
-              triggerClassName="w-full md:w-[240px]"
+            <Input
+              placeholder="Buscar por cliente..."
+              value={clientSearchTerm}
+              onChange={(e) => setClientSearchTerm(e.target.value)}
+              className="w-full md:w-[240px]"
             />
 
             <Select value={recordedByFilter || 'all'} onValueChange={(value) => setRecordedByFilter(value === 'all' ? '' : value)}>
@@ -409,3 +410,5 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     </div>
   );
 }
+
+    
