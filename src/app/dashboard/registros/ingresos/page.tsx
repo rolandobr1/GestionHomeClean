@@ -617,7 +617,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                 }
 
                 const transactionsMap = new Map<string, any[]>();
-                let newTransactionCounter = 0;
+                const rowsWithoutId: any[] = [];
 
                 for (let i = 1; i < lines.length; i++) {
                     const values = lines[i].split(delimiter);
@@ -626,17 +626,22 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                         rowData[header] = values[index]?.trim() || '';
                     });
 
-                    let transactionId = rowData.idtransaccion;
-                    if (!transactionId) {
-                        transactionId = `new_transaction_${newTransactionCounter++}`;
-                    }
+                    const transactionId = rowData.idtransaccion?.trim();
 
-                    if (!transactionsMap.has(transactionId)) {
-                        transactionsMap.set(transactionId, []);
+                    if (transactionId) {
+                        if (!transactionsMap.has(transactionId)) {
+                            transactionsMap.set(transactionId, []);
+                        }
+                        transactionsMap.get(transactionId)!.push(rowData);
+                    } else {
+                        rowsWithoutId.push(rowData);
                     }
-                    transactionsMap.get(transactionId)?.push(rowData);
                 }
 
+                rowsWithoutId.forEach((rowData, index) => {
+                    transactionsMap.set(`new_transaction_${index}`, [rowData]);
+                });
+                
                 const newIncomes: Income[] = [];
                 const newClientsCache = new Map<string, Client>();
                 let allClientsCurrentList = [...allClients];
