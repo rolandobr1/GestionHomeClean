@@ -514,21 +514,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const addExpense = async (expense: Omit<Expense, 'id' | 'balance' | 'payments'>) => {
     if (!db) throw new Error("Firestore no está inicializado.");
         
-    const newExpenseData: Omit<Expense, 'id'> = { ...expense, payments: [], balance: 0 };
+    const { paymentType, ...restOfExpense } = expense;
+    const dataToSave: any = { 
+        ...restOfExpense, 
+        payments: [], 
+        balance: 0 
+    };
 
     if (expense.paymentMethod === 'contado') {
-        newExpenseData.balance = 0;
-        newExpenseData.payments.push({
+        dataToSave.balance = 0;
+        dataToSave.paymentType = paymentType || (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
+        dataToSave.payments.push({
             id: doc(collection(db, 'temp')).id,
             amount: expense.amount,
             date: expense.date,
             recordedBy: expense.recordedBy
         });
     } else {
-        newExpenseData.balance = expense.amount;
+        dataToSave.balance = expense.amount;
     }
 
-    await addDoc(collection(db, 'expenses'), newExpenseData);
+    await addDoc(collection(db, 'expenses'), dataToSave);
   };
 
   const addMultipleExpenses = async (expensesToProcess: Omit<Expense, 'id' | 'balance' | 'payments'>[], mode: 'append' | 'replace' = 'append') => {
@@ -539,20 +545,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
       }
       expensesToProcess.forEach(expense => {
-          const newExpenseData: Omit<Expense, 'id'> = { ...expense, payments: [], balance: 0 };
+          const { paymentType, ...restOfExpense } = expense;
+          const dataToSave: any = { 
+              ...restOfExpense, 
+              payments: [], 
+              balance: 0 
+          };
+
           if (expense.paymentMethod === 'contado') {
-            newExpenseData.balance = 0;
-            newExpenseData.payments.push({
+            dataToSave.balance = 0;
+            dataToSave.paymentType = paymentType || (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
+            dataToSave.payments.push({
                 id: doc(collection(db, 'temp')).id,
                 amount: expense.amount,
                 date: expense.date,
                 recordedBy: expense.recordedBy
             });
           } else {
-            newExpenseData.balance = expense.amount;
+            dataToSave.balance = expense.amount;
           }
           const docRef = doc(collection(db, 'expenses'));
-          batch.set(docRef, newExpenseData);
+          batch.set(docRef, dataToSave);
       });
       await batch.commit();
   }
@@ -560,9 +573,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateExpense = async (updatedExpense: Expense) => {
     if(db) {
         const paymentSum = updatedExpense.payments.reduce((acc, p) => acc + p.amount, 0);
-        updatedExpense.balance = updatedExpense.amount - paymentSum;
+        const newBalance = updatedExpense.amount - paymentSum;
+
         const { id, ...expenseData } = updatedExpense;
-        await updateDoc(doc(db, 'expenses', id), expenseData as any);
+        const dataToUpdate: any = { ...expenseData, balance: newBalance };
+
+        if (dataToUpdate.paymentMethod !== 'contado') {
+            delete dataToUpdate.paymentType;
+        } else if (!dataToUpdate.paymentType) {
+            dataToUpdate.paymentType = (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
+        }
+
+        await updateDoc(doc(db, 'expenses', id), dataToUpdate);
     }
   };
 
