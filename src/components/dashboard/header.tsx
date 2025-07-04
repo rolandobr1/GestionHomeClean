@@ -1,3 +1,4 @@
+
 "use client";
 
 import { usePathname } from "next/navigation";
@@ -47,7 +48,7 @@ export function DashboardHeader() {
             <SheetHeader className="border-b p-4">
                 <SheetTitle>
                     <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setIsSheetOpen(false)}>
-                        <img src="/logohomeclean.png" alt="HOMECLEAN Logo" width={120} height={40} className="object-contain" />
+                        <img src="/logohomeclean.png" alt="HOMECLEAN Logo" width="120" height="40" className="object-contain" />
                     </Link>
                 </SheetTitle>
             </SheetHeader>

@@ -23,7 +23,7 @@ export const InvoiceTemplate = ({ income, clients, invoiceSettings }: InvoiceTem
       <header className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b-2 border-gray-200">
         <div>
           <div className="mb-2">
-            <img src={invoiceSettings.companyLogo} alt="Logo de la empresa" width="150" height="50" className="object-contain" />
+            <img src={invoiceSettings.companyLogo} alt={`${invoiceSettings.companyName} Logo`} width="150" height="50" className="object-contain" />
           </div>
           <p className="text-sm text-gray-500">{invoiceSettings.companyAddress}</p>
           <p className="text-sm text-gray-500">RNC: {invoiceSettings.companyRNC}</p>

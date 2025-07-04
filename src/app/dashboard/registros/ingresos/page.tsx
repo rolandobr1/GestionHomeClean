@@ -30,6 +30,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 
 const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | null, onSave: (income: Income | Omit<Income, 'id'>) => Promise<void>, clients: Client[], onClose: () => void }) => {
     const { products: allProducts, invoiceSettings } = useAppData();
+    const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const [clientId, setClientId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
@@ -63,7 +64,11 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
     const handleAddProduct = () => {
         if (currentProduct === 'generic') {
             if (Number(genericProductPrice) <= 0 || currentQuantity <= 0) {
-                alert('Por favor, ingresa un precio y cantidad mayor a cero para el producto genérico.');
+                 toast({
+                    variant: "destructive",
+                    title: "Datos Inválidos",
+                    description: "Por favor, ingresa un precio y cantidad mayor a cero.",
+                });
                 return;
             }
             const newProduct: SoldProduct = {
@@ -113,7 +118,11 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (soldProducts.length === 0) {
-             alert("Debes agregar al menos un producto.");
+             toast({
+                variant: "destructive",
+                title: "Venta Vacía",
+                description: "Debes agregar al menos un producto.",
+            });
             return;
         }
         setIsSaving(true);
@@ -1074,5 +1083,3 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         </div>
     );
 }
-
-    

@@ -236,7 +236,7 @@ export default function MateriaPrimaPage({ params, searchParams }: { params: any
                         stock: parseInt(materialData.stock, 10) || 0,
                         reorderLevel: parseInt(materialData.reorderlevel, 10) || 0,
                         supplierId: supplier!.id,
-                        recordedBy: materialData.registradopor || user.name,
+                        recordedBy: materialData.recordedby || user.name,
                     });
                 }
                 
@@ -326,7 +326,7 @@ export default function MateriaPrimaPage({ params, searchParams }: { params: any
             stock: material.stock,
             reorderLevel: material.reorderLevel,
             supplier: allSuppliers.find(s => s.id === material.supplierId)?.name || 'N/A',
-            registradopor: material.recordedBy,
+            recordedBy: material.recordedBy,
         }));
         const csvString = convertArrayOfObjectsToCSV(dataToExport);
         downloadCSV(csvString, 'materia_prima.csv');
@@ -507,5 +507,3 @@ export default function MateriaPrimaPage({ params, searchParams }: { params: any
         </>
     );
 }
-
-    

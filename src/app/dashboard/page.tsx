@@ -80,7 +80,11 @@ const IncomeForm = ({ onClose }: { onClose: () => void }) => {
     const handleAddProduct = () => {
         if (currentProduct === 'generic') {
             if (Number(genericProductPrice) <= 0 || currentQuantity <= 0) {
-                alert('Por favor, ingresa un precio y cantidad mayor a cero para el producto genérico.');
+                toast({
+                    variant: "destructive",
+                    title: "Datos Inválidos",
+                    description: "Por favor, ingresa un precio y cantidad mayor a cero.",
+                });
                 return;
             }
             const newProduct: SoldProduct = {
@@ -130,7 +134,11 @@ const IncomeForm = ({ onClose }: { onClose: () => void }) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (soldProducts.length === 0) {
-            alert("Debes agregar al menos un producto.");
+            toast({
+                variant: "destructive",
+                title: "Venta Vacía",
+                description: "Debes agregar al menos un producto.",
+            });
             return;
         }
         if (!user) {
@@ -742,5 +750,3 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
     </div>
   );
 }
-
-    
