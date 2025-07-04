@@ -364,7 +364,7 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-wrap gap-4">
             <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
             
             <Input
