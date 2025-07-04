@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Wallet, MoreHorizontal, X, Info, Sigma, Download, Share2 } from "lucide-react";
+import { Wallet, MoreHorizontal, X, Info, Sigma, Download, Share2, ChevronsUpDown } from "lucide-react";
 import { useAppData } from '@/hooks/use-app-data';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -147,6 +148,8 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [recordedByFilter, setRecordedByFilter] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
+
 
   const allClients = useMemo(() => [
     { id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' },
@@ -158,13 +161,10 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     return Array.from(users);
   }, [incomes]);
 
-  const accountsReceivable = useMemo(() => {
-    return incomes.filter(income => income.balance > 0.01)
-      .sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
-  }, [incomes]);
-
   const filteredAccounts = useMemo(() => {
-    return accountsReceivable.filter(income => {
+    let filtered = incomes.filter(income => income.balance > 0.01);
+
+    filtered = filtered.filter(income => {
         const incomeDate = new Date(income.date + 'T00:00:00');
         
         if (dateRange?.from && dateRange?.to) {
@@ -184,7 +184,33 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
         
         return true;
     });
-  }, [accountsReceivable, dateRange, clientSearchTerm, recordedByFilter, clients]);
+
+    return [...filtered].sort((a, b) => {
+        let aValue, bValue;
+
+        if (sortConfig.key === 'clientName') {
+            aValue = allClients.find(c => c.id === a.clientId)?.name || '';
+            bValue = allClients.find(c => c.id === b.clientId)?.name || '';
+        } else {
+            aValue = a[sortConfig.key as keyof Income];
+            bValue = b[sortConfig.key as keyof Income];
+        }
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        
+        const directionMultiplier = sortConfig.direction === 'asc' ? 1 : -1;
+
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+            return (aValue - bValue) * directionMultiplier;
+        }
+        if (sortConfig.key === 'date') {
+            return (new Date(a.date).getTime() - new Date(b.date).getTime()) * directionMultiplier;
+        }
+        return String(aValue).localeCompare(String(bValue)) * directionMultiplier;
+    });
+
+  }, [incomes, dateRange, clientSearchTerm, recordedByFilter, clients, sortConfig, allClients]);
 
   const filteredTotal = useMemo(() => {
     return filteredAccounts.reduce((acc, income) => acc + income.balance, 0);
@@ -194,6 +220,13 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
     setDateRange(undefined);
     setClientSearchTerm('');
     setRecordedByFilter('');
+  };
+  
+  const handleSort = (key: string) => {
+    setSortConfig(prev => ({
+        key,
+        direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
   };
 
   const handleAddPaymentClick = (income: Income) => {
@@ -371,81 +404,92 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
       </Card>
 
       <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Facturas a Crédito Pendientes</CardTitle>
-                <CardDescription>Un listado de todas las ventas a crédito con saldo pendiente.</CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button onClick={handleShare} variant="outline">
-                    <Share2 className="mr-2 h-4 w-4" />
-                    Compartir
-                </Button>
-                <Button onClick={handleExportPdf} variant="outline">
-                    <Download className="mr-2 h-4 w-4" />
-                    Exportar PDF
-                </Button>
-              </div>
-          </CardHeader>
-          <CardContent>
-            {filteredAccounts.length > 0 ? (
-              <Table>
-                  <TableHeader>
-                      <TableRow>
-                          <TableHead>Cliente</TableHead>
-                          <TableHead className="hidden md:table-cell">Fecha</TableHead>
-                          <TableHead className="hidden sm:table-cell text-right">Monto Total</TableHead>
-                          <TableHead className="text-right">Saldo Pendiente</TableHead>
-                          <TableHead className="hidden lg:table-cell">Registrado por</TableHead>
-                          <TableHead className="text-right">Acciones</TableHead>
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                      {filteredAccounts.map((income) => {
-                          const client = allClients.find(c => c.id === income.clientId);
-                          return (
-                              <TableRow key={income.id}>
-                                  <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
-                                  <TableCell className="hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}</TableCell>
-                                  <TableCell className="hidden sm:table-cell text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
-                                  <TableCell className="text-right font-semibold">RD${income.balance.toFixed(2)}</TableCell>
-                                  <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
-                                  <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Abrir menú</span><MoreHorizontal className="h-4 w-4" /></Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => handleAddPaymentClick(income)}><Wallet className="mr-2 h-4 w-4" /> Registrar Pago</DropdownMenuItem>
-                                            <TooltipProvider>
-                                                <Tooltip><TooltipTrigger asChild>
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={!income.payments || income.payments.length === 0}>
-                                                        <Info className="mr-2 h-4 w-4" /> Ver Abonos
-                                                    </DropdownMenuItem>
-                                                </TooltipTrigger>
-                                                <TooltipContent><p className="font-semibold mb-1">Historial de Pagos</p>
-                                                  {income.payments.map(p=>(<div key={p.id} className="text-xs">
-                                                    {format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy', { locale: es })}: RD${p.amount.toFixed(2)} ({p.recordedBy})
-                                                  </div>))}
-                                                </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </TableCell>
-                              </TableRow>
-                          )
-                      })}
-                  </TableBody>
-              </Table>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
-                  <Wallet className="h-16 w-16 text-muted-foreground/50" />
-                  <h3 className="mt-4 text-lg font-semibold">Todo al día</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">No se encontraron cuentas por cobrar con los filtros actuales.</p>
-              </div>
-            )}
-          </CardContent>
+          <Collapsible defaultOpen={true}>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Facturas a Crédito Pendientes</CardTitle>
+                    <CardDescription>Un listado de todas las ventas a crédito con saldo pendiente.</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button onClick={handleShare} variant="outline" size="sm">
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Compartir
+                    </Button>
+                    <Button onClick={handleExportPdf} variant="outline" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Exportar PDF
+                    </Button>
+                    <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                            <span className="data-[state=open]:hidden">Mostrar</span>
+                            <span className="data-[state=closed]:hidden">Ocultar</span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4" />
+                        </Button>
+                    </CollapsibleTrigger>
+                </div>
+            </CardHeader>
+            <CollapsibleContent>
+                <CardContent>
+                    {filteredAccounts.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead onClick={() => handleSort('clientName')} className="cursor-pointer">Cliente</TableHead>
+                                <TableHead onClick={() => handleSort('date')} className="hidden md:table-cell cursor-pointer">Fecha</TableHead>
+                                <TableHead className="hidden sm:table-cell text-right">Monto Total</TableHead>
+                                <TableHead onClick={() => handleSort('balance')} className="text-right cursor-pointer">Saldo Pendiente</TableHead>
+                                <TableHead className="hidden lg:table-cell">Registrado por</TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredAccounts.map((income) => {
+                                const client = allClients.find(c => c.id === income.clientId);
+                                return (
+                                    <TableRow key={income.id}>
+                                        <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
+                                        <TableCell className="hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}</TableCell>
+                                        <TableCell className="hidden sm:table-cell text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right font-semibold">RD${income.balance.toFixed(2)}</TableCell>
+                                        <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Abrir menú</span><MoreHorizontal className="h-4 w-4" /></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleAddPaymentClick(income)}><Wallet className="mr-2 h-4 w-4" /> Registrar Pago</DropdownMenuItem>
+                                                    <TooltipProvider>
+                                                        <Tooltip><TooltipTrigger asChild>
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={!income.payments || income.payments.length === 0}>
+                                                                <Info className="mr-2 h-4 w-4" /> Ver Abonos
+                                                            </DropdownMenuItem>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent><p className="font-semibold mb-1">Historial de Pagos</p>
+                                                        {income.payments.map(p=>(<div key={p.id} className="text-xs">
+                                                            {format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy', { locale: es })}: RD${p.amount.toFixed(2)} ({p.recordedBy})
+                                                        </div>))}
+                                                        </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                )
+                            })}
+                        </TableBody>
+                    </Table>
+                    ) : (
+                    <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
+                        <Wallet className="h-16 w-16 text-muted-foreground/50" />
+                        <h3 className="mt-4 text-lg font-semibold">Todo al día</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">No se encontraron cuentas por cobrar con los filtros actuales.</p>
+                    </div>
+                    )}
+                </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
       </Card>
       
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>

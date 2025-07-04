@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -414,6 +415,7 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
 
 export default function DashboardPage({ params, searchParams }: { params: any; searchParams: any; }) {
   const { incomes, expenses, products, clients, suppliers } = useAppData();
+  const router = useRouter();
   
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
@@ -519,7 +521,7 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
         </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card onClick={() => router.push('/dashboard/registros/ingresos')} className="cursor-pointer hover:bg-muted/50 active:scale-[0.98] transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ingresos (Mes)</CardTitle>
             <ArrowUpCircle className="h-4 w-4 text-muted-foreground text-green-500" />
@@ -529,7 +531,7 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
             <p className="text-xs text-muted-foreground">Total de ingresos este mes</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card onClick={() => router.push('/dashboard/registros/egresos')} className="cursor-pointer hover:bg-muted/50 active:scale-[0.98] transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Egresos (Mes)</CardTitle>
             <ArrowDownCircle className="h-4 w-4 text-muted-foreground text-red-500" />
@@ -539,7 +541,7 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
             <p className="text-xs text-muted-foreground">Total de egresos este mes</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card onClick={() => router.push('/dashboard/inventario/productos')} className="cursor-pointer hover:bg-muted/50 active:scale-[0.98] transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Valor Inventario</CardTitle>
             <FlaskConical className="h-4 w-4 text-muted-foreground" />
@@ -549,7 +551,7 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
             <p className="text-xs text-muted-foreground">Valor a precio por mayor</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card onClick={() => router.push('/dashboard/cuentas')} className="cursor-pointer hover:bg-muted/50 active:scale-[0.98] transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Cuentas por Cobrar</CardTitle>
             <CircleDollarSign className="h-4 w-4 text-muted-foreground" />

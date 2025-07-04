@@ -1,10 +1,10 @@
 
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, ChevronsUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -45,6 +45,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAppData } from '@/hooks/use-app-data';
 import type { Product } from '@/components/app-provider';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 
 export default function ProductosPage({ params, searchParams }: { params: any; searchParams: any; }) {
@@ -55,6 +56,38 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Product; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+
+    const sortedProducts = useMemo(() => {
+        return [...products].sort((a, b) => {
+            const aValue = a[sortConfig.key];
+            const bValue = b[sortConfig.key];
+
+            if (aValue === null || aValue === undefined) return 1;
+            if (bValue === null || bValue === undefined) return -1;
+            
+            const directionMultiplier = sortConfig.direction === 'asc' ? 1 : -1;
+            if (typeof aValue === 'number' && typeof bValue === 'number') {
+                return (aValue - bValue) * directionMultiplier;
+            }
+            return String(aValue).localeCompare(String(bValue)) * directionMultiplier;
+        });
+    }, [products, sortConfig]);
+
+    const handleSort = (key: keyof Product) => {
+        setSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    const renderSortArrow = (key: keyof Product) => {
+        if (sortConfig.key === key) {
+            return sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />;
+        }
+        return null;
+    };
+
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -284,69 +317,92 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
             </div>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Productos Terminados</CardTitle>
-                    <CardDescription>Un listado de todos tus productos listos para la venta.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Nombre</TableHead>
-                                <TableHead className="hidden sm:table-cell">SKU</TableHead>
-                                <TableHead className="text-right">Stock</TableHead>
-                                <TableHead className="text-right hidden md:table-cell">Precio Detalle</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {products.map((product) => (
-                                <TableRow key={product.id}>
-                                    <TableCell className="font-medium">{product.name}</TableCell>
-                                    <TableCell className="hidden sm:table-cell">{product.sku}</TableCell>
-                                    <TableCell className="text-right">
-                                        {product.stock <= product.reorderLevel ? (
-                                            <Badge variant="destructive">{product.stock} {product.unit}</Badge>
-                                        ) : (
-                                            <Badge variant="secondary">{product.stock} {product.unit}</Badge>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-right hidden md:table-cell">RD${product.salePriceRetail.toFixed(2)}</TableCell>
-                                    <TableCell className="text-right">
-                                        <AlertDialog>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                                        <span className="sr-only">Abrir menú</span>
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleEdit(product)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                                    <AlertDialogTrigger asChild>
-                                                        <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                                                    </AlertDialogTrigger>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                <AlertDialogTitle>¿Estás seguro de que quieres eliminar este producto?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Esta acción no se puede deshacer. Esto eliminará permanentemente el producto de tus registros.
-                                                </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(product.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
+                <Collapsible defaultOpen={true}>
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Productos Terminados</CardTitle>
+                                <CardDescription>Un listado de todos tus productos listos para la venta.</CardDescription>
+                            </div>
+                            <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                    <span className="data-[state=open]:hidden">Mostrar</span>
+                                    <span className="data-[state=closed]:hidden">Ocultar</span>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </CollapsibleTrigger>
+                        </div>
+                    </CardHeader>
+                    <CollapsibleContent>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
+                                            <div className="flex items-center">Nombre {renderSortArrow('name')}</div>
+                                        </TableHead>
+                                        <TableHead onClick={() => handleSort('sku')} className="hidden sm:table-cell cursor-pointer">
+                                            <div className="flex items-center">SKU {renderSortArrow('sku')}</div>
+                                        </TableHead>
+                                        <TableHead onClick={() => handleSort('stock')} className="text-right cursor-pointer">
+                                            <div className="flex items-center justify-end">Stock {renderSortArrow('stock')}</div>
+                                        </TableHead>
+                                        <TableHead onClick={() => handleSort('salePriceRetail')} className="text-right hidden md:table-cell cursor-pointer">
+                                            <div className="flex items-center justify-end">Precio Detalle {renderSortArrow('salePriceRetail')}</div>
+                                        </TableHead>
+                                        <TableHead className="text-right">Acciones</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {sortedProducts.map((product) => (
+                                        <TableRow key={product.id}>
+                                            <TableCell className="font-medium">{product.name}</TableCell>
+                                            <TableCell className="hidden sm:table-cell">{product.sku}</TableCell>
+                                            <TableCell className="text-right">
+                                                {product.stock <= product.reorderLevel ? (
+                                                    <Badge variant="destructive">{product.stock} {product.unit}</Badge>
+                                                ) : (
+                                                    <Badge variant="secondary">{product.stock} {product.unit}</Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right hidden md:table-cell">RD${product.salePriceRetail.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">
+                                                <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <span className="sr-only">Abrir menú</span>
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleEdit(product)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                        <AlertDialogTitle>¿Estás seguro de que quieres eliminar este producto?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Esta acción no se puede deshacer. Esto eliminará permanentemente el producto de tus registros.
+                                                        </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete(product.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </CollapsibleContent>
+                </Collapsible>
             </Card>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

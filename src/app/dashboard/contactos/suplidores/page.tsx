@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, Search } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, Search, ChevronsUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAppData } from '@/hooks/use-app-data';
 import type { Supplier } from '@/components/app-provider';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 
 const ContactForm = ({
@@ -106,19 +107,42 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
     const [searchTerm, setSearchTerm] = useState('');
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Supplier; direction: 'asc' | 'desc' }>({ key: 'code', direction: 'asc' });
 
-    const filteredSuppliers = useMemo(() => {
-        if (!searchTerm) {
-            return suppliers;
+    const sortedSuppliers = useMemo(() => {
+        let filtered = suppliers;
+        if (searchTerm) {
+            const lowercasedTerm = searchTerm.toLowerCase();
+            filtered = suppliers.filter(supplier =>
+                (supplier.name && supplier.name.toLowerCase().includes(lowercasedTerm)) ||
+                (supplier.code && supplier.code.toLowerCase().includes(lowercasedTerm)) ||
+                (supplier.email && supplier.email.toLowerCase().includes(lowercasedTerm)) ||
+                (supplier.phone && supplier.phone.toLowerCase().includes(lowercasedTerm))
+            );
         }
-        const lowercasedTerm = searchTerm.toLowerCase();
-        return suppliers.filter(supplier =>
-            (supplier.name && supplier.name.toLowerCase().includes(lowercasedTerm)) ||
-            (supplier.code && supplier.code.toLowerCase().includes(lowercasedTerm)) ||
-            (supplier.email && supplier.email.toLowerCase().includes(lowercasedTerm)) ||
-            (supplier.phone && supplier.phone.toLowerCase().includes(lowercasedTerm))
-        );
-    }, [suppliers, searchTerm]);
+
+        return [...filtered].sort((a, b) => {
+            const aValue = a[sortConfig.key];
+            const bValue = b[sortConfig.key];
+
+            if (aValue === null || aValue === undefined) return 1;
+            if (bValue === null || bValue === undefined) return -1;
+
+            if (sortConfig.direction === 'asc') {
+                return String(aValue).localeCompare(String(bValue), undefined, { numeric: true });
+            } else {
+                return String(bValue).localeCompare(String(aValue), undefined, { numeric: true });
+            }
+        });
+    }, [suppliers, searchTerm, sortConfig]);
+
+    const handleSort = (key: keyof Supplier) => {
+        setSortConfig(prev => {
+            const isSameKey = prev.key === key;
+            const newDirection = isSameKey ? (prev.direction === 'asc' ? 'desc' : 'asc') : 'asc';
+            return { key, direction: newDirection };
+        });
+    };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -280,6 +304,14 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
         }
     };
 
+    const renderSortArrow = (key: keyof Supplier) => {
+        if (sortConfig.key === key) {
+            return sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />;
+        }
+        return null;
+    };
+
+
     return (
         <>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv" />
@@ -299,80 +331,99 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
             </div>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Lista de Suplidores</CardTitle>
-                    <CardDescription>Un listado de todos tus suplidores.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="pb-4">
-                        <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar suplidor..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-8"
-                            />
+                <Collapsible defaultOpen={true}>
+                    <CardHeader>
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <CardTitle>Lista de Suplidores</CardTitle>
+                                <CardDescription>Un listado de todos tus suplidores.</CardDescription>
+                            </div>
+                            <CollapsibleTrigger asChild>
+                                 <Button variant="ghost" size="sm">
+                                    <span className="data-[state=open]:hidden">Mostrar</span>
+                                    <span className="data-[state=closed]:hidden">Ocultar</span>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </CollapsibleTrigger>
                         </div>
-                    </div>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Código</TableHead>
-                                <TableHead>Nombre</TableHead>
-                                <TableHead>Teléfono</TableHead>
-                                <TableHead>Correo</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredSuppliers.length > 0 ? filteredSuppliers.map((supplier) => (
-                                <TableRow key={supplier.id}>
-                                    <TableCell className="font-mono">{supplier.code}</TableCell>
-                                    <TableCell className="font-medium">{supplier.name}</TableCell>
-                                    <TableCell>{supplier.phone}</TableCell>
-                                    <TableCell>{supplier.email}</TableCell>
-                                    <TableCell className="text-right">
-                                        <AlertDialog>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                                        <span className="sr-only">Abrir menú</span>
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleEdit(supplier)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                                    <AlertDialogTrigger asChild>
-                                                        <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                                                    </AlertDialogTrigger>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                <AlertDialogTitle>¿Estás seguro de que quieres eliminar este suplidor?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del suplidor.
-                                                </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(supplier.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
-                                </TableRow>
-                            )) : (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">
-                                        No se encontraron suplidores.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
+                    </CardHeader>
+                    <CollapsibleContent>
+                        <CardContent>
+                            <div className="pb-4">
+                                <div className="relative w-full max-w-sm">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Buscar suplidor..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="pl-8"
+                                    />
+                                </div>
+                            </div>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead onClick={() => handleSort('code')} className="cursor-pointer">
+                                            <div className="flex items-center">Código {renderSortArrow('code')}</div>
+                                        </TableHead>
+                                        <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
+                                            <div className="flex items-center">Nombre {renderSortArrow('name')}</div>
+                                        </TableHead>
+                                        <TableHead>Teléfono</TableHead>
+                                        <TableHead>Correo</TableHead>
+                                        <TableHead className="text-right">Acciones</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {sortedSuppliers.length > 0 ? sortedSuppliers.map((supplier) => (
+                                        <TableRow key={supplier.id}>
+                                            <TableCell className="font-mono">{supplier.code}</TableCell>
+                                            <TableCell className="font-medium">{supplier.name}</TableCell>
+                                            <TableCell>{supplier.phone}</TableCell>
+                                            <TableCell>{supplier.email}</TableCell>
+                                            <TableCell className="text-right">
+                                                <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <span className="sr-only">Abrir menú</span>
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleEdit(supplier)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                        <AlertDialogTitle>¿Estás seguro de que quieres eliminar este suplidor?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del suplidor.
+                                                        </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete(supplier.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-24 text-center">
+                                                No se encontraron suplidores.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </CollapsibleContent>
+                </Collapsible>
             </Card>
 
             <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>

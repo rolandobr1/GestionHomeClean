@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, Upload } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, Upload, ChevronsUpDown } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -26,6 +26,7 @@ import { useAuth } from '@/hooks/use-auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | null, onSave: (income: Income | Omit<Income, 'id'>) => Promise<void>, clients: Client[], onClose: () => void }) => {
     const { products: allProducts } = useAppData();
@@ -316,6 +317,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     const [productSearchTerm, setProductSearchTerm] = useState('');
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
 
     const allClients = useMemo(() => [
         { id: 'generic', name: 'Cliente Genérico', code: 'CLI-000', email: '', phone: '', address: '' },
@@ -323,7 +325,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     ], [clients]);
 
     const filteredIncomes = useMemo(() => {
-        return incomes.filter(income => {
+        let filtered = incomes.filter(income => {
             const incomeDate = new Date(income.date + 'T00:00:00');
             
             if (dateRange?.from && dateRange?.to) {
@@ -350,8 +352,41 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
             }
             
             return true;
-        }).sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
-    }, [incomes, dateRange, clientSearchTerm, productSearchTerm, allClients]);
+        });
+        
+        return [...filtered].sort((a, b) => {
+            const key = sortConfig.key;
+            let aValue, bValue;
+
+            if (key === 'clientId') {
+                aValue = allClients.find(c => c.id === a.clientId)?.name || '';
+                bValue = allClients.find(c => c.id === b.clientId)?.name || '';
+            } else {
+                aValue = a[key as keyof Income];
+                bValue = b[key as keyof Income];
+            }
+            
+            if (aValue === null || aValue === undefined) return 1;
+            if (bValue === null || bValue === undefined) return -1;
+            
+            const directionMultiplier = sortConfig.direction === 'asc' ? 1 : -1;
+            if (key === 'date') {
+                return (new Date(a.date).getTime() - new Date(b.date).getTime()) * directionMultiplier;
+            }
+            if (typeof aValue === 'number' && typeof bValue === 'number') {
+                return (aValue - bValue) * directionMultiplier;
+            }
+            return String(aValue).localeCompare(String(bValue)) * directionMultiplier;
+        });
+
+    }, [incomes, dateRange, clientSearchTerm, productSearchTerm, allClients, sortConfig]);
+
+    const handleSort = (key: string) => {
+        setSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
 
     const clearFilters = () => {
         setDateRange({ from: undefined, to: undefined });
@@ -851,92 +886,107 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
             </Card>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Historial de Ingresos</CardTitle>
-                    <CardDescription>Un listado de todas tus transacciones de ingresos.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Cliente</TableHead>
-                                <TableHead>Productos</TableHead>
-                                <TableHead className="hidden sm:table-cell">Método</TableHead>
-                                <TableHead className="hidden lg:table-cell">Registrado por</TableHead>
-                                <TableHead className="text-right">Monto Total</TableHead>
-                                <TableHead className="text-right hidden md:table-cell">Fecha</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredIncomes.length > 0 ? filteredIncomes.map((income) => {
-                                const client = allClients.find(c => c.id === income.clientId);
-                                
-                                return (
-                                <TableRow key={income.id}>
-                                    <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
-                                    <TableCell>
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger>
-                                                    <span className="cursor-pointer underline-dashed">{income.products.length} producto(s)</span>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                   <ul className="list-disc pl-4">
-                                                        {income.products.map(p => (
-                                                            <li key={p.productId}>{p.quantity} x {p.name} @ RD${p.price.toFixed(2)}</li>
-                                                        ))}
-                                                   </ul>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    </TableCell>
-                                    <TableCell className="capitalize hidden sm:table-cell">{income.paymentMethod}</TableCell>
-                                    <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
-                                    <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
-                                    <TableCell className="text-right hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'PPP', { locale: es })}</TableCell>
-                                    <TableCell className="text-right">
-                                        <AlertDialog>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                                        <span className="sr-only">Abrir menú</span>
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleGenerateInvoice(income)}><FileText className="mr-2 h-4 w-4" /> Generar Factura</DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleEdit(income)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                                    <AlertDialogTrigger asChild>
-                                                        <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                                                    </AlertDialogTrigger>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                <AlertDialogTitle>¿Estás seguro de que quieres eliminar este ingreso?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del ingreso y devolverá los productos al stock.
-                                                </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(income.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
-                                </TableRow>
-                            )}) : (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center">
-                                        No se encontraron resultados.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
+                <Collapsible defaultOpen={true}>
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Historial de Ingresos</CardTitle>
+                                <CardDescription>Un listado de todas tus transacciones de ingresos.</CardDescription>
+                            </div>
+                             <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                    <span className="data-[state=open]:hidden">Mostrar</span>
+                                    <span className="data-[state=closed]:hidden">Ocultar</span>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </CollapsibleTrigger>
+                        </div>
+                    </CardHeader>
+                    <CollapsibleContent>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead onClick={() => handleSort('clientId')} className="cursor-pointer">Cliente</TableHead>
+                                        <TableHead>Productos</TableHead>
+                                        <TableHead onClick={() => handleSort('paymentMethod')} className="hidden sm:table-cell cursor-pointer">Método</TableHead>
+                                        <TableHead onClick={() => handleSort('recordedBy')} className="hidden lg:table-cell cursor-pointer">Registrado por</TableHead>
+                                        <TableHead onClick={() => handleSort('totalAmount')} className="text-right cursor-pointer">Monto Total</TableHead>
+                                        <TableHead onClick={() => handleSort('date')} className="text-right hidden md:table-cell cursor-pointer">Fecha</TableHead>
+                                        <TableHead className="text-right">Acciones</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredIncomes.length > 0 ? filteredIncomes.map((income) => {
+                                        const client = allClients.find(c => c.id === income.clientId);
+                                        
+                                        return (
+                                        <TableRow key={income.id}>
+                                            <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
+                                            <TableCell>
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger>
+                                                            <span className="cursor-pointer underline-dashed">{income.products.length} producto(s)</span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                        <ul className="list-disc pl-4">
+                                                                {income.products.map(p => (
+                                                                    <li key={p.productId}>{p.quantity} x {p.name} @ RD${p.price.toFixed(2)}</li>
+                                                                ))}
+                                                        </ul>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </TableCell>
+                                            <TableCell className="capitalize hidden sm:table-cell">{income.paymentMethod}</TableCell>
+                                            <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
+                                            <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'PPP', { locale: es })}</TableCell>
+                                            <TableCell className="text-right">
+                                                <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <span className="sr-only">Abrir menú</span>
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleGenerateInvoice(income)}><FileText className="mr-2 h-4 w-4" /> Generar Factura</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleEdit(income)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                        <AlertDialogTitle>¿Estás seguro de que quieres eliminar este ingreso?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del ingreso y devolverá los productos al stock.
+                                                        </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete(income.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}) : (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="h-24 text-center">
+                                                No se encontraron resultados.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </CollapsibleContent>
+                </Collapsible>
             </Card>
 
              <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
