@@ -14,7 +14,7 @@ import { Scale, TrendingUp, TrendingDown, Wallet, Boxes, Landmark, Banknote } fr
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { format, subMonths, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
@@ -262,7 +262,7 @@ export default function BalancePage() {
                     {selectedMetric?.hasHistory ? (
                         <div className="h-[300px] w-full pt-4">
                             <ChartContainer config={chartConfig} className="h-full w-full">
-                                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid vertical={false} />
                                     <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
                                     <YAxis
@@ -272,17 +272,11 @@ export default function BalancePage() {
                                         tickFormatter={(value) => `RD$${(Number(value) / 1000).toFixed(0)}k`}
                                     />
                                     <ChartTooltip
-                                        cursor={true}
+                                        cursor={false}
                                         content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => `RD$${Number(value).toFixed(2)}`} />}
                                     />
-                                    <defs>
-                                        <linearGradient id="chartColor" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <Area type="monotone" dataKey="value" stroke="var(--color-value)" fill="url(#chartColor)" strokeWidth={2} />
-                                </AreaChart>
+                                    <Bar dataKey="value" fill="var(--color-value)" radius={4} />
+                                </BarChart>
                             </ChartContainer>
                         </div>
                     ) : (
