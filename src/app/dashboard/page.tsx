@@ -315,7 +315,7 @@ const IncomeForm = ({ onClose }: { onClose: () => void }) => {
 };
 
 const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
-    const { suppliers, addExpense } = useAppData();
+    const { suppliers, addExpense, expenseCategories } = useAppData();
     const { user } = useAuth();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
@@ -324,8 +324,12 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
     });
 
     useEffect(() => {
-        setFormData(prev => ({ ...prev, date: format(new Date(), 'yyyy-MM-dd') }));
-    }, []);
+        setFormData(prev => ({ 
+            ...prev, 
+            date: format(new Date(), 'yyyy-MM-dd'),
+            category: expenseCategories.length > 0 ? expenseCategories[0] : 'Otro' 
+        }));
+    }, [expenseCategories]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value, type } = e.target;
@@ -392,12 +396,7 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
                             <SelectValue placeholder="Selecciona una categoría" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="Materia Prima">Materia Prima</SelectItem>
-                            <SelectItem value="Envases">Envases</SelectItem>
-                            <SelectItem value="Etiquetas">Etiquetas</SelectItem>
-                            <SelectItem value="Transportación">Transportación</SelectItem>
-                            <SelectItem value="Maquinarias y Herramientas">Maquinarias y Herramientas</SelectItem>
-                            <SelectItem value="Otro">Otro</SelectItem>
+                            {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>

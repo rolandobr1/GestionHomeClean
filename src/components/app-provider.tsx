@@ -96,6 +96,10 @@ export type InvoiceSettings = {
   shareMessage: string;
 };
 
+export type ExpenseCategorySettings = {
+  categories: string[];
+};
+
 // Context interface
 interface AppContextType {
   incomes: Income[];
@@ -105,6 +109,7 @@ interface AppContextType {
   clients: Client[];
   suppliers: Supplier[];
   invoiceSettings: InvoiceSettings;
+  expenseCategories: string[];
   loading: boolean;
   addIncome: (income: Omit<Income, 'id' | 'balance' | 'payments'>) => Promise<void>;
   addMultipleIncomes: (incomes: Income[], mode: 'append' | 'replace') => Promise<void>;
@@ -133,6 +138,7 @@ interface AppContextType {
   updateSupplier: (supplier: Supplier) => Promise<void>;
   deleteSupplier: (id: string) => Promise<void>;
   updateInvoiceSettings: (settings: InvoiceSettings) => Promise<void>;
+  updateExpenseCategories: (categories: string[]) => Promise<void>;
 }
 
 // Create context
@@ -147,6 +153,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [expenseCategories, setExpenseCategories] = useState<string[]>([]);
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
     companyName: "HOMECLEAN S.R.L.",
     companyAddress: "Calle Ficticia 123, Santo Domingo",
@@ -179,6 +186,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         suppliers: false,
         rawMaterials: false,
         settings: false,
+        expenseCategories: false,
     };
     
     const checkAllLoaded = () => {
@@ -288,6 +296,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
     unsubscribers.push(unsubscribeSettings);
 
+    const expenseCategoriesDocRef = doc(db, 'settings', 'expenseCategories');
+    const unsubscribeCategories = onSnapshot(expenseCategoriesDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setExpenseCategories((docSnap.data() as ExpenseCategorySettings).categories);
+        } else {
+            const defaultCategories = ["Materia Prima", "Envases", "Etiquetas", "Transportación", "Maquinarias y Herramientas", "Otro"];
+            setDoc(expenseCategoriesDocRef, { categories: defaultCategories });
+            setExpenseCategories(defaultCategories);
+        }
+        if (!loadStatus.expenseCategories) {
+            loadStatus.expenseCategories = true;
+            checkAllLoaded();
+        }
+    }, (error) => {
+        console.error("Error al escuchar las categorías de egresos:", error);
+        if (!loadStatus.expenseCategories) {
+            loadStatus.expenseCategories = true;
+            checkAllLoaded();
+        }
+    });
+    unsubscribers.push(unsubscribeCategories);
+
     return () => unsubscribers.forEach(unsub => unsub());
   }, []);
 
@@ -298,6 +328,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     await setDoc(settingsDocRef, settings, { merge: true });
   };
   
+  const updateExpenseCategories = async (categories: string[]) => {
+    if (!db) throw new Error("Firestore no está inicializado.");
+    const docRef = doc(db, 'settings', 'expenseCategories');
+    await setDoc(docRef, { categories });
+  };
+
   // --- Income Management with Firestore ---
   const addIncome = async (income: Omit<Income, 'id' | 'balance' | 'payments'>) => {
     if (!db) throw new Error("Firestore no está inicializado.");
@@ -724,13 +760,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     <AppContext.Provider value={{
         loading,
         incomes, expenses, products, rawMaterials, clients, suppliers, invoiceSettings,
+        expenseCategories,
         addIncome, addMultipleIncomes, deleteIncome, updateIncome, addPayment,
         addExpense, addMultipleExpenses, deleteExpense, updateExpense, addPaymentToExpense,
         addProduct, addMultipleProducts, deleteProduct, updateProduct,
         addRawMaterial, addMultipleRawMaterials, updateRawMaterial, deleteRawMaterial,
         addClient, addMultipleClients, updateClient, deleteClient,
         addSupplier, addMultipleSuppliers, updateSupplier, deleteSupplier,
-        updateInvoiceSettings
+        updateInvoiceSettings,
+        updateExpenseCategories,
     }}>
       {children}
     </AppContext.Provider>

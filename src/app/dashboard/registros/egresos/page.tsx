@@ -22,14 +22,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
-const expenseCategories = ["Materia Prima", "Envases", "Etiquetas", "Transportación", "Maquinarias y Herramientas", "Otro"];
-
 const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense | null, onSave: (expense: Omit<Expense, 'id' | 'balance' | 'payments'> | Expense) => Promise<void>, suppliers: Supplier[], onClose: () => void }) => {
+    const { expenseCategories } = useAppData();
     const [isSaving, setIsSaving] = useState(false);
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState(0);
     const [date, setDate] = useState('');
-    const [category, setCategory] = useState('Materia Prima');
+    const [category, setCategory] = useState(expenseCategories[0] || 'Otro');
     const [supplierId, setSupplierId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
 
@@ -45,11 +44,11 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
             setDescription('');
             setAmount(0);
             setDate(format(new Date(), 'yyyy-MM-dd'));
-            setCategory('Materia Prima');
+            setCategory(expenseCategories.length > 0 ? expenseCategories[0] : 'Otro');
             setSupplierId('generic');
             setPaymentMethod('contado');
         }
-    }, [expense]);
+    }, [expense, expenseCategories]);
 
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -144,7 +143,7 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
 };
 
 export default function EgresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
-    const { expenses, addExpense, deleteExpense, updateExpense, addMultipleExpenses, suppliers, addSupplier } = useAppData();
+    const { expenses, addExpense, deleteExpense, updateExpense, addMultipleExpenses, suppliers, addSupplier, expenseCategories } = useAppData();
     const { user } = useAuth();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
