@@ -17,7 +17,7 @@ import { useState } from "react";
 
 export function DashboardHeader() {
     const pathname = usePathname();
-    const currentLink = navLinks.find(link => link.href === pathname);
+    const currentLink = navLinks.find(link => link.matcher.test(pathname));
     const pageTitle = currentLink ? currentLink.label : "Dashboard";
     const [isSheetOpen, setIsSheetOpen] = useState(false);
 
