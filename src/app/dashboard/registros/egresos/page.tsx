@@ -23,7 +23,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense | null, onSave: (expense: Omit<Expense, 'id' | 'balance' | 'payments'> | Expense) => Promise<void>, suppliers: Supplier[], onClose: () => void }) => {
-    const { expenseCategories } = useAppData();
+    const { expenseCategories, invoiceSettings } = useAppData();
     const [isSaving, setIsSaving] = useState(false);
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState(0);
@@ -31,6 +31,7 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
     const [category, setCategory] = useState(expenseCategories[0] || 'Otro');
     const [supplierId, setSupplierId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
+    const [paymentType, setPaymentType] = useState(invoiceSettings.paymentMethods[0] || '');
 
     useEffect(() => {
         if (expense) {
@@ -40,6 +41,7 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
             setCategory(expense.category);
             setSupplierId(expense.supplierId || 'generic');
             setPaymentMethod(expense.paymentMethod || 'contado');
+            setPaymentType(expense.paymentType || (invoiceSettings.paymentMethods[0] || ''));
         } else {
             setDescription('');
             setAmount(0);
@@ -47,32 +49,33 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
             setCategory(expenseCategories.length > 0 ? expenseCategories[0] : 'Otro');
             setSupplierId('generic');
             setPaymentMethod('contado');
+            setPaymentType(invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : '');
         }
-    }, [expense, expenseCategories]);
+    }, [expense, expenseCategories, invoiceSettings.paymentMethods]);
 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
         try {
+            const dataToSave = {
+                description,
+                amount,
+                date,
+                category,
+                supplierId,
+                paymentMethod,
+                paymentType: paymentMethod === 'contado' ? paymentType : undefined,
+            };
+
             if (expense) {
                 await onSave({
                     ...expense,
-                    description,
-                    amount,
-                    date,
-                    category,
-                    supplierId,
-                    paymentMethod,
+                    ...dataToSave
                 });
             } else {
                 await onSave({
-                    description,
-                    amount,
-                    date,
-                    category,
-                    supplierId,
-                    paymentMethod,
+                    ...dataToSave,
                     recordedBy: '' // Will be set in provider
                 });
             }
@@ -96,17 +99,34 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="paymentMethod">Método de Pago</Label>
-                    <Select onValueChange={(val) => setPaymentMethod(val as 'contado' | 'credito')} value={paymentMethod} disabled={isSaving}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Selecciona un método" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="contado">Contado</SelectItem>
-                            <SelectItem value="credito">Crédito</SelectItem>
-                        </SelectContent>
-                    </Select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                    <div className="space-y-2">
+                        <Label htmlFor="paymentMethod">Condición de Pago</Label>
+                        <Select onValueChange={(val) => setPaymentMethod(val as 'contado' | 'credito')} value={paymentMethod} disabled={isSaving}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecciona una condición" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="contado">Contado</SelectItem>
+                                <SelectItem value="credito">Crédito</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    {paymentMethod === 'contado' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="paymentType">Método de Pago</Label>
+                            <Select onValueChange={setPaymentType} value={paymentType} disabled={isSaving}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona un método" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {invoiceSettings.paymentMethods.map(method => (
+                                        <SelectItem key={method} value={method}>{method}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="category">Categoría</Label>

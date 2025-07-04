@@ -29,10 +29,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | null, onSave: (income: Income | Omit<Income, 'id'>) => Promise<void>, clients: Client[], onClose: () => void }) => {
-    const { products: allProducts } = useAppData();
+    const { products: allProducts, invoiceSettings } = useAppData();
     const [isSaving, setIsSaving] = useState(false);
     const [clientId, setClientId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
+    const [paymentType, setPaymentType] = useState(invoiceSettings.paymentMethods[0] || '');
     const [date, setDate] = useState('');
     const [soldProducts, setSoldProducts] = useState<SoldProduct[]>([]);
     
@@ -47,15 +48,17 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
         if (income) {
             setClientId(income.clientId);
             setPaymentMethod(income.paymentMethod);
+            setPaymentType(income.paymentType || (invoiceSettings.paymentMethods[0] || ''));
             setDate(format(new Date(income.date + 'T00:00:00'), 'yyyy-MM-dd'));
             setSoldProducts(income.products);
         } else {
             setClientId('generic');
             setPaymentMethod('contado');
+            setPaymentType(invoiceSettings.paymentMethods[0] || '');
             setDate(format(new Date(), 'yyyy-MM-dd'));
             setSoldProducts([]);
         }
-    }, [income]);
+    }, [income, invoiceSettings.paymentMethods]);
 
     const handleAddProduct = () => {
         if (currentProduct === 'generic') {
@@ -115,23 +118,24 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
         }
         setIsSaving(true);
         try {
+            const dataToSave = {
+                clientId,
+                paymentMethod,
+                paymentType: paymentMethod === 'contado' ? paymentType : undefined,
+                date,
+                products: soldProducts,
+                totalAmount,
+                category: 'Venta de Producto',
+            };
+
             if (income) {
                  await onSave({
                     ...income,
-                    clientId,
-                    paymentMethod,
-                    date,
-                    products: soldProducts,
-                    totalAmount
+                    ...dataToSave,
                 });
             } else {
                 await onSave({
-                    clientId,
-                    paymentMethod,
-                    date,
-                    products: soldProducts,
-                    totalAmount,
-                    category: 'Venta de Producto',
+                    ...dataToSave,
                     recordedBy: '', // Will be set in the provider
                 });
             }
@@ -163,12 +167,12 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
                         <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} required disabled={isSaving} />
                     </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                     <div className="space-y-2">
-                        <Label htmlFor="paymentMethod">Método Pago</Label>
+                        <Label htmlFor="paymentMethod">Condición de Pago</Label>
                         <Select onValueChange={(value: 'contado' | 'credito') => setPaymentMethod(value)} value={paymentMethod} disabled={isSaving}>
                             <SelectTrigger id="paymentMethod">
-                                <SelectValue placeholder="Selecciona un método" />
+                                <SelectValue placeholder="Selecciona una condición" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="contado">Contado</SelectItem>
@@ -176,6 +180,21 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
                             </SelectContent>
                         </Select>
                     </div>
+                    {paymentMethod === 'contado' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="paymentType">Método de Pago</Label>
+                            <Select onValueChange={setPaymentType} value={paymentType} disabled={isSaving}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona un método" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {invoiceSettings.paymentMethods.map(method => (
+                                        <SelectItem key={method} value={method}>{method}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                 </div>
                 
                 <Separator />
@@ -213,8 +232,8 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
                                 <div className="space-y-2">
                                     <Label>Tipo de Precio</Label>
                                     <RadioGroup value={currentPriceType} onValueChange={(value: 'retail' | 'wholesale') => setCurrentPriceType(value)} className="flex gap-4" disabled={isSaving}>
-                                        <div className="flex items-center space-x-2"><RadioGroupItem value="retail" id="retail" /><Label htmlFor="retail">Detalle</Label></div>
-                                        <div className="flex items-center space-x-2"><RadioGroupItem value="wholesale" id="wholesale" /><Label htmlFor="wholesale">Por Mayor</Label></div>
+                                        <div className="flex items-center space-x-2"><RadioGroupItem value="retail" id="retail" /><Label htmlFor="retail">{invoiceSettings.priceLabels.retail}</Label></div>
+                                        <div className="flex items-center space-x-2"><RadioGroupItem value="wholesale" id="wholesale" /><Label htmlFor="wholesale">{invoiceSettings.priceLabels.wholesale}</Label></div>
                                     </RadioGroup>
                                 </div>
                             )

@@ -29,6 +29,7 @@ export type Income = {
   category: string;
   clientId: string;
   paymentMethod: 'credito' | 'contado';
+  paymentType?: string;
   products: SoldProduct[];
   recordedBy: string;
   payments: Payment[];
@@ -43,6 +44,7 @@ export type Expense = {
   category: string;
   supplierId: string;
   paymentMethod: 'credito' | 'contado';
+  paymentType?: string;
   recordedBy: string;
   payments: Payment[];
 };
@@ -94,6 +96,11 @@ export type InvoiceSettings = {
   companyRNC: string;
   companyLogo: string;
   shareMessage: string;
+  paymentMethods: string[];
+  priceLabels: {
+    retail: string;
+    wholesale: string;
+  };
 };
 
 export type ExpenseCategorySettings = {
@@ -160,6 +167,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     companyRNC: "1-2345678-9",
     companyLogo: "/logohomeclean.png",
     shareMessage: "Aquí está tu factura de HOMECLEAN.",
+    paymentMethods: ["Efectivo", "Transferencia", "Tarjeta"],
+    priceLabels: { retail: "Detalle", wholesale: "Por Mayor" },
   });
 
   // --- Firestore Listeners ---
@@ -281,7 +290,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const settingsDocRef = doc(db, 'settings', 'invoice');
     const unsubscribeSettings = onSnapshot(settingsDocRef, (docSnap) => {
         if (docSnap.exists()) {
-            setInvoiceSettings(docSnap.data() as InvoiceSettings);
+            const remoteSettings = docSnap.data() as Partial<InvoiceSettings>;
+            setInvoiceSettings(prev => ({ ...prev, ...remoteSettings }));
         }
         if (!loadStatus.settings) {
             loadStatus.settings = true;
@@ -774,5 +784,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
-
-    

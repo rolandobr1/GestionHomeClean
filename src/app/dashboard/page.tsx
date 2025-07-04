@@ -53,12 +53,13 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 const IncomeForm = ({ onClose }: { onClose: () => void }) => {
-    const { products: allProducts, clients: allClients, addIncome } = useAppData();
+    const { products: allProducts, clients: allClients, addIncome, invoiceSettings } = useAppData();
     const { user } = useAuth();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const [clientId, setClientId] = useState('generic');
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
+    const [paymentType, setPaymentType] = useState(invoiceSettings.paymentMethods[0] || '');
     const [date, setDate] = useState('');
     const [soldProducts, setSoldProducts] = useState<SoldProduct[]>([]);
     
@@ -71,7 +72,10 @@ const IncomeForm = ({ onClose }: { onClose: () => void }) => {
 
     useEffect(() => {
         setDate(format(new Date(), 'yyyy-MM-dd'));
-    }, []);
+        if (invoiceSettings.paymentMethods.length > 0 && !paymentType) {
+            setPaymentType(invoiceSettings.paymentMethods[0]);
+        }
+    }, [invoiceSettings.paymentMethods, paymentType]);
 
     const handleAddProduct = () => {
         if (currentProduct === 'generic') {
@@ -139,6 +143,7 @@ const IncomeForm = ({ onClose }: { onClose: () => void }) => {
             await addIncome({
                 clientId,
                 paymentMethod,
+                paymentType: paymentMethod === 'contado' ? paymentType : undefined,
                 date,
                 products: soldProducts,
                 totalAmount,
@@ -179,9 +184,9 @@ const IncomeForm = ({ onClose }: { onClose: () => void }) => {
                         <Input id="date-dash" type="date" value={date} onChange={e => setDate(e.target.value)} required disabled={isSaving}/>
                     </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                     <div className="space-y-2">
-                        <Label htmlFor="paymentMethod-dash">Método Pago</Label>
+                        <Label htmlFor="paymentMethod-dash">Condición de Pago</Label>
                         <Select onValueChange={(value: 'contado' | 'credito') => setPaymentMethod(value)} defaultValue={paymentMethod} disabled={isSaving}>
                             <SelectTrigger id="paymentMethod-dash">
                                 <SelectValue placeholder="Selecciona un método" />
@@ -192,6 +197,21 @@ const IncomeForm = ({ onClose }: { onClose: () => void }) => {
                             </SelectContent>
                         </Select>
                     </div>
+                    {paymentMethod === 'contado' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="paymentType-dash">Método de Pago</Label>
+                            <Select onValueChange={setPaymentType} value={paymentType} disabled={isSaving}>
+                                <SelectTrigger id="paymentType-dash">
+                                    <SelectValue placeholder="Selecciona un tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {invoiceSettings.paymentMethods.map(method => (
+                                        <SelectItem key={method} value={method}>{method}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                 </div>
                 
                 <Separator />
@@ -229,8 +249,8 @@ const IncomeForm = ({ onClose }: { onClose: () => void }) => {
                                 <div className="space-y-2">
                                     <Label>Tipo de Precio</Label>
                                     <RadioGroup value={currentPriceType} onValueChange={(value: 'retail' | 'wholesale') => setCurrentPriceType(value)} className="flex gap-4" disabled={isSaving}>
-                                        <div className="flex items-center space-x-2"><RadioGroupItem value="retail" id="retail-dash" /><Label htmlFor="retail-dash">Detalle</Label></div>
-                                        <div className="flex items-center space-x-2"><RadioGroupItem value="wholesale" id="wholesale-dash" /><Label htmlFor="wholesale-dash">Por Mayor</Label></div>
+                                        <div className="flex items-center space-x-2"><RadioGroupItem value="retail" id="retail-dash" /><Label htmlFor="retail-dash">{invoiceSettings.priceLabels.retail}</Label></div>
+                                        <div className="flex items-center space-x-2"><RadioGroupItem value="wholesale" id="wholesale-dash" /><Label htmlFor="wholesale-dash">{invoiceSettings.priceLabels.wholesale}</Label></div>
                                     </RadioGroup>
                                 </div>
                             )
@@ -315,21 +335,22 @@ const IncomeForm = ({ onClose }: { onClose: () => void }) => {
 };
 
 const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
-    const { suppliers, addExpense, expenseCategories } = useAppData();
+    const { suppliers, addExpense, expenseCategories, invoiceSettings } = useAppData();
     const { user } = useAuth();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({
-        description: '', amount: 0, date: '', category: 'Materia Prima', supplierId: 'generic', paymentMethod: 'contado' as 'contado' | 'credito'
+        description: '', amount: 0, date: '', category: 'Materia Prima', supplierId: 'generic', paymentMethod: 'contado' as 'contado' | 'credito', paymentType: invoiceSettings.paymentMethods[0] || ''
     });
 
     useEffect(() => {
         setFormData(prev => ({ 
             ...prev, 
             date: format(new Date(), 'yyyy-MM-dd'),
-            category: expenseCategories.length > 0 ? expenseCategories[0] : 'Otro' 
+            category: expenseCategories.length > 0 ? expenseCategories[0] : 'Otro',
+            paymentType: invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : ''
         }));
-    }, [expenseCategories]);
+    }, [expenseCategories, invoiceSettings.paymentMethods]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value, type } = e.target;
@@ -337,7 +358,7 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
         setFormData(prev => ({ ...prev, [key]: type === 'number' ? parseFloat(value) || 0 : value }));
     };
 
-    const handleSelectChange = (field: 'category' | 'supplierId' | 'paymentMethod') => (value: string) => {
+    const handleSelectChange = (field: 'category' | 'supplierId' | 'paymentMethod' | 'paymentType') => (value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
@@ -350,7 +371,11 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
 
         setIsSaving(true);
         try {
-            await addExpense({ ...formData, recordedBy: user.name });
+            const dataToSave = {
+                ...formData,
+                paymentType: formData.paymentMethod === 'contado' ? formData.paymentType : undefined
+            }
+            await addExpense({ ...dataToSave, recordedBy: user.name });
             toast({
                 title: "Egreso Registrado",
                 description: `Se ha añadido un egreso por RD$${formData.amount.toFixed(2)}.`,
@@ -377,17 +402,34 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
                         </SelectContent>
                     </Select>
                 </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="paymentMethod-dash-exp">Método de Pago</Label>
-                    <Select onValueChange={handleSelectChange('paymentMethod')} value={formData.paymentMethod} disabled={isSaving}>
-                        <SelectTrigger id="paymentMethod-dash-exp">
-                            <SelectValue placeholder="Selecciona un método" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="contado">Contado</SelectItem>
-                            <SelectItem value="credito">Crédito</SelectItem>
-                        </SelectContent>
-                    </Select>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                    <div className="space-y-2">
+                        <Label htmlFor="paymentMethod-dash-exp">Condición de Pago</Label>
+                        <Select onValueChange={handleSelectChange('paymentMethod')} value={formData.paymentMethod} disabled={isSaving}>
+                            <SelectTrigger id="paymentMethod-dash-exp">
+                                <SelectValue placeholder="Selecciona un método" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="contado">Contado</SelectItem>
+                                <SelectItem value="credito">Crédito</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    {formData.paymentMethod === 'contado' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="paymentType-dash-exp">Método de Pago</Label>
+                            <Select onValueChange={handleSelectChange('paymentType')} value={formData.paymentType} disabled={isSaving}>
+                                <SelectTrigger id="paymentType-dash-exp">
+                                    <SelectValue placeholder="Selecciona un tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {invoiceSettings.paymentMethods.map(method => (
+                                        <SelectItem key={method} value={method}>{method}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="category-dash">Categoría</Label>
