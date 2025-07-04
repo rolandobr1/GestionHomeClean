@@ -626,5 +626,3 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
         </>
     );
 }
-
-    
