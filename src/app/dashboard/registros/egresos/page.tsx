@@ -439,7 +439,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                     <CardDescription>Filtra los egresos por fecha, categoría o descripción.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex flex-wrap gap-4">
                         <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
                         <Select value={categoryFilter || 'all'} onValueChange={(value) => setCategoryFilter(value === 'all' ? '' : value)}>
                             <SelectTrigger className="w-full md:w-[280px]">

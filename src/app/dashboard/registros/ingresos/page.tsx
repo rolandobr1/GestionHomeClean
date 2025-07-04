@@ -862,7 +862,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     <CardDescription>Filtra los ingresos por fecha, cliente o producto.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex flex-wrap gap-4">
                         <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
                         
                         <Input
