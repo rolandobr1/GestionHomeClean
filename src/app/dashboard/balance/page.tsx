@@ -9,34 +9,40 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAppData } from '@/hooks/use-app-data';
-import { Scale, TrendingUp, TrendingDown, Wallet, Boxes, Landmark } from 'lucide-react';
+import { Scale, TrendingUp, TrendingDown, Wallet, Boxes, Landmark, Banknote } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
-const BalanceCard = ({ title, value, description, icon: Icon, isLoading, formatAsCurrency = true }: { title: string, value: number, description: string, icon: React.ElementType, isLoading: boolean, formatAsCurrency?: boolean }) => (
-    <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{title}</CardTitle>
-            <Icon className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-            {isLoading ? (
-                <>
-                    <Skeleton className="h-8 w-3/4" />
-                    <Skeleton className="h-4 w-1/2 mt-1" />
-                </>
-            ) : (
-                <>
-                    <div className="text-2xl font-bold truncate">
-                        {formatAsCurrency ? `RD$${value.toFixed(2)}` : value}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                        {description}
-                    </p>
-                </>
-            )}
-        </CardContent>
-    </Card>
-);
+const BalanceCard = ({ title, value, description, icon: Icon, isLoading, formatAsCurrency = true, colorBasedOnValue = false }: { title: string, value: number, description: string, icon: React.ElementType, isLoading: boolean, formatAsCurrency?: boolean, colorBasedOnValue?: boolean }) => {
+    const valueColorClass = colorBasedOnValue ? (value >= 0 ? 'text-green-600' : 'text-red-600') : '';
+    
+    return (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{title}</CardTitle>
+                <Icon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                {isLoading ? (
+                    <>
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-4 w-1/2 mt-1" />
+                    </>
+                ) : (
+                    <>
+                        <div className={cn("text-2xl font-bold truncate", valueColorClass)}>
+                            {formatAsCurrency ? `RD$${value.toFixed(2)}` : value}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            {description}
+                        </p>
+                    </>
+                )}
+            </CardContent>
+        </Card>
+    );
+};
+
 
 export default function BalancePage() {
     const { incomes, expenses, products, rawMaterials, loading } = useAppData();
@@ -56,13 +62,16 @@ export default function BalancePage() {
             
         const currentAssets = inventoryValue + accountsReceivable;
 
+        const realizedNetIncome = netBalance - accountsReceivable;
+
         return {
             totalIncomeAllTime,
             totalExpensesAllTime,
             netBalance,
             inventoryValue,
             accountsReceivable,
-            currentAssets
+            currentAssets,
+            realizedNetIncome
         };
     }, [incomes, expenses, products, rawMaterials]);
     
@@ -75,6 +84,14 @@ export default function BalancePage() {
                 </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                 <BalanceCard
+                    title="Ingresos Netos Realizados"
+                    value={summaryData.realizedNetIncome}
+                    description="Balance total menos las cuentas por cobrar."
+                    icon={Banknote}
+                    isLoading={loading}
+                    colorBasedOnValue={true}
+                />
                 <BalanceCard
                     title="Balance Neto Total"
                     value={summaryData.netBalance}
