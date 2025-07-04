@@ -1074,3 +1074,5 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         </div>
     );
 }
+
+    
