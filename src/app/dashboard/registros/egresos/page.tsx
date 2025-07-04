@@ -134,10 +134,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: subDays(new Date(), 90),
-        to: new Date(),
-    });
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [categoryFilter, setCategoryFilter] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
@@ -324,12 +321,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                 const delimiter = semicolonCount > commaCount ? ';' : ',';
 
                 const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
-                const requiredHeaders = ['description', 'amount', 'date', 'category'];
-                const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
-                if (missingHeaders.length > 0) {
-                    throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
-                }
-
+                
                 const newExpenses: Expense[] = [];
                 const newSuppliersCache = new Map<string, Supplier>();
                 let allSuppliersCurrentList = [...allSuppliers];
@@ -517,9 +509,13 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleEdit(expense)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleEdit(expense)}>
+                                                              <Edit className="mr-2 h-4 w-4" /> Editar
+                                                            </DropdownMenuItem>
                                                             <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                                                  <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                                                </DropdownMenuItem>
                                                             </AlertDialogTrigger>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
