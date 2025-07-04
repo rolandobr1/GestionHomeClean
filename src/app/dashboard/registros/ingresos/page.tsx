@@ -556,7 +556,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         if (data.length === 0) return '';
         const columnDelimiter = ',';
         const lineDelimiter = '\n';
-        const keys = ['idtransaccion', 'fecha', 'cliente', 'metododepago', 'producto', 'cantidad', 'preciounitario', 'subtotalproducto', 'totalfactura'];
+        const keys = ['idtransaccion', 'fecha', 'cliente', 'metododepago', 'producto', 'cantidad', 'preciounitario', 'subtotalproducto', 'totalfactura', 'registradopor'];
 
         let result = keys.join(columnDelimiter) + lineDelimiter;
 
@@ -610,6 +610,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                 'preciounitario': product.price,
                 'subtotalproducto': (product.quantity * product.price).toFixed(2),
                 'totalfactura': income.totalAmount.toFixed(2),
+                'registradopor': income.recordedBy,
             }));
         });
         const csvString = convertArrayOfObjectsToCSV(flattenedIncomes);
@@ -691,6 +692,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     const clientName = (firstRow.cliente || 'Cliente Genérico').trim();
                     const paymentMethodRaw = (firstRow.metododepago || 'contado').toLowerCase();
                     const paymentMethod = (paymentMethodRaw === 'credito' || paymentMethodRaw === 'contado') ? paymentMethodRaw : 'contado';
+                    const recordedBy = firstRow.registradopor?.trim() || user.name;
                     
                     const totalFacturaFromFile = firstRow.totalfactura ? parseFloat(firstRow.totalfactura) : null;
                     if (totalFacturaFromFile !== null && isNaN(totalFacturaFromFile)) {
@@ -702,6 +704,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                         if (row.fecha && row.fecha !== date) throw new Error(`Fechas inconsistentes para transacción ${transactionId}.`);
                         if (row.cliente && row.cliente !== clientName) throw new Error(`Clientes inconsistentes para transacción ${transactionId}.`);
                         if (row.metododepago && row.metododepago.toLowerCase() !== paymentMethod) throw new Error(`Métodos de pago inconsistentes para transacción ${transactionId}.`);
+                        if (row.registradopor && row.registradopor.trim() !== recordedBy) throw new Error(`Registradores inconsistentes para transacción ${transactionId}.`);
                     }
                     
                     let client: Client | undefined;
@@ -791,7 +794,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                         id: `payment_${Date.now()}`,
                         amount: calculatedTotal,
                         date: date,
-                        recordedBy: user.name,
+                        recordedBy: recordedBy,
                     }] : [];
 
                     newIncomes.push({
@@ -802,7 +805,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                         products: soldProducts,
                         totalAmount: calculatedTotal,
                         category: 'Venta de Producto',
-                        recordedBy: user.name,
+                        recordedBy: recordedBy,
                         balance: balance,
                         payments: payments
                     });

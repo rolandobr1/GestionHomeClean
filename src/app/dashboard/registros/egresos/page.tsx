@@ -299,7 +299,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
             'date': expense.date,
             'category': expense.category,
             'supplier': allSuppliers.find(s => s.id === expense.supplierId)?.name || 'Suplidor Genérico',
-            'recordedBy': expense.recordedBy
+            'registradopor': expense.recordedBy
         }));
         const csvString = convertArrayOfObjectsToCSV(flattenedExpenses);
         downloadCSV(csvString, 'egresos.csv');
@@ -323,7 +323,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                 const semicolonCount = (headerLine.match(/;/g) || []).length;
                 const delimiter = semicolonCount > commaCount ? ';' : ',';
 
-                const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase());
+                const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
                 const requiredHeaders = ['description', 'amount', 'date', 'category'];
                 const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
                 if (missingHeaders.length > 0) {
@@ -374,7 +374,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                         date: expenseData.date || format(new Date(), 'yyyy-MM-dd'),
                         category: expenseData.category || 'Otro',
                         supplierId: supplier.id,
-                        recordedBy: user.name,
+                        recordedBy: expenseData.registradopor || user.name,
                     });
                 }
                 
