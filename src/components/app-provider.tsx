@@ -38,10 +38,13 @@ export type Expense = {
   id: string;
   description: string;
   amount: number;
+  balance: number;
   date: string;
   category: string;
   supplierId: string;
+  paymentMethod: 'credito' | 'contado';
   recordedBy: string;
+  payments: Payment[];
 };
 
 export type Product = {
@@ -108,10 +111,11 @@ interface AppContextType {
   deleteIncome: (id: string) => Promise<void>;
   updateIncome: (income: Income) => Promise<void>;
   addPayment: (incomeId: string, payment: Omit<Payment, 'id'>) => Promise<void>;
-  addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
-  addMultipleExpenses: (expenses: Expense[], mode: 'append' | 'replace') => Promise<void>;
+  addExpense: (expense: Omit<Expense, 'id' | 'balance' | 'payments'>) => Promise<void>;
+  addMultipleExpenses: (expenses: Omit<Expense, 'id' | 'balance' | 'payments'>[], mode: 'append' | 'replace') => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   updateExpense: (expense: Expense) => Promise<void>;
+  addPaymentToExpense: (expenseId: string, payment: Omit<Payment, 'id'>) => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   addMultipleProducts: (products: Product[], mode: 'append' | 'replace') => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
@@ -161,7 +165,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribers: (() => void)[] = [];
 
     const collectionsToSync: { name: string, setter: React.Dispatch<any> }[] = [
-        { name: 'expenses', setter: setExpenses },
         { name: 'products', setter: setProducts },
         { name: 'clients', setter: setClients },
         { name: 'suppliers', setter: setSuppliers },
@@ -209,6 +212,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         console.error(`Error al escuchar la colección incomes:`, error);
         if (!loadStatus.incomes) {
             loadStatus.incomes = true;
+            checkAllLoaded();
+        }
+    }));
+
+     unsubscribers.push(onSnapshot(collection(db, 'expenses'), (querySnapshot) => {
+        const data = querySnapshot.docs.map(doc => {
+            const expenseData = { id: doc.id, ...doc.data() } as any;
+            if (expenseData.payments === undefined) {
+                expenseData.payments = [];
+            }
+            if (expenseData.balance === undefined) {
+                const paymentsTotal = expenseData.payments.reduce((acc: number, p: Payment) => acc + p.amount, 0);
+                if (expenseData.paymentMethod === 'contado') {
+                    expenseData.balance = 0;
+                } else {
+                    expenseData.balance = expenseData.amount - paymentsTotal;
+                }
+            }
+            return expenseData;
+        });
+        setExpenses(data as Expense[]);
+        if (!loadStatus.expenses) {
+            loadStatus.expenses = true;
+            checkAllLoaded();
+        }
+    }, (error) => {
+        console.error(`Error al escuchar la colección expenses:`, error);
+        if (!loadStatus.expenses) {
+            loadStatus.expenses = true;
             checkAllLoaded();
         }
     }));
@@ -433,11 +465,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // --- Expense Management with Firestore ---
-  const addExpense = async (expense: Omit<Expense, 'id'>) => {
-    if(db) await addDoc(collection(db, 'expenses'), expense);
+  const addExpense = async (expense: Omit<Expense, 'id' | 'balance' | 'payments'>) => {
+    if (!db) throw new Error("Firestore no está inicializado.");
+        
+    const newExpenseData: Omit<Expense, 'id'> = { ...expense, payments: [], balance: 0 };
+
+    if (expense.paymentMethod === 'contado') {
+        newExpenseData.balance = 0;
+        newExpenseData.payments.push({
+            id: doc(collection(db, 'temp')).id,
+            amount: expense.amount,
+            date: expense.date,
+            recordedBy: expense.recordedBy
+        });
+    } else {
+        newExpenseData.balance = expense.amount;
+    }
+
+    await addDoc(collection(db, 'expenses'), newExpenseData);
   };
 
-  const addMultipleExpenses = async (expensesToProcess: Expense[], mode: 'append' | 'replace' = 'append') => {
+  const addMultipleExpenses = async (expensesToProcess: Omit<Expense, 'id' | 'balance' | 'payments'>[], mode: 'append' | 'replace' = 'append') => {
       if (!db) return;
       const batch = writeBatch(db);
       if (mode === 'replace') {
@@ -445,15 +493,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
       }
       expensesToProcess.forEach(expense => {
-          const { id, ...expenseData } = expense;
-          const docRef = id && mode === 'append' ? doc(db, 'expenses', id) : doc(collection(db, 'expenses'));
-          batch.set(docRef, expenseData);
+          const newExpenseData: Omit<Expense, 'id'> = { ...expense, payments: [], balance: 0 };
+          if (expense.paymentMethod === 'contado') {
+            newExpenseData.balance = 0;
+            newExpenseData.payments.push({
+                id: doc(collection(db, 'temp')).id,
+                amount: expense.amount,
+                date: expense.date,
+                recordedBy: expense.recordedBy
+            });
+          } else {
+            newExpenseData.balance = expense.amount;
+          }
+          const docRef = doc(collection(db, 'expenses'));
+          batch.set(docRef, newExpenseData);
       });
       await batch.commit();
   }
 
   const updateExpense = async (updatedExpense: Expense) => {
     if(db) {
+        const paymentSum = updatedExpense.payments.reduce((acc, p) => acc + p.amount, 0);
+        updatedExpense.balance = updatedExpense.amount - paymentSum;
         const { id, ...expenseData } = updatedExpense;
         await updateDoc(doc(db, 'expenses', id), expenseData as any);
     }
@@ -461,6 +522,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteExpense = async (id: string) => {
     if(db) await deleteDoc(doc(db, 'expenses', id));
+  };
+  
+  const addPaymentToExpense = async (expenseId: string, payment: Omit<Payment, 'id'>) => {
+    if (!db) throw new Error("Firestore no está inicializado.");
+    const expenseRef = doc(db, 'expenses', expenseId);
+    
+    const newPayment = { ...payment, id: doc(collection(db, 'temp')).id };
+
+    await updateDoc(expenseRef, {
+        payments: arrayUnion(newPayment),
+        balance: increment(-payment.amount)
+    });
   };
 
   // --- Product Management with Firestore ---
@@ -652,7 +725,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         loading,
         incomes, expenses, products, rawMaterials, clients, suppliers, invoiceSettings,
         addIncome, addMultipleIncomes, deleteIncome, updateIncome, addPayment,
-        addExpense, addMultipleExpenses, deleteExpense, updateExpense,
+        addExpense, addMultipleExpenses, deleteExpense, updateExpense, addPaymentToExpense,
         addProduct, addMultipleProducts, deleteProduct, updateProduct,
         addRawMaterial, addMultipleRawMaterials, updateRawMaterial, deleteRawMaterial,
         addClient, addMultipleClients, updateClient, deleteClient,
@@ -663,3 +736,5 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     </AppContext.Provider>
   );
 };
+
+    

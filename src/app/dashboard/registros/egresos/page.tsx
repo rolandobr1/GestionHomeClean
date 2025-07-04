@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppData } from '@/hooks/use-app-data';
 import type { Expense, Supplier } from '@/components/app-provider';
@@ -24,13 +24,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 
 const expenseCategories = ["Materia Prima", "Envases", "Etiquetas", "Transportación", "Maquinarias y Herramientas", "Otro"];
 
-const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense | null, onSave: (expense: Expense | Omit<Expense, 'id'>) => Promise<void>, suppliers: Supplier[], onClose: () => void }) => {
+const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense | null, onSave: (expense: Omit<Expense, 'id' | 'balance' | 'payments'> | Expense) => Promise<void>, suppliers: Supplier[], onClose: () => void }) => {
     const [isSaving, setIsSaving] = useState(false);
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState(0);
     const [date, setDate] = useState('');
     const [category, setCategory] = useState('Materia Prima');
     const [supplierId, setSupplierId] = useState('generic');
+    const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
 
     useEffect(() => {
         if (expense) {
@@ -39,12 +40,14 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
             setDate(format(new Date(expense.date + 'T00:00:00'), 'yyyy-MM-dd'));
             setCategory(expense.category);
             setSupplierId(expense.supplierId || 'generic');
+            setPaymentMethod(expense.paymentMethod || 'contado');
         } else {
             setDescription('');
             setAmount(0);
             setDate(format(new Date(), 'yyyy-MM-dd'));
             setCategory('Materia Prima');
             setSupplierId('generic');
+            setPaymentMethod('contado');
         }
     }, [expense]);
 
@@ -61,6 +64,7 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
                     date,
                     category,
                     supplierId,
+                    paymentMethod,
                 });
             } else {
                 await onSave({
@@ -69,6 +73,7 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
                     date,
                     category,
                     supplierId,
+                    paymentMethod,
                     recordedBy: '' // Will be set in provider
                 });
             }
@@ -89,6 +94,18 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
                         </SelectTrigger>
                         <SelectContent>
                             {suppliers.map(sup => <SelectItem key={sup.id} value={sup.id}>{sup.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="paymentMethod">Método de Pago</Label>
+                    <Select onValueChange={(val) => setPaymentMethod(val as 'contado' | 'credito')} value={paymentMethod} disabled={isSaving}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecciona un método" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="contado">Contado</SelectItem>
+                            <SelectItem value="credito">Crédito</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -223,7 +240,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
         await deleteExpense(expenseId);
     };
 
-    const handleSave = async (expenseData: Expense | Omit<Expense, 'id'>) => {
+    const handleSave = async (expenseData: Omit<Expense, 'id' | 'balance' | 'payments'> | Expense) => {
         if (!user) {
             toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
             return;
@@ -295,8 +312,9 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
             'amount': expense.amount,
             'date': expense.date,
             'category': expense.category,
+            'paymentMethod': expense.paymentMethod,
             'supplier': allSuppliers.find(s => s.id === expense.supplierId)?.name || 'Suplidor Genérico',
-            'registradopor': expense.recordedBy
+            'recordedBy': expense.recordedBy
         }));
         const csvString = convertArrayOfObjectsToCSV(flattenedExpenses);
         downloadCSV(csvString, 'egresos.csv');
@@ -322,7 +340,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
 
                 const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
                 
-                const newExpenses: Expense[] = [];
+                const newExpenses: Omit<Expense, 'id'|'balance'|'payments'>[] = [];
                 const newSuppliersCache = new Map<string, Supplier>();
                 let allSuppliersCurrentList = [...allSuppliers];
 
@@ -359,14 +377,16 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                         throw new Error(`No se pudo encontrar o crear el suplidor "${supplierName}".`);
                     }
 
+                    const paymentMethod = (expenseData.paymentmethod === 'credito' || expenseData.paymentmethod === 'crédito') ? 'credito' : 'contado';
+
                     newExpenses.push({
-                        id: expenseData.id || '',
                         description: expenseData.description || 'N/A',
                         amount: parseFloat(expenseData.amount) || 0,
                         date: expenseData.date || format(new Date(), 'yyyy-MM-dd'),
                         category: expenseData.category || 'Otro',
+                        paymentMethod,
                         supplierId: supplier.id,
-                        recordedBy: expenseData.registradopor || user.name,
+                        recordedBy: expenseData.recordedby || user.name,
                     });
                 }
                 
@@ -583,3 +603,5 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
         </>
     );
 }
+
+    

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -319,7 +320,7 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({
-        description: '', amount: 0, date: '', category: 'Materia Prima', supplierId: 'generic'
+        description: '', amount: 0, date: '', category: 'Materia Prima', supplierId: 'generic', paymentMethod: 'contado' as 'contado' | 'credito'
     });
 
     useEffect(() => {
@@ -332,7 +333,7 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
         setFormData(prev => ({ ...prev, [key]: type === 'number' ? parseFloat(value) || 0 : value }));
     };
 
-    const handleSelectChange = (field: 'category' | 'supplierId') => (value: string) => {
+    const handleSelectChange = (field: 'category' | 'supplierId' | 'paymentMethod') => (value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
@@ -369,6 +370,18 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
                         </SelectTrigger>
                         <SelectContent>
                             {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="paymentMethod-dash-exp">Método de Pago</Label>
+                    <Select onValueChange={handleSelectChange('paymentMethod')} value={formData.paymentMethod} disabled={isSaving}>
+                        <SelectTrigger id="paymentMethod-dash-exp">
+                            <SelectValue placeholder="Selecciona un método" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="contado">Contado</SelectItem>
+                            <SelectItem value="credito">Crédito</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -550,7 +563,7 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
             <p className="text-xs text-muted-foreground">Valor a precio por mayor</p>
           </CardContent>
         </Card>
-        <Card onClick={() => router.push('/dashboard/cuentas')} className="cursor-pointer hover:bg-muted/50 active:scale-[0.98] transition-all">
+        <Card onClick={() => router.push('/dashboard/cuentas/por-cobrar')} className="cursor-pointer hover:bg-muted/50 active:scale-[0.98] transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Cuentas por Cobrar</CardTitle>
             <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
@@ -688,3 +701,5 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
     </div>
   );
 }
+
+    

@@ -1,3 +1,4 @@
+
 import {
   LayoutDashboard,
   FlaskConical,
@@ -34,10 +35,10 @@ export const navLinks = [
     matcher: /^\/dashboard\/contactos/,
   },
   {
-    href: "/dashboard/cuentas",
+    href: "/dashboard/cuentas/por-cobrar",
     label: "Cuentas",
     icon: CircleDollarSign,
-    matcher: /^\/dashboard\/cuentas$/,
+    matcher: /^\/dashboard\/cuentas/,
   },
   {
     href: "/dashboard/balance",
@@ -52,3 +53,5 @@ export const navLinks = [
     matcher: /^\/dashboard\/ajustes$/,
   },
 ];
+
+    
