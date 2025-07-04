@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -527,7 +526,7 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
             <ArrowUpCircle className="h-4 w-4 text-muted-foreground text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RD${totalIncome.toFixed(2)}</div>
+            <div className="text-2xl font-bold truncate">RD${totalIncome.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Total de ingresos este mes</p>
           </CardContent>
         </Card>
@@ -537,7 +536,7 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
             <ArrowDownCircle className="h-4 w-4 text-muted-foreground text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RD${totalExpenses.toFixed(2)}</div>
+            <div className="text-2xl font-bold truncate">RD${totalExpenses.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Total de egresos este mes</p>
           </CardContent>
         </Card>
@@ -547,7 +546,7 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
             <FlaskConical className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RD${inventoryValue.toFixed(2)}</div>
+            <div className="text-2xl font-bold truncate">RD${inventoryValue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Valor a precio por mayor</p>
           </CardContent>
         </Card>
@@ -557,7 +556,7 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
             <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">RD${accountsReceivable.total.toFixed(2)}</div>
+            <div className="text-2xl font-bold truncate">RD${accountsReceivable.total.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">{accountsReceivable.count} cuentas pendientes</p>
           </CardContent>
         </Card>

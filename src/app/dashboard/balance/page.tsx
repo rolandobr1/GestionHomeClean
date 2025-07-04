@@ -26,7 +26,7 @@ const BalanceCard = ({ title, value, description, icon: Icon, isLoading, formatA
                 </>
             ) : (
                 <>
-                    <div className="text-2xl font-bold">
+                    <div className="text-2xl font-bold truncate">
                         {formatAsCurrency ? `RD$${value.toFixed(2)}` : value}
                     </div>
                     <p className="text-xs text-muted-foreground">
