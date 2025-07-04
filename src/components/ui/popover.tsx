@@ -6,11 +6,6 @@ import * as PopoverPrimitive from "@radix-ui/react-popover"
 
 import { cn } from "@/lib/utils"
 
-function filterNextProps(props: Record<string, any>) {
-  const { params, searchParams, ...rest } = props;
-  return rest;
-}
-
 const Popover = PopoverPrimitive.Root
 
 const PopoverTrigger = PopoverPrimitive.Trigger
@@ -34,7 +29,7 @@ const PopoverContent = React.forwardRef<
           event.preventDefault();
         }
       }}
-      {...filterNextProps(props)}
+      {...props}
     />
   </PopoverPrimitive.Portal>
 ))
