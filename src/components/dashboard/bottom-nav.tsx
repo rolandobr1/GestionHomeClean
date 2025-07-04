@@ -4,15 +4,24 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { navLinks } from "./nav-links";
+import { useAuth } from "@/hooks/use-auth";
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const accessibleNavLinks = navLinks.filter(link => {
+    if (link.href === '/dashboard/ajustes') {
+      return user?.role === 'admin';
+    }
+    return true;
+  });
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t z-50">
       <nav className="grid h-full grid-cols-5">
-        {navLinks.slice(0, 5).map((link) => {
-          const isActive = pathname === link.href;
+        {accessibleNavLinks.slice(0, 5).map((link) => {
+          const isActive = link.matcher.test(pathname);
           return (
             <Link
               key={link.href}

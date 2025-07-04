@@ -14,12 +14,21 @@ import { UserNav } from "./user-nav";
 import { navLinks } from "./nav-links";
 import Link from "next/link";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 export function DashboardHeader() {
     const pathname = usePathname();
+    const { user } = useAuth();
     const currentLink = navLinks.find(link => link.matcher.test(pathname));
     const pageTitle = currentLink ? currentLink.label : "Dashboard";
     const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+    const accessibleNavLinks = navLinks.filter(link => {
+      if (link.href === '/dashboard/ajustes') {
+        return user?.role === 'admin';
+      }
+      return true;
+    });
 
   return (
     <header className="flex h-14 w-full items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
@@ -43,7 +52,7 @@ export function DashboardHeader() {
                 </SheetTitle>
             </SheetHeader>
             <nav className="grid gap-2 text-lg font-medium p-4">
-              {navLinks.map(link => (
+              {accessibleNavLinks.map(link => (
                  <Link
                     key={link.href}
                     href={link.href}

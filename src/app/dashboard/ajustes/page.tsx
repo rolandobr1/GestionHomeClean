@@ -31,9 +31,20 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
   } from "@/components/ui/alert-dialog"
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 
 export default function AjustesPage({ params, searchParams }: { params: any; searchParams: any; }) {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user?.role !== 'admin') {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
   const { 
     invoiceSettings, 
     updateInvoiceSettings, 
@@ -150,6 +161,13 @@ export default function AjustesPage({ params, searchParams }: { params: any; sea
       }
   }
 
+  if (loading || !user || user.role !== 'admin') {
+    return (
+        <div className="flex justify-center items-center h-full p-8">
+            <p className="text-muted-foreground">No tienes permiso para ver esta página.</p>
+        </div>
+    );
+  }
 
   return (
     <>

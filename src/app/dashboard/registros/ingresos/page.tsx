@@ -861,10 +861,12 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         <div className="space-y-6">
              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv" />
              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleImportClick}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Imp.
-                </Button>
+                {user?.role === 'admin' && (
+                  <Button variant="outline" onClick={handleImportClick}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Imp.
+                  </Button>
+                )}
                 <Button variant="outline" onClick={handleExport}>
                     <Download className="mr-2 h-4 w-4" />
                     Exp.
@@ -976,9 +978,11 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuItem onClick={() => handleGenerateInvoice(income)}><FileText className="mr-2 h-4 w-4" /> Generar Factura</DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => handleEdit(income)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                                            <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                                                            </AlertDialogTrigger>
+                                                            {user?.role === 'admin' && (
+                                                              <AlertDialogTrigger asChild>
+                                                                  <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                              </AlertDialogTrigger>
+                                                            )}
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                     <AlertDialogContent>

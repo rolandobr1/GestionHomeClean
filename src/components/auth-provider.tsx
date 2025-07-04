@@ -8,6 +8,7 @@ export type AppUser = {
   uid: string;
   email: string | null;
   name: string;
+  role: 'admin' | 'editor';
 };
 
 interface AuthContextType {
@@ -25,21 +26,25 @@ export const AuthContext = createContext<AuthContextType>({
 });
 
 const mapFirebaseUserToAppUser = (firebaseUser: FirebaseUser): AppUser => {
-  const emailName = firebaseUser.email?.split('@')[0] || 'Usuario';
-  const name = emailName.charAt(0).toUpperCase() + emailName.slice(1);
-  
+  const email = firebaseUser.email || '';
+  const emailName = email.split('@')[0] || 'Usuario';
+  let name = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+  let role: 'admin' | 'editor' = 'editor'; // Default to editor
+
   // Special mapping for specific users
-  if (firebaseUser.email?.toLowerCase() === 'rolando@homeclean.do') {
-    return { uid: firebaseUser.uid, email: firebaseUser.email, name: 'Rolando' };
-  }
-  if (firebaseUser.email?.toLowerCase() === 'mikel@homeclean.do') {
-    return { uid: firebaseUser.uid, email: firebaseUser.email, name: 'Mikel' };
+  if (email.toLowerCase() === 'rolando@homeclean.do') {
+    name = 'Rolando';
+    role = 'admin';
+  } else if (email.toLowerCase() === 'mikel@homeclean.do') {
+    name = 'Mikel';
+    role = 'editor';
   }
   
   return {
     uid: firebaseUser.uid,
     email: firebaseUser.email,
-    name: name,
+    name,
+    role,
   };
 };
 

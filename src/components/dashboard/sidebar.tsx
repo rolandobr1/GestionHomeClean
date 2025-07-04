@@ -13,9 +13,18 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { navLinks } from "./nav-links";
+import { useAuth } from "@/hooks/use-auth";
 
 export function DashboardSidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const accessibleNavLinks = navLinks.filter(link => {
+    if (link.href === '/dashboard/ajustes') {
+      return user?.role === 'admin';
+    }
+    return true;
+  });
 
   return (
     <Sidebar
@@ -35,7 +44,7 @@ export function DashboardSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {navLinks.map((link) => {
+          {accessibleNavLinks.map((link) => {
             const isActive = link.matcher.test(pathname);
             return (
               <SidebarMenuItem key={link.href}>
