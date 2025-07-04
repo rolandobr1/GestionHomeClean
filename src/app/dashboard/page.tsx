@@ -25,7 +25,7 @@ import {
   ChartTooltipContent,
   ChartConfig,
 } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ArrowUpCircle, ArrowDownCircle, CircleDollarSign, FlaskConical, AlertTriangle, PlusCircle, Trash2 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -571,14 +571,59 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
           </CardHeader>
           <CardContent className="pl-2">
              <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                <BarChart data={chartData} margin={{ top: 20, right: 20, bottom: 5, left: -10 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
-                    <YAxis tickLine={false} axisLine={false} tickMargin={10} tickFormatter={(value) => `RD$${value / 1000}k`} />
-                    <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                    <Bar dataKey="income" fill="var(--color-income)" radius={4} />
-                    <Bar dataKey="expense" fill="var(--color-expense)" radius={4} />
-                </BarChart>
+                <AreaChart
+                  data={chartData}
+                  margin={{
+                    top: 10,
+                    right: 30,
+                    left: 0,
+                    bottom: 0,
+                  }}
+                >
+                  <CartesianGrid vertical={false} />
+                  <XAxis
+                    dataKey="month"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => `RD$${Number(value) / 1000}k`}
+                  />
+                  <ChartTooltip
+                    cursor={true}
+                    content={<ChartTooltipContent indicator="dot" />}
+                  />
+                  <defs>
+                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-income)" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="var(--color-income)" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-expense)" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="var(--color-expense)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="monotone"
+                    dataKey="income"
+                    stroke="var(--color-income)"
+                    fillOpacity={1} 
+                    fill="url(#colorIncome)"
+                    strokeWidth={2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="expense"
+                    stroke="var(--color-expense)"
+                    fillOpacity={1} 
+                    fill="url(#colorExpense)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
             </ChartContainer>
           </CardContent>
         </Card>

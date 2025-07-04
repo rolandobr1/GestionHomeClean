@@ -5,6 +5,7 @@ import {
   FileCog,
   Users,
   ClipboardList,
+  Scale,
 } from "lucide-react";
 
 export const navLinks = [
@@ -32,6 +33,11 @@ export const navLinks = [
     href: "/dashboard/cuentas",
     label: "Cuentas",
     icon: CircleDollarSign,
+  },
+  {
+    href: "/dashboard/balance",
+    label: "Balance",
+    icon: Scale,
   },
   {
     href: "/dashboard/ajustes",
