@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Wallet, MoreHorizontal, X, Info, Sigma, Download, Share2, ChevronsUpDown } from "lucide-react";
 import { useAppData } from '@/hooks/use-app-data';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -405,25 +405,25 @@ export default function CuentasPage({ params, searchParams }: { params: any; sea
 
       <Card>
           <Collapsible defaultOpen={true}>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <CardTitle>Facturas a Crédito Pendientes</CardTitle>
                     <CardDescription>Un listado de todas las ventas a crédito con saldo pendiente.</CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
                     <Button onClick={handleShare} variant="outline" size="sm">
-                        <Share2 className="mr-2 h-4 w-4" />
-                        Compartir
+                        <Share2 className="h-4 w-4" />
+                        <span className="hidden sm:inline">Compartir</span>
                     </Button>
                     <Button onClick={handleExportPdf} variant="outline" size="sm">
-                        <Download className="mr-2 h-4 w-4" />
-                        Exportar PDF
+                        <Download className="h-4 w-4" />
+                        <span className="hidden sm:inline">Exportar</span>
                     </Button>
                     <CollapsibleTrigger asChild>
                         <Button variant="ghost" size="sm">
-                            <span className="data-[state=open]:hidden">Mostrar</span>
-                            <span className="data-[state=closed]:hidden">Ocultar</span>
-                            <ChevronsUpDown className="ml-2 h-4 w-4" />
+                            <span className="hidden sm:inline data-[state=open]:hidden">Mostrar</span>
+                            <span className="hidden sm:inline data-[state=closed]:hidden">Ocultar</span>
+                            <ChevronsUpDown className="h-4 w-4" />
                         </Button>
                     </CollapsibleTrigger>
                 </div>
