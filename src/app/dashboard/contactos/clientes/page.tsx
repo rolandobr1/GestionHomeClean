@@ -334,16 +334,15 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
         <Card>
             <Collapsible defaultOpen={true}>
                 <CardHeader>
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-center">
                         <div>
                             <CardTitle>Lista de Clientes</CardTitle>
                             <CardDescription>Un listado de todos tus clientes.</CardDescription>
                         </div>
                         <CollapsibleTrigger asChild>
-                             <Button variant="ghost" size="sm">
-                                <span className="data-[state=open]:hidden">Mostrar</span>
-                                <span className="data-[state=closed]:hidden">Ocultar</span>
-                                <ChevronsUpDown className="ml-2 h-4 w-4" />
+                             <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <ChevronsUpDown className="h-4 w-4" />
+                                <span className="sr-only">Mostrar/Ocultar</span>
                             </Button>
                         </CollapsibleTrigger>
                     </div>

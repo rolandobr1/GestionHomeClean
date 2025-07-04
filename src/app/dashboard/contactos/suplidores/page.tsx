@@ -333,16 +333,15 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
             <Card>
                 <Collapsible defaultOpen={true}>
                     <CardHeader>
-                        <div className="flex justify-between items-start">
+                        <div className="flex justify-between items-center">
                             <div>
                                 <CardTitle>Lista de Suplidores</CardTitle>
                                 <CardDescription>Un listado de todos tus suplidores.</CardDescription>
                             </div>
                             <CollapsibleTrigger asChild>
-                                 <Button variant="ghost" size="sm">
-                                    <span className="data-[state=open]:hidden">Mostrar</span>
-                                    <span className="data-[state=closed]:hidden">Ocultar</span>
-                                    <ChevronsUpDown className="ml-2 h-4 w-4" />
+                                 <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <ChevronsUpDown className="h-4 w-4" />
+                                    <span className="sr-only">Mostrar/Ocultar</span>
                                 </Button>
                             </CollapsibleTrigger>
                         </div>

@@ -65,7 +65,7 @@ const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | nul
             }
             const newProduct: SoldProduct = {
                 productId: `generic_${Date.now()}`,
-                name: genericProductName || 'Producto Genérico',
+                name: genericProductName || 'Venta General',
                 quantity: currentQuantity,
                 price: Number(genericProductPrice),
             };
@@ -894,10 +894,9 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                 <CardDescription>Un listado de todas tus transacciones de ingresos.</CardDescription>
                             </div>
                              <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                    <span className="data-[state=open]:hidden">Mostrar</span>
-                                    <span className="data-[state=closed]:hidden">Ocultar</span>
-                                    <ChevronsUpDown className="ml-2 h-4 w-4" />
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <ChevronsUpDown className="h-4 w-4" />
+                                    <span className="sr-only">Mostrar/Ocultar</span>
                                 </Button>
                             </CollapsibleTrigger>
                         </div>

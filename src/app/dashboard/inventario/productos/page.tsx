@@ -325,10 +325,9 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
                                 <CardDescription>Un listado de todos tus productos listos para la venta.</CardDescription>
                             </div>
                             <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                    <span className="data-[state=open]:hidden">Mostrar</span>
-                                    <span className="data-[state=closed]:hidden">Ocultar</span>
-                                    <ChevronsUpDown className="ml-2 h-4 w-4" />
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <ChevronsUpDown className="h-4 w-4" />
+                                    <span className="sr-only">Mostrar/Ocultar</span>
                                 </Button>
                             </CollapsibleTrigger>
                         </div>
