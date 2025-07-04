@@ -1,22 +1,16 @@
 
 "use client"
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppData } from '@/hooks/use-app-data';
-import type { InvoiceSettings, Income, Expense, Product, Client, Supplier, RawMaterial } from '@/components/app-provider';
+import type { InvoiceSettings } from '@/components/app-provider';
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronsUpDown, X, PlusCircle } from 'lucide-react';
+import { X, PlusCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -38,38 +32,11 @@ import {
     AlertDialogTrigger,
   } from "@/components/ui/alert-dialog"
 
-const DataTableView = ({ title, children }: { title: string, children: React.ReactNode }) => {
-    return (
-        <Collapsible defaultOpen={true}>
-            <div className="flex items-center justify-between rounded-t-lg border bg-muted/50 px-4 py-2">
-                <h4 className="font-semibold">{title}</h4>
-                <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="w-9 p-0">
-                        <ChevronsUpDown className="h-4 w-4" />
-                        <span className="sr-only">Contraer/Expandir</span>
-                    </Button>
-                </CollapsibleTrigger>
-            </div>
-            <CollapsibleContent>
-                <div className="w-full overflow-x-auto rounded-b-lg border border-t-0 p-1">
-                    {children}
-                </div>
-            </CollapsibleContent>
-        </Collapsible>
-    );
-}
-
 
 export default function AjustesPage({ params, searchParams }: { params: any; searchParams: any; }) {
   const { 
     invoiceSettings, 
     updateInvoiceSettings, 
-    incomes, 
-    expenses, 
-    products,
-    rawMaterials,
-    clients, 
-    suppliers,
     expenseCategories,
     updateExpenseCategories,
   } = useAppData();
@@ -84,13 +51,6 @@ export default function AjustesPage({ params, searchParams }: { params: any; sea
   const [isPaymentMethodDialogOpen, setIsPaymentMethodDialogOpen] = useState(false);
   const [newPaymentMethod, setNewPaymentMethod] = useState('');
   const [isSavingPaymentMethod, setIsSavingPaymentMethod] = useState(false);
-
-
-  const allClients = useMemo(() => [{ id: 'generic', name: 'Cliente Genérico', email: '', phone: '', address: '' }, ...clients], [clients]);
-  const allSuppliers = useMemo(() => [{ id: 'generic', name: 'Suplidor Genérico', email: '', phone: '', address: '' }, ...suppliers], [suppliers]);
-
-  const sortedIncomes = useMemo(() => [...incomes].sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime()), [incomes]);
-  const sortedExpenses = useMemo(() => [...expenses].sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime()), [expenses]);
 
   useEffect(() => {
     const defaultSettings: Partial<InvoiceSettings> = {
@@ -327,99 +287,6 @@ export default function AjustesPage({ params, searchParams }: { params: any; sea
                 </Button>
             </div>
         </form>
-
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Vista de Datos del Sistema</CardTitle>
-            <CardDescription>Visualiza todos los registros almacenados en la aplicación. Solo lectura.</CardDescription>
-          </CardHeader>
-          <CardContent>
-              <Tabs defaultValue="incomes" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-                      <TabsTrigger value="incomes">Ingresos</TabsTrigger>
-                      <TabsTrigger value="expenses">Egresos</TabsTrigger>
-                      <TabsTrigger value="products">Productos</TabsTrigger>
-                      <TabsTrigger value="rawMaterials">Materia Prima</TabsTrigger>
-                      <TabsTrigger value="clients">Clientes</TabsTrigger>
-                      <TabsTrigger value="suppliers">Suplidores</TabsTrigger>
-                  </TabsList>
-                  <div className="mt-4">
-                    <TabsContent value="incomes">
-                      <DataTableView title="Registros de Ingresos">
-                          <Table>
-                              <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Cliente</TableHead><TableHead>Fecha</TableHead><TableHead>Monto</TableHead><TableHead>Registrado Por</TableHead></TableRow></TableHeader>
-                              <TableBody>
-                                  {sortedIncomes.map((item: Income) => (
-                                      <TableRow key={item.id}><TableCell>{item.id.slice(-6)}</TableCell><TableCell>{allClients.find(c=>c.id === item.clientId)?.name}</TableCell><TableCell>{format(new Date(item.date + 'T00:00:00'), 'P', { locale: es })}</TableCell><TableCell>RD${item.totalAmount.toFixed(2)}</TableCell><TableCell>{item.recordedBy}</TableCell></TableRow>
-                                  ))}
-                              </TableBody>
-                          </Table>
-                      </DataTableView>
-                    </TabsContent>
-                    <TabsContent value="expenses">
-                      <DataTableView title="Registros de Egresos">
-                            <Table>
-                                <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Descripción</TableHead><TableHead>Suplidor</TableHead><TableHead>Fecha</TableHead><TableHead>Monto</TableHead><TableHead>Registrado Por</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                    {sortedExpenses.map((item: Expense) => (
-                                        <TableRow key={item.id}><TableCell>{item.id.slice(-6)}</TableCell><TableCell>{item.description}</TableCell><TableCell>{allSuppliers.find(s=>s.id === item.supplierId)?.name}</TableCell><TableCell>{format(new Date(item.date + 'T00:00:00'), 'P', { locale: es })}</TableCell><TableCell>RD${item.amount.toFixed(2)}</TableCell><TableCell>{item.recordedBy}</TableCell></TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </DataTableView>
-                    </TabsContent>
-                    <TabsContent value="products">
-                      <DataTableView title="Registros de Productos Terminados">
-                            <Table>
-                                <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>SKU</TableHead><TableHead>Stock</TableHead><TableHead>Precio Detalle</TableHead><TableHead>Precio Por Mayor</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                    {products.map((item: Product) => (
-                                        <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell>{item.sku}</TableCell><TableCell><Badge variant={item.stock <= item.reorderLevel ? "destructive" : "secondary"}>{item.stock} {item.unit}</Badge></TableCell><TableCell>RD${item.salePriceRetail.toFixed(2)}</TableCell><TableCell>RD${item.salePriceWholesale.toFixed(2)}</TableCell></TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </DataTableView>
-                    </TabsContent>
-                    <TabsContent value="rawMaterials">
-                        <DataTableView title="Registros de Materia Prima">
-                            <Table>
-                                <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>SKU</TableHead><TableHead>Suplidor</TableHead><TableHead>Stock</TableHead><TableHead>Precio Compra</TableHead><TableHead>Registrado Por</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                    {rawMaterials.map((item: RawMaterial) => (
-                                        <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell>{item.sku}</TableCell><TableCell>{allSuppliers.find(s=>s.id === item.supplierId)?.name}</TableCell><TableCell><Badge variant={item.stock <= item.reorderLevel ? "destructive" : "secondary"}>{item.stock} {item.unit}</Badge></TableCell><TableCell>RD${item.purchasePrice.toFixed(2)}</TableCell><TableCell>{item.recordedBy}</TableCell></TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </DataTableView>
-                    </TabsContent>
-                    <TabsContent value="clients">
-                        <DataTableView title="Registros de Clientes">
-                            <Table>
-                                <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Email</TableHead><TableHead>Teléfono</TableHead><TableHead>Dirección</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                    {clients.map((item: Client) => (
-                                        <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell>{item.email}</TableCell><TableCell>{item.phone}</TableCell><TableCell>{item.address}</TableCell></TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </DataTableView>
-                    </TabsContent>
-                    <TabsContent value="suppliers">
-                        <DataTableView title="Registros de Suplidores">
-                            <Table>
-                                <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Email</TableHead><TableHead>Teléfono</TableHead><TableHead>Dirección</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                    {suppliers.map((item: Supplier) => (
-                                        <TableRow key={item.id}><TableCell>{item.name}</TableCell><TableCell>{item.email}</TableCell><TableCell>{item.phone}</TableCell><TableCell>{item.address}</TableCell></TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </DataTableView>
-                    </TabsContent>
-                  </div>
-              </Tabs>
-          </CardContent>
-        </Card>
       </div>
 
       <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
