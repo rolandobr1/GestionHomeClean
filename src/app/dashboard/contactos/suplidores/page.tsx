@@ -1,103 +1,21 @@
 
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, Search, ChevronsUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAppData } from '@/hooks/use-app-data';
 import type { Supplier } from '@/components/app-provider';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/hooks/use-auth';
-
-
-const ContactForm = ({
-  contact,
-  onSave,
-  onClose,
-}: {
-  contact: Supplier | null;
-  onSave: (supplier: Omit<Supplier, 'id' | 'code'> | Supplier) => Promise<void>;
-  onClose: () => void;
-}) => {
-  const [formData, setFormData] = useState({
-    name: '', email: '', phone: '', address: ''
-  });
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (contact) {
-      setFormData({
-        name: contact.name,
-        email: contact.email,
-        phone: contact.phone,
-        address: contact.address,
-      });
-    } else {
-      setFormData({ name: '', email: '', phone: '', address: '' });
-    }
-  }, [contact]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      if (contact) {
-        await onSave({ ...contact, ...formData });
-      } else {
-        await onSave(formData);
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <div className="grid gap-4 py-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Nombre</Label>
-          <Input id="name" value={formData.name} onChange={handleChange} required disabled={isSaving}/>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Correo</Label>
-          <Input id="email" type="email" value={formData.email} onChange={handleChange} disabled={isSaving}/>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="phone">Teléfono</Label>
-          <Input id="phone" value={formData.phone} onChange={handleChange} disabled={isSaving}/>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="address">Dirección</Label>
-          <Input id="address" value={formData.address} onChange={handleChange} disabled={isSaving}/>
-        </div>
-      </div>
-      <DialogFooter>
-        <DialogClose asChild>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
-            Cancelar
-          </Button>
-        </DialogClose>
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? 'Guardando...' : 'Guardar'}
-        </Button>
-      </DialogFooter>
-    </form>
-  );
-};
-
+import { ContactForm } from '@/components/contact-form';
 
 export default function SuplidoresPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { suppliers, addSupplier, updateSupplier, deleteSupplier, addMultipleSuppliers } = useAppData();
@@ -291,12 +209,18 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
     };
 
     const handleSave = async (supplierData: Omit<Supplier, 'id' | 'code'> | Supplier) => {
-        if ('id' in supplierData && supplierData.id) {
-            await updateSupplier(supplierData as Supplier);
-        } else {
-            await addSupplier(supplierData as Omit<Supplier, 'id' | 'code'>);
+        try {
+            if ('id' in supplierData && supplierData.id) {
+                await updateSupplier(supplierData as Supplier);
+                toast({ title: "Suplidor Actualizado", description: "Los datos del suplidor han sido actualizados." });
+            } else {
+                await addSupplier(supplierData as Omit<Supplier, 'id' | 'code'>);
+                toast({ title: "Suplidor Añadido", description: "El nuevo suplidor ha sido añadido a tus registros." });
+            }
+            setIsDialogOpen(false);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo guardar el suplidor.' });
         }
-        setIsDialogOpen(false);
     };
 
     const handleDialogChange = (open: boolean) => {
@@ -467,5 +391,3 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
         </>
     );
 }
-
-    

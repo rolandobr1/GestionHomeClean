@@ -1,16 +1,15 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { PlusCircle, MoreHorizontal, Trash2, Edit, X, Download, Upload, ChevronsUpDown } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -21,152 +20,7 @@ import type { DateRange } from 'react-day-picker';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-
-const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense | null, onSave: (expense: Omit<Expense, 'id' | 'balance' | 'payments'> | Expense) => Promise<void>, suppliers: Supplier[], onClose: () => void }) => {
-    const { expenseCategories, invoiceSettings } = useAppData();
-    const [isSaving, setIsSaving] = useState(false);
-    const [description, setDescription] = useState('');
-    const [amount, setAmount] = useState(0);
-    const [date, setDate] = useState('');
-    const [category, setCategory] = useState(expenseCategories[0] || 'Otro');
-    const [supplierId, setSupplierId] = useState('generic');
-    const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
-    const [paymentType, setPaymentType] = useState(invoiceSettings.paymentMethods[0] || '');
-
-    useEffect(() => {
-        if (expense) {
-            setDescription(expense.description);
-            setAmount(expense.amount);
-            setDate(format(new Date(expense.date + 'T00:00:00'), 'yyyy-MM-dd'));
-            setCategory(expense.category);
-            setSupplierId(expense.supplierId || 'generic');
-            setPaymentMethod(expense.paymentMethod || 'contado');
-            setPaymentType(expense.paymentType || (invoiceSettings.paymentMethods[0] || ''));
-        } else {
-            setDescription('');
-            setAmount(0);
-            setDate(format(new Date(), 'yyyy-MM-dd'));
-            setCategory(expenseCategories.length > 0 ? expenseCategories[0] : 'Otro');
-            setSupplierId('generic');
-            setPaymentMethod('contado');
-            setPaymentType(invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : '');
-        }
-    }, [expense, expenseCategories, invoiceSettings.paymentMethods]);
-
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSaving(true);
-        try {
-            const dataToSave: Partial<Omit<Expense, 'id' | 'balance' | 'payments'>> = {
-                description,
-                amount,
-                date,
-                category,
-                supplierId,
-                paymentMethod,
-                paymentType,
-            };
-
-            if (dataToSave.paymentMethod !== 'contado') {
-                delete dataToSave.paymentType;
-            }
-
-            if (expense) {
-                await onSave({
-                    ...expense,
-                    ...dataToSave
-                });
-            } else {
-                await onSave({
-                    ...dataToSave,
-                    recordedBy: '' // Will be set in provider
-                } as Omit<Expense, 'id' | 'balance' | 'payments'>);
-            }
-            onClose();
-        } catch (error) {
-            console.error("Error saving expense from form:", error);
-        } finally {
-            setIsSaving(false);
-        }
-    }
-    
-    return (
-        <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                    <Label htmlFor="supplierId">Suplidor</Label>
-                    <Select onValueChange={setSupplierId} value={supplierId} disabled={isSaving}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Selecciona un suplidor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {suppliers.map(sup => <SelectItem key={sup.id} value={sup.id}>{sup.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                    <div className="space-y-2">
-                        <Label htmlFor="paymentMethod">Condición de Pago</Label>
-                        <Select onValueChange={(val) => setPaymentMethod(val as 'contado' | 'credito')} value={paymentMethod} disabled={isSaving}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecciona una condición" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="contado">Contado</SelectItem>
-                                <SelectItem value="credito">Crédito</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    {paymentMethod === 'contado' && (
-                        <div className="space-y-2">
-                            <Label htmlFor="paymentType">Método de Pago</Label>
-                            <Select onValueChange={setPaymentType} value={paymentType} disabled={isSaving}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona un método" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {invoiceSettings.paymentMethods.map(method => (
-                                        <SelectItem key={method} value={method}>{method}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    )}
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="category">Categoría</Label>
-                    <Select onValueChange={setCategory} value={category} disabled={isSaving}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Selecciona una categoría" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="description">Descripción</Label>
-                    <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} required disabled={isSaving}/>
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="amount">Monto</Label>
-                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value) || 0)} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="date">Fecha</Label>
-                    <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required disabled={isSaving}/>
-                </div>
-            </div>
-             <DialogFooter>
-                <DialogClose asChild>
-                     <Button type="button" variant="secondary" disabled={isSaving}>Cancelar</Button>
-                </DialogClose>
-                <Button type="submit" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar'}</Button>
-            </DialogFooter>
-        </form>
-    );
-};
+import { ExpenseForm } from '@/components/expense-form';
 
 export default function EgresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { expenses, addExpense, deleteExpense, updateExpense, addMultipleExpenses, suppliers, addSupplier, expenseCategories } = useAppData();
@@ -262,20 +116,33 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
     };
 
     const handleDelete = async (expenseId: string) => {
-        await deleteExpense(expenseId);
+        try {
+            await deleteExpense(expenseId);
+            toast({ title: 'Egreso Eliminado' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar el egreso.' });
+        }
     };
 
-    const handleSave = async (expenseData: Omit<Expense, 'id' | 'balance' | 'payments'> | Expense) => {
+    const handleSave = async (expenseData: Omit<Expense, 'id' | 'balance' | 'payments' | 'recordedBy'> | Expense) => {
         if (!user) {
             toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
             return;
         }
         
-        if ('id' in expenseData && expenseData.id) {
-            await updateExpense(expenseData as Expense);
-        } else {
-            const expenseToSave = { ...expenseData, recordedBy: user.name };
-            await addExpense(expenseToSave);
+        try {
+            if ('id' in expenseData && expenseData.id) {
+                await updateExpense(expenseData as Expense);
+                toast({ title: "Egreso Actualizado", description: "El registro ha sido actualizado." });
+            } else {
+                const expenseToSave = { ...expenseData, recordedBy: user.name };
+                await addExpense(expenseToSave as Omit<Expense, 'id' | 'balance' | 'payments'>);
+                toast({ title: "Egreso Registrado", description: "El nuevo egreso ha sido guardado." });
+            }
+            setIsDialogOpen(false);
+        } catch (error) {
+            console.error("Error saving expense:", error);
+            toast({ variant: "destructive", title: "Error al Guardar", description: "No se pudo guardar el egreso." });
         }
     };
 
@@ -605,7 +472,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
                             {editingExpense ? 'Actualiza los detalles de tu egreso.' : 'Añade un nuevo egreso a tus registros.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <ExpenseForm expense={editingExpense} onSave={handleSave} suppliers={allSuppliers} onClose={() => handleDialogChange(false)} />
+                    <ExpenseForm expense={editingExpense} onSave={handleSave} onClose={() => handleDialogChange(false)} />
                 </DialogContent>
             </Dialog>
              <AlertDialog open={isImportAlertOpen} onOpenChange={setIsImportAlertOpen}>

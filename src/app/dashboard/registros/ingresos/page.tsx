@@ -7,16 +7,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, Upload, ChevronsUpDown } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from '@/components/ui/separator';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppData } from '@/hooks/use-app-data';
-import type { Income, SoldProduct, Client, Payment } from '@/components/app-provider';
+import type { Income, Client, Payment, SoldProduct } from '@/components/app-provider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { InvoiceTemplate } from '@/components/invoice-template';
 import { useToast } from "@/hooks/use-toast";
@@ -25,306 +22,8 @@ import type { DateRange } from 'react-day-picker';
 import { useAuth } from '@/hooks/use-auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-
-const IncomeForm = ({ income, onSave, clients, onClose }: { income: Income | null, onSave: (income: Income | Omit<Income, 'id'>) => Promise<void>, clients: Client[], onClose: () => void }) => {
-    const { products: allProducts, invoiceSettings } = useAppData();
-    const { toast } = useToast();
-    const [isSaving, setIsSaving] = useState(false);
-    const [clientId, setClientId] = useState('generic');
-    const [paymentMethod, setPaymentMethod] = useState<'contado' | 'credito'>('contado');
-    const [paymentType, setPaymentType] = useState(invoiceSettings.paymentMethods[0] || '');
-    const [date, setDate] = useState('');
-    const [soldProducts, setSoldProducts] = useState<SoldProduct[]>([]);
-    
-    const [currentProduct, setCurrentProduct] = useState('');
-    const [currentQuantity, setCurrentQuantity] = useState(1);
-    const [currentPriceType, setCurrentPriceType] = useState<'retail' | 'wholesale'>('retail');
-
-    const [genericProductName, setGenericProductName] = useState('');
-    const [genericProductPrice, setGenericProductPrice] = useState<number | string>('');
-
-    useEffect(() => {
-        if (income) {
-            setClientId(income.clientId);
-            setPaymentMethod(income.paymentMethod);
-            setPaymentType(income.paymentType || (invoiceSettings.paymentMethods[0] || ''));
-            setDate(format(new Date(income.date + 'T00:00:00'), 'yyyy-MM-dd'));
-            setSoldProducts(income.products);
-        } else {
-            setClientId('generic');
-            setPaymentMethod('contado');
-            setPaymentType(invoiceSettings.paymentMethods[0] || '');
-            setDate(format(new Date(), 'yyyy-MM-dd'));
-            setSoldProducts([]);
-        }
-    }, [income, invoiceSettings.paymentMethods]);
-
-    const handleAddProduct = () => {
-        if (currentProduct === 'generic') {
-            if (Number(genericProductPrice) <= 0 || currentQuantity <= 0) {
-                 toast({
-                    variant: "destructive",
-                    title: "Datos Inválidos",
-                    description: "Por favor, ingresa un precio y cantidad mayor a cero.",
-                });
-                return;
-            }
-            const newProduct: SoldProduct = {
-                productId: `generic_${Date.now()}`,
-                name: genericProductName || 'Venta General',
-                quantity: currentQuantity,
-                price: Number(genericProductPrice),
-            };
-            setSoldProducts([...soldProducts, newProduct]);
-            setGenericProductName('');
-            setGenericProductPrice('');
-        } else {
-            const product = allProducts.find(p => p.id === currentProduct);
-            if (!product || currentQuantity <= 0) return;
-
-            const price = currentPriceType === 'retail' ? product.salePriceRetail : product.salePriceWholesale;
-            
-            const existingProduct = soldProducts.find(p => p.productId === product.id && p.price === price);
-
-            if (existingProduct) {
-                setSoldProducts(soldProducts.map(p => 
-                    p.productId === product.id && p.price === price
-                    ? { ...p, quantity: p.quantity + currentQuantity } 
-                    : p
-                ));
-            } else {
-                setSoldProducts([...soldProducts, {
-                    productId: product.id,
-                    name: product.name,
-                    quantity: currentQuantity,
-                    price: price,
-                }]);
-            }
-        }
-        
-        setCurrentProduct('');
-        setCurrentQuantity(1);
-        setCurrentPriceType('retail');
-    };
-
-    const handleRemoveProduct = (productId: string) => {
-        setSoldProducts(soldProducts.filter(p => p.productId !== productId));
-    };
-
-    const totalAmount = soldProducts.reduce((acc, p) => acc + (p.price * p.quantity), 0);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (soldProducts.length === 0) {
-             toast({
-                variant: "destructive",
-                title: "Venta Vacía",
-                description: "Debes agregar al menos un producto.",
-            });
-            return;
-        }
-        setIsSaving(true);
-        try {
-            const dataToSave = {
-                clientId,
-                paymentMethod,
-                paymentType: paymentMethod === 'contado' ? paymentType : undefined,
-                date,
-                products: soldProducts,
-                totalAmount,
-                category: 'Venta de Producto',
-            };
-
-            if (income) {
-                 await onSave({
-                    ...income,
-                    ...dataToSave,
-                });
-            } else {
-                await onSave({
-                    ...dataToSave,
-                    recordedBy: '', // Will be set in the provider
-                });
-            }
-            onClose();
-        } finally {
-            setIsSaving(false);
-        }
-    }
-    
-    return (
-        <form onSubmit={handleSubmit}>
-            <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="clientId">Cliente</Label>
-                        <Select onValueChange={setClientId} value={clientId} disabled={isSaving}>
-                            <SelectTrigger id="clientId">
-                                <SelectValue placeholder="Selecciona un cliente" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {clients.map(client => (
-                                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="date">Fecha</Label>
-                        <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} required disabled={isSaving} />
-                    </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                    <div className="space-y-2">
-                        <Label htmlFor="paymentMethod">Condición de Pago</Label>
-                        <Select onValueChange={(value: 'contado' | 'credito') => setPaymentMethod(value)} value={paymentMethod} disabled={isSaving}>
-                            <SelectTrigger id="paymentMethod">
-                                <SelectValue placeholder="Selecciona una condición" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="contado">Contado</SelectItem>
-                                <SelectItem value="credito">Crédito</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    {paymentMethod === 'contado' && (
-                        <div className="space-y-2">
-                            <Label htmlFor="paymentType">Método de Pago</Label>
-                            <Select onValueChange={setPaymentType} value={paymentType} disabled={isSaving}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona un método" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {invoiceSettings.paymentMethods.map(method => (
-                                        <SelectItem key={method} value={method}>{method}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    )}
-                </div>
-                
-                <Separator />
-
-                <div className="space-y-2">
-                    <Label>Añadir Productos</Label>
-                    <Card className="p-4 space-y-4 bg-muted/50">
-                        <div className="space-y-2">
-                            <Label htmlFor="productId-form">Producto</Label>
-                            <Select onValueChange={setCurrentProduct} value={currentProduct}>
-                                <SelectTrigger id="productId-form">
-                                    <SelectValue placeholder="Selecciona un producto" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="generic">-- Producto Genérico (Entrada Manual) --</SelectItem>
-                                    {allProducts.map(product => (
-                                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        {currentProduct === 'generic' ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="generic-name">Nombre del Producto</Label>
-                                    <Input id="generic-name" value={genericProductName} onChange={e => setGenericProductName(e.target.value)} placeholder="Ej: Vaso Desechable" disabled={isSaving}/>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="generic-price">Precio Unitario</Label>
-                                    <Input id="generic-price" type="number" value={genericProductPrice} onChange={e => setGenericProductPrice(e.target.value)} placeholder="0.00" inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
-                                </div>
-                            </div>
-                        ) : (
-                            currentProduct && (
-                                <div className="space-y-2">
-                                    <Label>Tipo de Precio</Label>
-                                    <RadioGroup value={currentPriceType} onValueChange={(value: 'retail' | 'wholesale') => setCurrentPriceType(value)} className="flex gap-4" disabled={isSaving}>
-                                        <div className="flex items-center space-x-2"><RadioGroupItem value="retail" id="retail" /><Label htmlFor="retail">{invoiceSettings.priceLabels.retail}</Label></div>
-                                        <div className="flex items-center space-x-2"><RadioGroupItem value="wholesale" id="wholesale" /><Label htmlFor="wholesale">{invoiceSettings.priceLabels.wholesale}</Label></div>
-                                    </RadioGroup>
-                                </div>
-                            )
-                        )}
-                        <div className="space-y-2">
-                            <Label htmlFor="quantity">Cantidad</Label>
-                            <Input id="quantity" type="number" value={currentQuantity} onChange={e => setCurrentQuantity(Number(e.target.value))} min="1" inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
-                        </div>
-
-                        <Button type="button" onClick={handleAddProduct} className="w-full" disabled={!currentProduct || isSaving}>Añadir Producto a la Venta</Button>
-                    </Card>
-                </div>
-
-                {soldProducts.length > 0 && (
-                     <div className="space-y-2">
-                        <Label>Productos en la Venta</Label>
-                        <Card>
-                            <CardContent className="p-0">
-                                <div className="hidden md:block">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Producto</TableHead>
-                                                <TableHead className="text-center">Cant.</TableHead>
-                                                <TableHead className="text-right">Precio</TableHead>
-                                                <TableHead className="text-right">Subtotal</TableHead>
-                                                <TableHead className="w-[50px]"></TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {soldProducts.map((p, index) => (
-                                                <TableRow key={p.productId + index}>
-                                                    <TableCell>{p.name}</TableCell>
-                                                    <TableCell className="text-center">{p.quantity}</TableCell>
-                                                    <TableCell className="text-right">RD${p.price.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">RD${(p.quantity * p.price).toFixed(2)}</TableCell>
-                                                    <TableCell>
-                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(p.productId)} disabled={isSaving}>
-                                                            <Trash2 className="h-4 w-4 text-destructive"/>
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                                <div className="md:hidden space-y-3 p-3">
-                                    {soldProducts.map((p, index) => (
-                                        <div key={p.productId + index} className="rounded-lg border bg-card text-card-foreground shadow-sm p-3 space-y-2">
-                                            <div className="flex justify-between items-start">
-                                                <p className="font-semibold pr-2">{p.name}</p>
-                                                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleRemoveProduct(p.productId)} disabled={isSaving}>
-                                                    <Trash2 className="h-4 w-4 text-destructive"/>
-                                                </Button>
-                                            </div>
-                                            <div className="flex justify-between items-center text-sm text-muted-foreground">
-                                                <span>Cant: {p.quantity}</span>
-                                                <span>Precio: RD${p.price.toFixed(2)}</span>
-                                                <span className="font-medium text-foreground">RD${(p.quantity * p.price).toFixed(2)}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                     </div>
-                )}
-            </div>
-            <DialogFooter className="pt-4 mt-4 border-t flex-col sm:flex-row sm:justify-between sm:items-center">
-                 <div className="text-right sm:text-left text-xl font-bold">
-                    Total: RD${totalAmount.toFixed(2)}
-                </div>
-                <div className="flex justify-end gap-2">
-                    <DialogClose asChild>
-                         <Button type="button" variant="secondary" disabled={isSaving}>Cancelar</Button>
-                    </DialogClose>
-                    <Button type="submit" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar'}</Button>
-                </div>
-            </DialogFooter>
-        </form>
-    );
-};
+import { IncomeForm } from '@/components/income-form';
 
 export default function IngresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes, invoiceSettings, addClient } = useAppData();
@@ -428,20 +127,32 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     };
 
     const handleDelete = async (incomeId: string) => {
-        await deleteIncome(incomeId);
+        try {
+            await deleteIncome(incomeId);
+            toast({ title: 'Ingreso Eliminado' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar el ingreso.' });
+        }
     };
 
-    const handleSave = async (incomeData: Income | Omit<Income, 'id'>) => {
+    const handleSave = async (incomeData: Omit<Income, 'id' | 'balance' | 'payments' | 'recordedBy'> | Income) => {
         if (!user) {
             toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
             return;
         }
         
-        if ('id' in incomeData && incomeData.id) {
-            await updateIncome(incomeData as Income);
-        } else {
-            const incomeToSave = { ...incomeData, recordedBy: user.name };
-            await addIncome(incomeToSave);
+        try {
+            if ('id' in incomeData && incomeData.id) {
+                await updateIncome(incomeData as Income);
+                 toast({ title: "Ingreso Actualizado", description: "El registro ha sido actualizado." });
+            } else {
+                const incomeToSave = { ...incomeData, recordedBy: user.name };
+                await addIncome(incomeToSave as Omit<Income, 'id' | 'balance' | 'payments'>);
+                toast({ title: "Ingreso Registrado", description: "El nuevo ingreso ha sido guardado." });
+            }
+            setIsDialogOpen(false);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo guardar el ingreso.' });
         }
     };
     
@@ -565,7 +276,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
           const file = new File([pdfBlob], `factura-${selectedIncomeForInvoice.id.slice(-6)}.pdf`, { type: 'application/pdf' });
           
           await navigator.share({
-            title: 'Factura HOMECLEAN',
+            title: `Factura ${invoiceSettings.companyName}`,
             text: invoiceSettings.shareMessage,
             files: [file],
           });
@@ -1031,7 +742,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                             {editingIncome ? 'Actualiza los detalles de tu ingreso.' : 'Añade un nuevo ingreso a tus registros.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <IncomeForm income={editingIncome} onSave={handleSave} clients={allClients} onClose={() => handleDialogChange(false)} />
+                    <IncomeForm income={editingIncome} onSave={handleSave} onClose={() => handleDialogChange(false)} />
                 </DialogContent>
             </Dialog>
 

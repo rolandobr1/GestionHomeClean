@@ -31,7 +31,7 @@ export const InvoiceTemplate = ({ income, clients, invoiceSettings }: InvoiceTem
         <div className="text-left sm:text-right">
           <h2 className="text-2xl font-semibold uppercase text-gray-600">Factura</h2>
           <p className="text-sm text-gray-500">Nº: {income.id.slice(-6).toUpperCase()}</p>
-          <p className="text-sm text-gray-500">Fecha: {format(new Date(income.date), 'dd/MM/yyyy', { locale: es })}</p>
+          <p className="text-sm text-gray-500">Fecha: {format(new Date(income.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}</p>
         </div>
       </header>
 

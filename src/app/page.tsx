@@ -52,7 +52,7 @@ export default function LoginPage() {
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-background">
       <header className="absolute top-0 px-4 lg:px-6 h-14 flex items-center w-full">
-        <img src="/logohomeclean.png" alt="HOMECLEAN Logo" width="120" height="40" className="object-contain" />
+        <img src="/logohomeclean.png" alt="HOMECLEAN Logo" width={120} height={40} className="object-contain" />
         <span className="sr-only">HOMECLEAN</span>
       </header>
       <main className="flex-1 flex flex-col items-center justify-center p-4">

@@ -511,31 +511,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // --- Expense Management with Firestore ---
-  const addExpense = async (expense: Omit<Expense, 'id' | 'balance' | 'payments'>) => {
-    if (!db) throw new Error("Firestore no está inicializado.");
+    const addExpense = async (expense: Omit<Expense, 'id' | 'balance' | 'payments'>) => {
+        if (!db) throw new Error("Firestore no está inicializado.");
+
+        const dataToSave: any = { ...expense, payments: [], balance: 0 };
+
+        if (dataToSave.paymentMethod === 'contado') {
+            dataToSave.balance = 0;
+            if (!dataToSave.paymentType) {
+                dataToSave.paymentType = (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
+            }
+            dataToSave.payments.push({
+                id: doc(collection(db, 'temp')).id,
+                amount: dataToSave.amount,
+                date: dataToSave.date,
+                recordedBy: dataToSave.recordedBy
+            });
+        } else {
+            dataToSave.balance = dataToSave.amount;
+            delete dataToSave.paymentType;
+        }
         
-    const { paymentType, ...restOfExpense } = expense;
-    const dataToSave: any = { 
-        ...restOfExpense, 
-        payments: [], 
-        balance: 0 
+        await addDoc(collection(db, 'expenses'), dataToSave);
     };
-
-    if (expense.paymentMethod === 'contado') {
-        dataToSave.balance = 0;
-        dataToSave.paymentType = paymentType || (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
-        dataToSave.payments.push({
-            id: doc(collection(db, 'temp')).id,
-            amount: expense.amount,
-            date: expense.date,
-            recordedBy: expense.recordedBy
-        });
-    } else {
-        dataToSave.balance = expense.amount;
-    }
-
-    await addDoc(collection(db, 'expenses'), dataToSave);
-  };
 
   const addMultipleExpenses = async (expensesToProcess: Omit<Expense, 'id' | 'balance' | 'payments'>[], mode: 'append' | 'replace' = 'append') => {
       if (!db) return;
@@ -563,6 +561,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             });
           } else {
             dataToSave.balance = expense.amount;
+            delete dataToSave.paymentType;
           }
           const docRef = doc(collection(db, 'expenses'));
           batch.set(docRef, dataToSave);
@@ -571,25 +570,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const updateExpense = async (updatedExpense: Expense) => {
-    if(db) {
-        const paymentSum = updatedExpense.payments.reduce((acc, p) => acc + p.amount, 0);
-        const newBalance = updatedExpense.amount - paymentSum;
+    if(!db) return;
 
-        const { id, ...expenseData } = updatedExpense;
-        const dataToUpdate: any = { ...expenseData, balance: newBalance };
+    const dataToUpdate: any = { ...updatedExpense };
+    
+    const paymentSum = dataToUpdate.payments.reduce((acc: number, p: Payment) => acc + p.amount, 0);
+    dataToUpdate.balance = dataToUpdate.amount - paymentSum;
 
-        if (dataToUpdate.paymentMethod !== 'contado') {
-            delete dataToUpdate.paymentType;
-        } else if (!dataToUpdate.paymentType) {
-            dataToUpdate.paymentType = (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
-        }
-
-        await updateDoc(doc(db, 'expenses', id), dataToUpdate);
+    if (dataToUpdate.paymentMethod !== 'contado') {
+        delete dataToUpdate.paymentType;
+    } else if (!dataToUpdate.paymentType) {
+        dataToUpdate.paymentType = (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
     }
+    
+    const { id, ...finalExpenseData } = dataToUpdate;
+    await updateDoc(doc(db, 'expenses', id), finalExpenseData);
   };
 
   const deleteExpense = async (id: string) => {
-    if(db) await deleteDoc(doc(db, 'expenses', id));
+    if (db) await deleteDoc(doc(db, 'expenses', id));
   };
   
   const addPaymentToExpense = async (expenseId: string, payment: Omit<Payment, 'id'>) => {
