@@ -58,15 +58,19 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
         e.preventDefault();
         setIsSaving(true);
         try {
-            const dataToSave = {
+            const dataToSave: Partial<Omit<Expense, 'id' | 'balance' | 'payments'>> = {
                 description,
                 amount,
                 date,
                 category,
                 supplierId,
                 paymentMethod,
-                paymentType: paymentMethod === 'contado' ? paymentType : undefined,
+                paymentType,
             };
+
+            if (dataToSave.paymentMethod !== 'contado') {
+                delete dataToSave.paymentType;
+            }
 
             if (expense) {
                 await onSave({
@@ -77,9 +81,11 @@ const ExpenseForm = ({ expense, onSave, suppliers, onClose }: { expense: Expense
                 await onSave({
                     ...dataToSave,
                     recordedBy: '' // Will be set in provider
-                });
+                } as Omit<Expense, 'id' | 'balance' | 'payments'>);
             }
             onClose();
+        } catch (error) {
+            console.error("Error saving expense from form:", error);
         } finally {
             setIsSaving(false);
         }

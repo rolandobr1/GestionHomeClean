@@ -1,15 +1,15 @@
 {
-  "name": "QuimioGest",
-  "short_name": "QuimioGest",
+  "name": "Home Clean",
+  "short_name": "Home Clean",
   "description": "Gestión inteligente para tu negocio de productos químicos.",
   "icons": [
     {
-      "src": "/logohomeclean.png",
+      "src": "/iconohomecleancuadrado.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/logohomeclean.png",
+      "src": "/iconohomecleancuadrado.png",
       "sizes": "512x512",
       "type": "image/png"
     }

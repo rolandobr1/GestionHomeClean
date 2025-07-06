@@ -379,17 +379,21 @@ const ExpenseForm = ({ onClose }: { onClose: () => void }) => {
 
         setIsSaving(true);
         try {
-            const dataToSave = {
-                ...formData,
-                paymentType: formData.paymentMethod === 'contado' ? formData.paymentType : undefined
+            const dataToSubmit: Partial<Omit<Expense, 'id' | 'balance' | 'payments'>> = { ...formData, recordedBy: user.name };
+            
+            if (dataToSubmit.paymentMethod !== 'contado') {
+                delete dataToSubmit.paymentType;
             }
-            await addExpense({ ...dataToSave, recordedBy: user.name });
+
+            await addExpense(dataToSubmit as Omit<Expense, 'id' | 'balance' | 'payments'>);
+            
             toast({
                 title: "Egreso Registrado",
                 description: `Se ha añadido un egreso por RD$${formData.amount.toFixed(2)}.`,
             });
             onClose();
         } catch (error) {
+            console.error("Error saving expense from dashboard:", error);
             toast({ title: "Error", description: "No se pudo registrar el egreso.", variant: "destructive"});
         } finally {
             setIsSaving(false);
