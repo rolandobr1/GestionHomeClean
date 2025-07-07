@@ -202,7 +202,7 @@ export default function BalancePage() {
                     icon={Banknote}
                     isLoading={loading}
                     colorBasedOnValue={true}
-                    onClick={() => handleCardClick('realizedNetIncome', 'Ingresos Netos Realizados', 'CUIDA QUE NO SE DESBORDE', summaryData.realizedNetIncome)}
+                    onClick={() => handleCardClick('realizedNetIncome', 'Ingresos Netos Realizados', 'VERIFICA QUE NO SE VEA EL TEXTO CORTADO', summaryData.realizedNetIncome)}
                 />
                 <BalanceCard
                     title="Balance Neto Total"
@@ -262,7 +262,7 @@ export default function BalancePage() {
                     {selectedMetric?.hasHistory ? (
                         <div className="h-[300px] w-full pt-4">
                             <ChartContainer config={chartConfig} className="h-full w-full">
-                                <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.8}/>
