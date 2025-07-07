@@ -202,7 +202,7 @@ export default function BalancePage() {
                     icon={Banknote}
                     isLoading={loading}
                     colorBasedOnValue={true}
-                    onClick={() => handleCardClick('realizedNetIncome', 'Ingresos Netos Realizados', 'VERIFICA QUE NO SE VEA EL TEXTO CORTADO', summaryData.realizedNetIncome)}
+                    onClick={() => handleCardClick('realizedNetIncome', 'Ingresos Netos Realizados', 'AQUI VA LA DESCRIPCION , BALANCE TOTAL MENOS LAS CUENTAS POR COBRAR', summaryData.realizedNetIncome)}
                 />
                 <BalanceCard
                     title="Balance Neto Total"
