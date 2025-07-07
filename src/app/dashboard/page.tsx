@@ -25,12 +25,12 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
-import { ArrowUpCircle, ArrowDownCircle, CircleDollarSign, FlaskConical, AlertTriangle, PlusCircle, Clock } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, CircleDollarSign, FlaskConical, AlertTriangle, PlusCircle, Clock, Wallet } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from "@/hooks/use-toast";
 import { useAppData } from '@/hooks/use-app-data';
-import type { Income, Expense, Product } from '@/components/app-provider';
+import type { Income, Expense, Product, Payment } from '@/components/app-provider';
 import { subMonths, format, getMonth, getYear, startOfMonth, endOfMonth, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/hooks/use-auth';
@@ -48,10 +48,25 @@ const chartConfig = {
   },
 } as const;
 
-type Transaction = (Income & { type: 'income' }) | (Expense & { type: 'expense' });
+type IncomeTransaction = Income & { type: 'income' };
+type ExpenseTransaction = Expense & { type: 'expense' };
+type PaymentTransaction = {
+    type: 'payment';
+    id: string;
+    parent: Income;
+    payment: Payment;
+};
+type ExpensePaymentTransaction = {
+    type: 'expense_payment';
+    id: string;
+    parent: Expense;
+    payment: Payment;
+};
+type Transaction = IncomeTransaction | ExpenseTransaction | PaymentTransaction | ExpensePaymentTransaction;
+
 
 export default function DashboardPage({ params, searchParams }: { params: any; searchParams: any; }) {
-  const { incomes, expenses, products, clients } = useAppData();
+  const { incomes, expenses, products, clients, suppliers } = useAppData();
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -137,19 +152,70 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
     
     const lowStock = products.filter(p => p.stock <= p.reorderLevel);
     setLowStockItems(lowStock);
+    
+    const incomeTransactions: IncomeTransaction[] = incomes.map(i => ({ ...i, type: 'income' }));
+    const expenseTransactions: ExpenseTransaction[] = expenses.map(e => ({ ...e, type: 'expense' }));
+    
+    const incomePaymentTransactions: PaymentTransaction[] = incomes.flatMap(income => 
+        (income.payments || []).map(payment => ({
+            type: 'payment' as const,
+            id: `${income.id}-${payment.id}`,
+            parent: income,
+            payment: payment
+        }))
+    );
 
-    const getSortableDate = (item: Income | Expense) => {
-        if (item.createdAt && typeof item.createdAt.toDate === 'function') {
-            return item.createdAt.toDate();
-        }
-        // Fallback for old data without createdAt
-        return new Date(item.date + 'T23:59:59'); // Use end of day to appear before new items on same day
-    };
+    const expensePaymentTransactions: ExpensePaymentTransaction[] = expenses.flatMap(expense => 
+        (expense.payments || []).map(payment => ({
+            type: 'expense_payment' as const,
+            id: `${expense.id}-${payment.id}`,
+            parent: expense,
+            payment: payment
+        }))
+    );
 
     const combinedTransactions: Transaction[] = [
-        ...incomes.map((i): Transaction => ({...i, type: 'income'})),
-        ...expenses.map((e): Transaction => ({...e, type: 'expense'}))
+        ...incomeTransactions,
+        ...expenseTransactions,
+        ...incomePaymentTransactions,
+        ...expensePaymentTransactions,
     ];
+
+    const getSortableDate = (tx: Transaction): Date => {
+        let paymentObject: Payment | undefined;
+        let mainObject: Income | Expense | undefined;
+
+        switch(tx.type) {
+            case 'payment':
+                paymentObject = tx.payment;
+                break;
+            case 'expense_payment':
+                paymentObject = tx.payment;
+                break;
+            case 'income':
+            case 'expense':
+                mainObject = tx;
+                break;
+        }
+
+        if (paymentObject) {
+            if (paymentObject.createdAt && typeof paymentObject.createdAt.toDate === 'function') {
+                return paymentObject.createdAt.toDate();
+            }
+            // Fallback for payments without createdAt
+            return new Date(paymentObject.date + 'T23:59:58');
+        }
+        
+        if (mainObject) {
+            if (mainObject.createdAt && typeof mainObject.createdAt.toDate === 'function') {
+                return mainObject.createdAt.toDate();
+            }
+            // Fallback for main transactions without createdAt
+            return new Date(mainObject.date + 'T23:59:59');
+        }
+        
+        return new Date(); // Should not happen
+    };
     
     const sortedTransactions = combinedTransactions.sort((a, b) => {
         return getSortableDate(b).getTime() - getSortableDate(a).getTime();
@@ -163,6 +229,12 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
     { id: 'generic', name: 'Cliente Genérico', code: 'CLI-000', email: '', phone: '', address: '' },
     ...clients
   ], [clients]);
+  
+  const allSuppliers = useMemo(() => [
+    { id: 'generic', name: 'Suplidor Genérico', code: 'SUP-000', email: '', phone: '', address: '' },
+    ...suppliers
+  ], [suppliers]);
+
 
   const handleSaveIncome = async (incomeData: Omit<Income, 'id' | 'balance' | 'payments' | 'recordedBy'>) => {
     if (!user) {
@@ -372,26 +444,69 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
           <CardContent>
               {recentTransactions.length > 0 ? (
                   <div className="space-y-4">
-                      {recentTransactions.map(tx => (
+                      {recentTransactions.map(tx => {
+                        if (tx.type === 'payment') {
+                            const client = allClients.find(c => c.id === tx.parent.clientId);
+                            return (
+                                <div key={tx.id} className="flex items-center">
+                                    <Wallet className="h-6 w-6 text-green-500" />
+                                    <div className="ml-4 space-y-1">
+                                        <p className="text-sm font-medium leading-none">
+                                            Abono de {client?.name || 'Cliente Genérico'}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Factura {tx.parent.id.slice(-6).toUpperCase()} &middot; {tx.payment.createdAt?.toDate ? formatDistanceToNow(tx.payment.createdAt.toDate(), { addSuffix: true, locale: es }) : format(new Date(tx.payment.date + 'T00:00:00'), 'dd MMM yyyy', { locale: es })}
+                                        </p>
+                                    </div>
+                                    <div className="ml-auto font-medium text-green-600">
+                                        +RD${tx.payment.amount.toFixed(2)}
+                                    </div>
+                                </div>
+                            )
+                        }
+
+                        if (tx.type === 'expense_payment') {
+                            const supplier = allSuppliers.find(s => s.id === tx.parent.supplierId);
+                            return (
+                                <div key={tx.id} className="flex items-center">
+                                    <Wallet className="h-6 w-6 text-red-500" />
+                                    <div className="ml-4 space-y-1">
+                                        <p className="text-sm font-medium leading-none">
+                                            Pago a {supplier?.name || 'Suplidor Genérico'}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Egreso {tx.parent.id.slice(-6).toUpperCase()} &middot; {tx.payment.createdAt?.toDate ? formatDistanceToNow(tx.payment.createdAt.toDate(), { addSuffix: true, locale: es }) : format(new Date(tx.payment.date + 'T00:00:00'), 'dd MMM yyyy', { locale: es })}
+                                        </p>
+                                    </div>
+                                    <div className="ml-auto font-medium text-red-600">
+                                        -RD${tx.payment.amount.toFixed(2)}
+                                    </div>
+                                </div>
+                            )
+                        }
+
+                        const isIncome = tx.type === 'income';
+                        return (
                           <div key={tx.id} className="flex items-center">
-                              {tx.type === 'income' ? (
+                              {isIncome ? (
                                   <ArrowUpCircle className="h-6 w-6 text-green-500" />
                               ) : (
                                   <ArrowDownCircle className="h-6 w-6 text-red-500" />
                               )}
                               <div className="ml-4 space-y-1">
                                   <p className="text-sm font-medium leading-none">
-                                      {tx.type === 'income' ? allClients.find(c => c.id === tx.clientId)?.name || 'Venta a Cliente Genérico' : tx.description}
+                                      {isIncome ? allClients.find(c => c.id === tx.clientId)?.name || 'Venta a Cliente Genérico' : tx.description}
                                   </p>
                                   <p className="text-sm text-muted-foreground">
                                       {tx.createdAt?.toDate ? formatDistanceToNow(tx.createdAt.toDate(), { addSuffix: true, locale: es }) : format(new Date(tx.date + 'T00:00:00'), 'dd MMM yyyy', { locale: es })}
                                   </p>
                               </div>
-                              <div className={`ml-auto font-medium ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                                  {tx.type === 'income' ? '+' : '-'}RD${(tx.type === 'income' ? tx.totalAmount : tx.amount).toFixed(2)}
+                              <div className={`ml-auto font-medium ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
+                                  {isIncome ? '+' : '-'}RD${(isIncome ? tx.totalAmount : tx.amount).toFixed(2)}
                               </div>
                           </div>
-                      ))}
+                        )
+                      })}
                   </div>
               ) : (
                   <p className="text-sm text-muted-foreground text-center py-4">No hay transacciones recientes.</p>

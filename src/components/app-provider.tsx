@@ -19,6 +19,7 @@ export type Payment = {
   date: string;
   amount: number;
   recordedBy: string;
+  createdAt?: any;
 };
 
 export type Income = {
@@ -124,12 +125,12 @@ interface AppContextType {
   addMultipleIncomes: (incomes: Income[], mode: 'append' | 'replace') => Promise<void>;
   deleteIncome: (id: string) => Promise<void>;
   updateIncome: (income: Income) => Promise<void>;
-  addPayment: (incomeId: string, payment: Omit<Payment, 'id'>) => Promise<void>;
+  addPayment: (incomeId: string, payment: Omit<Payment, 'id' | 'createdAt'>) => Promise<void>;
   addExpense: (expense: Omit<Expense, 'id' | 'balance' | 'payments' | 'createdAt'>) => Promise<void>;
   addMultipleExpenses: (expenses: Omit<Expense, 'id' | 'balance' | 'payments' | 'createdAt'>[], mode: 'append' | 'replace') => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   updateExpense: (expense: Expense) => Promise<void>;
-  addPaymentToExpense: (expenseId: string, payment: Omit<Payment, 'id'>) => Promise<void>;
+  addPaymentToExpense: (expenseId: string, payment: Omit<Payment, 'id' | 'createdAt'>) => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   addMultipleProducts: (products: Product[], mode: 'append' | 'replace') => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
@@ -503,21 +504,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteIncome = async (id: string) => {
     if (!db) throw new Error("Firestore no está inicializado.");
-
-    const incomeToDelete = incomes.find(i => i.id === id);
-    if (!incomeToDelete) {
-      console.warn("No se encontró el ingreso a eliminar. Es posible que ya haya sido borrado.");
-      // Even if not in local state, try to delete from DB in case of state desync.
-      try {
-        await deleteDoc(doc(db, 'incomes', id));
-      } catch (error) {
-        console.error("Error deleting income not found in local state:", error);
-        throw new Error("No se pudo eliminar el ingreso.");
-      }
-      return;
-    }
-    
     try {
+        const incomeToDelete = incomes.find(i => i.id === id);
+        if (!incomeToDelete) throw new Error("Ingreso no encontrado para eliminar.");
+        
         const batch = writeBatch(db);
         const incomeRef = doc(db, 'incomes', id);
         batch.delete(incomeRef);
@@ -530,18 +520,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
 
         await batch.commit();
-        // UI will update automatically via onSnapshot listener
     } catch (error) {
         console.error("Error deleting income:", error);
-        throw new Error("No se pudo eliminar el ingreso.");
+        throw error;
     }
   };
   
-  const addPayment = async (incomeId: string, payment: Omit<Payment, 'id'>) => {
+  const addPayment = async (incomeId: string, payment: Omit<Payment, 'id' | 'createdAt'>) => {
     if (!db) throw new Error("Firestore no está inicializado.");
     try {
         const incomeRef = doc(db, 'incomes', incomeId);
-        const newPayment = { ...payment, id: doc(collection(db, 'temp')).id };
+        const newPayment = { ...payment, id: doc(collection(db, 'temp')).id, createdAt: new Date() };
         await updateDoc(incomeRef, {
             payments: arrayUnion(newPayment),
             balance: increment(-payment.amount)
@@ -567,7 +556,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     id: doc(collection(db, 'temp')).id,
                     amount: dataToSave.amount,
                     date: dataToSave.date,
-                    recordedBy: dataToSave.recordedBy
+                    recordedBy: dataToSave.recordedBy,
+                    createdAt: new Date(),
                 });
             } else {
                 dataToSave.balance = dataToSave.amount;
@@ -605,7 +595,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                   id: doc(collection(db, 'temp')).id,
                   amount: expense.amount,
                   date: expense.date,
-                  recordedBy: expense.recordedBy
+                  recordedBy: expense.recordedBy,
+                  createdAt: new Date(),
               });
             } else {
               dataToSave.balance = expense.amount;
@@ -653,12 +644,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  const addPaymentToExpense = async (expenseId: string, payment: Omit<Payment, 'id'>) => {
+  const addPaymentToExpense = async (expenseId: string, payment: Omit<Payment, 'id' | 'createdAt'>) => {
     if (!db) throw new Error("Firestore no está inicializado.");
     try {
         const expenseRef = doc(db, 'expenses', expenseId);
         
-        const newPayment = { ...payment, id: doc(collection(db, 'temp')).id };
+        const newPayment = { ...payment, id: doc(collection(db, 'temp')).id, createdAt: new Date() };
 
         await updateDoc(expenseRef, {
             payments: arrayUnion(newPayment),
@@ -677,7 +668,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await addDoc(collection(db, 'products'), product);
     } catch (error) {
         console.error("Error adding product:", error);
-        throw new Error("No se pudo añadir el producto.");
+        throw error;
     }
   }
 
@@ -697,7 +688,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await batch.commit();
     } catch (error) {
         console.error("Error adding multiple products:", error);
-        throw new Error("No se pudieron importar los productos.");
+        throw error;
     }
   }
 
@@ -709,7 +700,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await updateDoc(productRef, productData as any);
     } catch (error) {
         console.error("Error updating product:", error);
-        throw new Error("No se pudo actualizar el producto.");
+        throw error;
     }
   }
 
@@ -719,7 +710,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await deleteDoc(doc(db, 'products', id));
     } catch (error) {
         console.error("Error deleting product:", error);
-        throw new Error("No se pudo eliminar el producto.");
+        throw error;
     }
   }
 
@@ -730,7 +721,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await addDoc(collection(db, 'rawMaterials'), material);
     } catch (error) {
         console.error("Error adding raw material:", error);
-        throw new Error("No se pudo añadir la materia prima.");
+        throw error;
     }
   };
 
@@ -750,7 +741,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await batch.commit();
     } catch (error) {
         console.error("Error adding multiple raw materials:", error);
-        throw new Error("No se pudieron importar las materias primas.");
+        throw error;
     }
   };
 
@@ -762,7 +753,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await updateDoc(materialRef, materialData as any);
     } catch(error) {
         console.error("Error updating raw material:", error);
-        throw new Error("No se pudo actualizar la materia prima.");
+        throw error;
     }
   };
 
@@ -772,7 +763,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await deleteDoc(doc(db, 'rawMaterials', id));
     } catch (error) {
         console.error("Error deleting raw material:", error);
-        throw new Error("No se pudo eliminar la materia prima.");
+        throw error;
     }
   };
 
@@ -795,7 +786,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return { id: docRef.id, ...clientData };
     } catch (error) {
         console.error("Error adding client:", error);
-        throw new Error("No se pudo añadir el cliente.");
+        throw error;
     }
   };
 
@@ -828,7 +819,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await batch.commit();
     } catch (error) {
         console.error("Error adding multiple clients:", error);
-        throw new Error("No se pudieron importar los clientes.");
+        throw error;
     }
   };
 
@@ -840,7 +831,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await updateDoc(clientRef, clientData as any);
     } catch (error) {
         console.error("Error updating client:", error);
-        throw new Error("No se pudo actualizar el cliente.");
+        throw error;
     }
   };
 
@@ -850,7 +841,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await deleteDoc(doc(db, 'clients', id));
     } catch (error) {
         console.error("Error deleting client:", error);
-        throw new Error("No se pudo eliminar el cliente.");
+        throw error;
     }
   };
 
@@ -873,7 +864,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return { id: docRef.id, ...supplierData };
     } catch (error) {
         console.error("Error adding supplier:", error);
-        throw new Error("No se pudo añadir el suplidor.");
+        throw error;
     }
   };
 
@@ -906,7 +897,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await batch.commit();
     } catch(error) {
         console.error("Error adding multiple suppliers:", error);
-        throw new Error("No se pudieron importar los suplidores.");
+        throw error;
     }
   };
 
@@ -918,7 +909,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await updateDoc(supplierRef, supplierData as any);
     } catch(error) {
         console.error("Error updating supplier:", error);
-        throw new Error("No se pudo actualizar el suplidor.");
+        throw error;
     }
   };
 
@@ -928,7 +919,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await deleteDoc(doc(db, 'suppliers', id));
     } catch(error) {
         console.error("Error deleting supplier:", error);
-        throw new Error("No se pudo eliminar el suplidor.");
+        throw error;
     }
   };
 
