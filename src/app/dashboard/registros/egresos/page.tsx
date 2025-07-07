@@ -88,7 +88,7 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
             
             const directionMultiplier = sortConfig.direction === 'asc' ? 1 : -1;
             if (sortConfig.key === 'date') {
-                return (new Date(a.date).getTime() - new Date(b.date).getTime()) * directionMultiplier;
+                return (new Date(a.date + 'T00:00:00').getTime() - new Date(b.date + 'T00:00:00').getTime()) * directionMultiplier;
             }
             if (typeof aValue === 'number' && typeof bValue === 'number') {
                 return (aValue - bValue) * directionMultiplier;

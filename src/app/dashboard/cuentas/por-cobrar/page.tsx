@@ -205,7 +205,7 @@ export default function CuentasPorCobrarPage({ params, searchParams }: { params:
             return (aValue - bValue) * directionMultiplier;
         }
         if (sortConfig.key === 'date') {
-            return (new Date(a.date).getTime() - new Date(b.date).getTime()) * directionMultiplier;
+            return (new Date(a.date + 'T00:00:00').getTime() - new Date(b.date + 'T00:00:00').getTime()) * directionMultiplier;
         }
         return String(aValue).localeCompare(String(bValue)) * directionMultiplier;
     });
@@ -503,5 +503,3 @@ export default function CuentasPorCobrarPage({ params, searchParams }: { params:
     </div>
   );
 }
-
-    

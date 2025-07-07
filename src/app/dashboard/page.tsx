@@ -384,7 +384,7 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
                                       {tx.type === 'income' ? allClients.find(c => c.id === tx.clientId)?.name || 'Venta a Cliente Genérico' : tx.description}
                                   </p>
                                   <p className="text-sm text-muted-foreground">
-                                      {tx.createdAt?.toDate ? formatDistanceToNow(tx.createdAt.toDate(), { addSuffix: true, locale: es }) : format(new Date(tx.date), 'dd MMM yyyy', { locale: es })}
+                                      {tx.createdAt?.toDate ? formatDistanceToNow(tx.createdAt.toDate(), { addSuffix: true, locale: es }) : format(new Date(tx.date + 'T00:00:00'), 'dd MMM yyyy', { locale: es })}
                                   </p>
                               </div>
                               <div className={`ml-auto font-medium ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
