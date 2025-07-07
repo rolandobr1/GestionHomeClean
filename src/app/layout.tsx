@@ -11,6 +11,11 @@ export const metadata: Metadata = {
   title: "HOMECLEAN",
   description: "Gestión inteligente para tu negocio de limpieza.",
   manifest: "/manifest.json",
+  icons: {
+    icon: '/logohomeclean.png',
+    shortcut: '/logohomeclean.png',
+    apple: '/logohomeclean.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

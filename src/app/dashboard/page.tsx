@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Card,
@@ -25,13 +25,13 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
-import { ArrowUpCircle, ArrowDownCircle, CircleDollarSign, FlaskConical, AlertTriangle, PlusCircle } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, CircleDollarSign, FlaskConical, AlertTriangle, PlusCircle, Clock } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from "@/hooks/use-toast";
 import { useAppData } from '@/hooks/use-app-data';
 import type { Income, Expense, Product } from '@/components/app-provider';
-import { subMonths, format, getMonth, getYear, startOfMonth, endOfMonth } from 'date-fns';
+import { subMonths, format, getMonth, getYear, startOfMonth, endOfMonth, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/hooks/use-auth';
 import { IncomeForm } from '@/components/income-form';
@@ -48,9 +48,10 @@ const chartConfig = {
   },
 } as const;
 
+type Transaction = (Income & { type: 'income' }) | (Expense & { type: 'expense' });
 
 export default function DashboardPage({ params, searchParams }: { params: any; searchParams: any; }) {
-  const { incomes, expenses, products } = useAppData();
+  const { incomes, expenses, products, clients } = useAppData();
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -65,6 +66,7 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
   const [inventoryValue, setInventoryValue] = useState(0);
   const [lowStockItems, setLowStockItems] = useState<Product[]>([]);
   const [chartData, setChartData] = useState<{ month: string, income: number, expense: number }[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     const today = new Date();
@@ -136,7 +138,31 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
     const lowStock = products.filter(p => p.stock <= p.reorderLevel);
     setLowStockItems(lowStock);
 
+    const getSortableDate = (item: Income | Expense) => {
+        if (item.createdAt && typeof item.createdAt.toDate === 'function') {
+            return item.createdAt.toDate();
+        }
+        // Fallback for old data without createdAt
+        return new Date(item.date + 'T23:59:59'); // Use end of day to appear before new items on same day
+    };
+
+    const combinedTransactions: Transaction[] = [
+        ...incomes.map((i): Transaction => ({...i, type: 'income'})),
+        ...expenses.map((e): Transaction => ({...e, type: 'expense'}))
+    ];
+    
+    const sortedTransactions = combinedTransactions.sort((a, b) => {
+        return getSortableDate(b).getTime() - getSortableDate(a).getTime();
+    });
+    
+    setRecentTransactions(sortedTransactions.slice(0, 5));
+
   }, [incomes, expenses, products]);
+
+  const allClients = useMemo(() => [
+    { id: 'generic', name: 'Cliente Genérico', code: 'CLI-000', email: '', phone: '', address: '' },
+    ...clients
+  ], [clients]);
 
   const handleSaveIncome = async (incomeData: Omit<Income, 'id' | 'balance' | 'payments' | 'recordedBy'>) => {
     if (!user) {
@@ -150,8 +176,8 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
             description: `Se ha añadido un ingreso por RD$${incomeData.totalAmount.toFixed(2)}.`,
         });
         setIsIncomeDialogOpen(false);
-    } catch (error) {
-         toast({ title: "Error", description: "No se pudo registrar el ingreso.", variant: "destructive"});
+    } catch (error: any) {
+         toast({ title: "Error al registrar ingreso", description: error.message, variant: "destructive"});
     }
   };
 
@@ -167,9 +193,8 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
             description: `Se ha añadido un egreso por RD$${expenseData.amount.toFixed(2)}.`,
         });
         setIsExpenseDialogOpen(false);
-    } catch (error) {
-        console.error("Error saving expense from dashboard:", error);
-        toast({ title: "Error", description: "No se pudo registrar el egreso.", variant: "destructive"});
+    } catch (error: any) {
+        toast({ title: "Error al registrar egreso", description: error.message, variant: "destructive"});
     }
   };
 
@@ -336,6 +361,43 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
           </CardContent>
         </Card>
       </div>
+      
+      <Card>
+          <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5"/> Actividad Reciente
+              </CardTitle>
+              <CardDescription>Últimas transacciones registradas en el sistema.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              {recentTransactions.length > 0 ? (
+                  <div className="space-y-4">
+                      {recentTransactions.map(tx => (
+                          <div key={tx.id} className="flex items-center">
+                              {tx.type === 'income' ? (
+                                  <ArrowUpCircle className="h-6 w-6 text-green-500" />
+                              ) : (
+                                  <ArrowDownCircle className="h-6 w-6 text-red-500" />
+                              )}
+                              <div className="ml-4 space-y-1">
+                                  <p className="text-sm font-medium leading-none">
+                                      {tx.type === 'income' ? allClients.find(c => c.id === tx.clientId)?.name || 'Venta a Cliente Genérico' : tx.description}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                      {tx.createdAt?.toDate ? formatDistanceToNow(tx.createdAt.toDate(), { addSuffix: true, locale: es }) : format(new Date(tx.date), 'dd MMM yyyy', { locale: es })}
+                                  </p>
+                              </div>
+                              <div className={`ml-auto font-medium ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                                  {tx.type === 'income' ? '+' : '-'}RD${(tx.type === 'income' ? tx.totalAmount : tx.amount).toFixed(2)}
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No hay transacciones recientes.</p>
+              )}
+          </CardContent>
+      </Card>
 
       <Dialog open={isIncomeDialogOpen} onOpenChange={setIsIncomeDialogOpen}>
           <DialogContent className="sm:max-w-2xl">

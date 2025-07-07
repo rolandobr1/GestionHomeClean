@@ -26,6 +26,7 @@ export type Income = {
   totalAmount: number;
   balance: number;
   date: string;
+  createdAt: any;
   category: string;
   clientId: string;
   paymentMethod: 'credito' | 'contado';
@@ -41,6 +42,7 @@ export type Expense = {
   amount: number;
   balance: number;
   date: string;
+  createdAt: any;
   category: string;
   supplierId: string;
   paymentMethod: 'credito' | 'contado';
@@ -118,13 +120,13 @@ interface AppContextType {
   invoiceSettings: InvoiceSettings;
   expenseCategories: string[];
   loading: boolean;
-  addIncome: (income: Omit<Income, 'id' | 'balance' | 'payments'>) => Promise<void>;
+  addIncome: (income: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>) => Promise<void>;
   addMultipleIncomes: (incomes: Income[], mode: 'append' | 'replace') => Promise<void>;
   deleteIncome: (id: string) => Promise<void>;
   updateIncome: (income: Income) => Promise<void>;
   addPayment: (incomeId: string, payment: Omit<Payment, 'id'>) => Promise<void>;
-  addExpense: (expense: Omit<Expense, 'id' | 'balance' | 'payments'>) => Promise<void>;
-  addMultipleExpenses: (expenses: Omit<Expense, 'id' | 'balance' | 'payments'>[], mode: 'append' | 'replace') => Promise<void>;
+  addExpense: (expense: Omit<Expense, 'id' | 'balance' | 'payments' | 'createdAt'>) => Promise<void>;
+  addMultipleExpenses: (expenses: Omit<Expense, 'id' | 'balance' | 'payments' | 'createdAt'>[], mode: 'append' | 'replace') => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   updateExpense: (expense: Expense) => Promise<void>;
   addPaymentToExpense: (expenseId: string, payment: Omit<Payment, 'id'>) => Promise<void>;
@@ -334,453 +336,592 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateInvoiceSettings = async (settings: InvoiceSettings) => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    const settingsDocRef = doc(db, 'settings', 'invoice');
-    await setDoc(settingsDocRef, settings, { merge: true });
+    try {
+        const settingsDocRef = doc(db, 'settings', 'invoice');
+        await setDoc(settingsDocRef, settings, { merge: true });
+    } catch (error) {
+        console.error("Error updating invoice settings:", error);
+        throw new Error("No se pudieron guardar los ajustes de factura.");
+    }
   };
   
   const updateExpenseCategories = async (categories: string[]) => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    const docRef = doc(db, 'settings', 'expenseCategories');
-    await setDoc(docRef, { categories });
+    try {
+        const docRef = doc(db, 'settings', 'expenseCategories');
+        await setDoc(docRef, { categories });
+    } catch (error) {
+        console.error("Error updating expense categories:", error);
+        throw new Error("No se pudieron guardar las categorías de egresos.");
+    }
   };
 
   // --- Income Management with Firestore ---
-  const addIncome = async (income: Omit<Income, 'id' | 'balance' | 'payments'>) => {
+  const addIncome = async (income: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>) => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    const batch = writeBatch(db);
-    
-    const incomeRef = doc(collection(db, "incomes"));
+    try {
+      const batch = writeBatch(db);
+      
+      const incomeRef = doc(collection(db, "incomes"));
 
-    const newIncomeData: Omit<Income, 'id'> = { ...income, payments: [], balance: 0 };
+      const newIncomeData: Omit<Income, 'id'> = { ...income, payments: [], balance: 0, createdAt: new Date() };
 
-    if (income.paymentMethod === 'contado') {
-        newIncomeData.balance = 0;
-        newIncomeData.payments.push({
-            id: doc(collection(db, 'temp')).id,
-            amount: income.totalAmount,
-            date: income.date,
-            recordedBy: income.recordedBy
-        });
-    } else {
-        newIncomeData.balance = income.totalAmount;
+      if (income.paymentMethod === 'contado') {
+          newIncomeData.balance = 0;
+          newIncomeData.payments.push({
+              id: doc(collection(db, 'temp')).id,
+              amount: income.totalAmount,
+              date: income.date,
+              recordedBy: income.recordedBy
+          });
+      } else {
+          newIncomeData.balance = income.totalAmount;
+      }
+
+      batch.set(incomeRef, newIncomeData);
+
+      income.products.forEach(soldProduct => {
+          if (!soldProduct.productId.startsWith('generic_')) {
+              const productRef = doc(db, "products", soldProduct.productId);
+              batch.update(productRef, { stock: increment(-soldProduct.quantity) });
+          }
+      });
+
+      await batch.commit();
+    } catch(error) {
+        console.error("Error adding income:", error);
+        throw new Error("No se pudo registrar el ingreso en la base de datos.");
     }
-
-    batch.set(incomeRef, newIncomeData);
-
-    income.products.forEach(soldProduct => {
-        if (!soldProduct.productId.startsWith('generic_')) {
-            const productRef = doc(db, "products", soldProduct.productId);
-            batch.update(productRef, { stock: increment(-soldProduct.quantity) });
-        }
-    });
-
-    await batch.commit();
   };
 
   const addMultipleIncomes = async (incomesToProcess: Income[], mode: 'append' | 'replace' = 'append') => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    const batch = writeBatch(db);
-    const stockChanges = new Map<string, number>();
-    const existingIncomesMap = new Map(incomes.map(i => [i.id, i]));
+    try {
+        const batch = writeBatch(db);
+        const stockChanges = new Map<string, number>();
+        const existingIncomesMap = new Map(incomes.map(i => [i.id, i]));
 
-    if (mode === 'replace') {
-        const allIncomesSnapshot = await getDocs(collection(db, "incomes"));
-        for (const docSnap of allIncomesSnapshot.docs) {
-            const oldIncome = { id: docSnap.id, ...docSnap.data() } as Income;
-            if (oldIncome.products) {
-                oldIncome.products.forEach(p => {
-                    if (!p.productId.startsWith('generic_')) {
-                        stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
-                    }
-                });
+        if (mode === 'replace') {
+            const allIncomesSnapshot = await getDocs(collection(db, "incomes"));
+            for (const docSnap of allIncomesSnapshot.docs) {
+                const oldIncome = { id: docSnap.id, ...docSnap.data() } as Income;
+                if (oldIncome.products) {
+                    oldIncome.products.forEach(p => {
+                        if (!p.productId.startsWith('generic_')) {
+                            stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+                        }
+                    });
+                }
+                batch.delete(docSnap.ref);
             }
-            batch.delete(docSnap.ref);
         }
-    }
 
-    for (const income of incomesToProcess) {
-        const { id, ...incomeData } = income;
+        for (const income of incomesToProcess) {
+            const { id, ...incomeData } = { ...income, createdAt: new Date() };
 
-        if (mode === 'append' && id) {
-             const originalIncome = existingIncomesMap.get(id);
-             if (originalIncome) {
-                originalIncome.products.forEach(p => {
-                    if (!p.productId.startsWith('generic_')) {
-                        stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
-                    }
-                });
-             }
+            if (mode === 'append' && id) {
+                const originalIncome = existingIncomesMap.get(id);
+                if (originalIncome) {
+                    originalIncome.products.forEach(p => {
+                        if (!p.productId.startsWith('generic_')) {
+                            stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+                        }
+                    });
+                }
+            }
+            
+            income.products.forEach(p => {
+                if (!p.productId.startsWith('generic_')) {
+                    stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+                }
+            });
+
+            const docRef = id && mode === 'append' ? doc(db, 'incomes', id) : doc(collection(db, 'incomes'));
+            batch.set(docRef, incomeData);
         }
         
-        income.products.forEach(p => {
-            if (!p.productId.startsWith('generic_')) {
-                stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+        for (const [productId, quantityChange] of stockChanges.entries()) {
+            if (quantityChange !== 0) {
+                const productRef = doc(db, "products", productId);
+                batch.update(productRef, { stock: increment(quantityChange) });
             }
-        });
-
-        const docRef = id && mode === 'append' ? doc(db, 'incomes', id) : doc(collection(db, 'incomes'));
-        batch.set(docRef, incomeData);
-    }
-    
-    for (const [productId, quantityChange] of stockChanges.entries()) {
-        if (quantityChange !== 0) {
-            const productRef = doc(db, "products", productId);
-            batch.update(productRef, { stock: increment(quantityChange) });
         }
-    }
 
-    await batch.commit();
+        await batch.commit();
+    } catch(error) {
+        console.error("Error adding multiple incomes:", error);
+        throw new Error("No se pudieron importar los ingresos.");
+    }
   };
 
   const updateIncome = async (updatedIncome: Income) => {
-      if (!db) throw new Error("Firestore no está inicializado.");
-      const originalIncome = incomes.find(i => i.id === updatedIncome.id);
-      if (!originalIncome) {
-          console.error("No se encontró el ingreso original a actualizar.");
-          const { id, ...incomeData } = updatedIncome;
-          await updateDoc(doc(db, 'incomes', id), incomeData as any);
-          return;
-      }
-      
-      const batch = writeBatch(db);
-      
-      const paymentSum = updatedIncome.payments.reduce((acc, p) => acc + p.amount, 0);
-      updatedIncome.balance = updatedIncome.totalAmount - paymentSum;
-      
-      const { id, ...incomeData } = updatedIncome;
-      const incomeRef = doc(db, 'incomes', id);
-      batch.update(incomeRef, incomeData as any);
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const originalIncome = incomes.find(i => i.id === updatedIncome.id);
+        if (!originalIncome) {
+            console.warn("No se encontró el ingreso original a actualizar.");
+        }
+        
+        const batch = writeBatch(db);
+        
+        const paymentSum = updatedIncome.payments.reduce((acc, p) => acc + p.amount, 0);
+        updatedIncome.balance = updatedIncome.totalAmount - paymentSum;
+        
+        const { id, ...incomeData } = updatedIncome;
+        const incomeRef = doc(db, 'incomes', id);
+        batch.update(incomeRef, incomeData as any);
 
-      const stockChanges = new Map<string, number>();
-      
-      originalIncome.products.forEach(p => {
-          if (!p.productId.startsWith('generic_')) {
-            stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
-          }
-      });
+        const stockChanges = new Map<string, number>();
+        
+        if (originalIncome) {
+            originalIncome.products.forEach(p => {
+                if (!p.productId.startsWith('generic_')) {
+                  stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+                }
+            });
+        }
 
-      updatedIncome.products.forEach(p => {
-          if (!p.productId.startsWith('generic_')) {
-            stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
-          }
-      });
-      
-      for (const [productId, quantityChange] of stockChanges.entries()) {
-          if (quantityChange !== 0) {
-              const productRef = doc(db, "products", productId);
-              batch.update(productRef, { stock: increment(quantityChange) });
-          }
-      }
-      
-      await batch.commit();
+        updatedIncome.products.forEach(p => {
+            if (!p.productId.startsWith('generic_')) {
+              stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
+            }
+        });
+        
+        for (const [productId, quantityChange] of stockChanges.entries()) {
+            if (quantityChange !== 0) {
+                const productRef = doc(db, "products", productId);
+                batch.update(productRef, { stock: increment(quantityChange) });
+            }
+        }
+        
+        await batch.commit();
+    } catch(error) {
+        console.error("Error updating income:", error);
+        throw new Error("No se pudo actualizar el ingreso.");
+    }
   };
 
   const deleteIncome = async (id: string) => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    const incomeToDelete = incomes.find(i => i.id === id);
-    if (!incomeToDelete) {
-        console.error("No se encontró el ingreso a eliminar en el estado local. Solo se borrará el registro de ingreso.");
-        await deleteDoc(doc(db, 'incomes', id));
-        return;
-    }
-
-    const batch = writeBatch(db);
-    const incomeRef = doc(db, 'incomes', id);
-    batch.delete(incomeRef);
-
-    incomeToDelete.products.forEach(p => {
-        if (!p.productId.startsWith('generic_')) {
-            const productRef = doc(db, "products", p.productId);
-            batch.update(productRef, { stock: increment(p.quantity) });
+    try {
+        const incomeToDelete = incomes.find(i => i.id === id);
+        if (!incomeToDelete) {
+            console.warn("No se encontró el ingreso a eliminar en el estado local.");
+            await deleteDoc(doc(db, 'incomes', id));
+            return;
         }
-    });
 
-    await batch.commit();
+        const batch = writeBatch(db);
+        const incomeRef = doc(db, 'incomes', id);
+        batch.delete(incomeRef);
+
+        incomeToDelete.products.forEach(p => {
+            if (!p.productId.startsWith('generic_')) {
+                const productRef = doc(db, "products", p.productId);
+                batch.update(productRef, { stock: increment(p.quantity) });
+            }
+        });
+
+        await batch.commit();
+    } catch (error) {
+        console.error("Error deleting income:", error);
+        throw new Error("No se pudo eliminar el ingreso.");
+    }
   };
   
   const addPayment = async (incomeId: string, payment: Omit<Payment, 'id'>) => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    const incomeRef = doc(db, 'incomes', incomeId);
-    
-    const newPayment = { ...payment, id: doc(collection(db, 'temp')).id };
-
-    await updateDoc(incomeRef, {
-        payments: arrayUnion(newPayment),
-        balance: increment(-payment.amount)
-    });
+    try {
+        const incomeRef = doc(db, 'incomes', incomeId);
+        const newPayment = { ...payment, id: doc(collection(db, 'temp')).id };
+        await updateDoc(incomeRef, {
+            payments: arrayUnion(newPayment),
+            balance: increment(-payment.amount)
+        });
+    } catch (error) {
+        console.error("Error adding payment:", error);
+        throw new Error("No se pudo registrar el pago.");
+    }
   };
 
   // --- Expense Management with Firestore ---
-    const addExpense = async (expense: Omit<Expense, 'id' | 'balance' | 'payments'>) => {
+    const addExpense = async (expense: Omit<Expense, 'id' | 'balance' | 'payments' | 'createdAt'>) => {
         if (!db) throw new Error("Firestore no está inicializado.");
+        try {
+            const dataToSave: any = { ...expense, payments: [], balance: 0, createdAt: new Date() };
 
-        const dataToSave: any = { ...expense, payments: [], balance: 0 };
-
-        if (dataToSave.paymentMethod === 'contado') {
-            dataToSave.balance = 0;
-            if (!dataToSave.paymentType) {
-                dataToSave.paymentType = (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
+            if (dataToSave.paymentMethod === 'contado') {
+                dataToSave.balance = 0;
+                if (!dataToSave.paymentType) {
+                    dataToSave.paymentType = (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
+                }
+                dataToSave.payments.push({
+                    id: doc(collection(db, 'temp')).id,
+                    amount: dataToSave.amount,
+                    date: dataToSave.date,
+                    recordedBy: dataToSave.recordedBy
+                });
+            } else {
+                dataToSave.balance = dataToSave.amount;
+                delete dataToSave.paymentType;
             }
-            dataToSave.payments.push({
-                id: doc(collection(db, 'temp')).id,
-                amount: dataToSave.amount,
-                date: dataToSave.date,
-                recordedBy: dataToSave.recordedBy
-            });
-        } else {
-            dataToSave.balance = dataToSave.amount;
-            delete dataToSave.paymentType;
+            
+            await addDoc(collection(db, 'expenses'), dataToSave);
+        } catch (error) {
+            console.error("Error adding expense:", error);
+            throw new Error("No se pudo registrar el egreso.");
         }
-        
-        await addDoc(collection(db, 'expenses'), dataToSave);
     };
 
-  const addMultipleExpenses = async (expensesToProcess: Omit<Expense, 'id' | 'balance' | 'payments'>[], mode: 'append' | 'replace' = 'append') => {
-      if (!db) return;
-      const batch = writeBatch(db);
-      if (mode === 'replace') {
-        const existingDocsSnapshot = await getDocs(collection(db, 'expenses'));
-        existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
-      }
-      expensesToProcess.forEach(expense => {
-          const { paymentType, ...restOfExpense } = expense;
-          const dataToSave: any = { 
-              ...restOfExpense, 
-              payments: [], 
-              balance: 0 
-          };
+  const addMultipleExpenses = async (expensesToProcess: Omit<Expense, 'id' | 'balance' | 'payments' | 'createdAt'>[], mode: 'append' | 'replace' = 'append') => {
+      if (!db) throw new Error("Firestore no está inicializado.");
+      try {
+        const batch = writeBatch(db);
+        if (mode === 'replace') {
+          const existingDocsSnapshot = await getDocs(collection(db, 'expenses'));
+          existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+        }
+        expensesToProcess.forEach(expense => {
+            const { paymentType, ...restOfExpense } = expense;
+            const dataToSave: any = { 
+                ...restOfExpense, 
+                payments: [], 
+                balance: 0,
+                createdAt: new Date(),
+            };
 
-          if (expense.paymentMethod === 'contado') {
-            dataToSave.balance = 0;
-            dataToSave.paymentType = paymentType || (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
-            dataToSave.payments.push({
-                id: doc(collection(db, 'temp')).id,
-                amount: expense.amount,
-                date: expense.date,
-                recordedBy: expense.recordedBy
-            });
-          } else {
-            dataToSave.balance = expense.amount;
-            delete dataToSave.paymentType;
-          }
-          const docRef = doc(collection(db, 'expenses'));
-          batch.set(docRef, dataToSave);
-      });
-      await batch.commit();
+            if (expense.paymentMethod === 'contado') {
+              dataToSave.balance = 0;
+              dataToSave.paymentType = paymentType || (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
+              dataToSave.payments.push({
+                  id: doc(collection(db, 'temp')).id,
+                  amount: expense.amount,
+                  date: expense.date,
+                  recordedBy: expense.recordedBy
+              });
+            } else {
+              dataToSave.balance = expense.amount;
+              delete dataToSave.paymentType;
+            }
+            const docRef = doc(collection(db, 'expenses'));
+            batch.set(docRef, dataToSave);
+        });
+        await batch.commit();
+      } catch (error) {
+        console.error("Error adding multiple expenses:", error);
+        throw new Error("No se pudieron importar los egresos.");
+      }
   }
 
   const updateExpense = async (updatedExpense: Expense) => {
-    if(!db) return;
+    if(!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const dataToUpdate: any = { ...updatedExpense };
+        
+        const paymentSum = dataToUpdate.payments.reduce((acc: number, p: Payment) => acc + p.amount, 0);
+        dataToUpdate.balance = dataToUpdate.amount - paymentSum;
 
-    const dataToUpdate: any = { ...updatedExpense };
-    
-    const paymentSum = dataToUpdate.payments.reduce((acc: number, p: Payment) => acc + p.amount, 0);
-    dataToUpdate.balance = dataToUpdate.amount - paymentSum;
-
-    if (dataToUpdate.paymentMethod !== 'contado') {
-        delete dataToUpdate.paymentType;
-    } else if (!dataToUpdate.paymentType) {
-        dataToUpdate.paymentType = (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
+        if (dataToUpdate.paymentMethod !== 'contado') {
+            delete dataToUpdate.paymentType;
+        } else if (!dataToUpdate.paymentType) {
+            dataToUpdate.paymentType = (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
+        }
+        
+        const { id, ...finalExpenseData } = dataToUpdate;
+        await updateDoc(doc(db, 'expenses', id), finalExpenseData);
+    } catch(error) {
+        console.error("Error updating expense:", error);
+        throw new Error("No se pudo actualizar el egreso.");
     }
-    
-    const { id, ...finalExpenseData } = dataToUpdate;
-    await updateDoc(doc(db, 'expenses', id), finalExpenseData);
   };
 
   const deleteExpense = async (id: string) => {
-    if (db) await deleteDoc(doc(db, 'expenses', id));
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        await deleteDoc(doc(db, 'expenses', id));
+    } catch (error) {
+        console.error("Error deleting expense:", error);
+        throw new Error("No se pudo eliminar el egreso.");
+    }
   };
   
   const addPaymentToExpense = async (expenseId: string, payment: Omit<Payment, 'id'>) => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    const expenseRef = doc(db, 'expenses', expenseId);
-    
-    const newPayment = { ...payment, id: doc(collection(db, 'temp')).id };
+    try {
+        const expenseRef = doc(db, 'expenses', expenseId);
+        
+        const newPayment = { ...payment, id: doc(collection(db, 'temp')).id };
 
-    await updateDoc(expenseRef, {
-        payments: arrayUnion(newPayment),
-        balance: increment(-payment.amount)
-    });
+        await updateDoc(expenseRef, {
+            payments: arrayUnion(newPayment),
+            balance: increment(-payment.amount)
+        });
+    } catch (error) {
+        console.error("Error adding payment to expense:", error);
+        throw new Error("No se pudo registrar el pago.");
+    }
   };
 
   // --- Product Management with Firestore ---
   const addProduct = async (product: Omit<Product, 'id'>) => {
-    if (db) await addDoc(collection(db, 'products'), product);
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        await addDoc(collection(db, 'products'), product);
+    } catch (error) {
+        console.error("Error adding product:", error);
+        throw new Error("No se pudo añadir el producto.");
+    }
   }
 
   const addMultipleProducts = async (productsToProcess: Product[], mode: 'append' | 'replace' = 'append') => {
-    if (!db) return;
-    const batch = writeBatch(db);
-    if (mode === 'replace') {
-        const existingDocsSnapshot = await getDocs(collection(db, 'products'));
-        existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const batch = writeBatch(db);
+        if (mode === 'replace') {
+            const existingDocsSnapshot = await getDocs(collection(db, 'products'));
+            existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+        }
+        productsToProcess.forEach(product => {
+        const { id, ...productData } = product;
+        const docRef = id && mode === 'append' ? doc(db, 'products', id) : doc(collection(db, 'products'));
+        batch.set(docRef, productData);
+        });
+        await batch.commit();
+    } catch (error) {
+        console.error("Error adding multiple products:", error);
+        throw new Error("No se pudieron importar los productos.");
     }
-    productsToProcess.forEach(product => {
-      const { id, ...productData } = product;
-      const docRef = id && mode === 'append' ? doc(db, 'products', id) : doc(collection(db, 'products'));
-      batch.set(docRef, productData);
-    });
-    await batch.commit();
   }
 
   const updateProduct = async (updatedProduct: Product) => {
-    if (!db) return;
-    const { id, ...productData } = updatedProduct;
-    const productRef = doc(db, 'products', id);
-    await updateDoc(productRef, productData as any);
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const { id, ...productData } = updatedProduct;
+        const productRef = doc(db, 'products', id);
+        await updateDoc(productRef, productData as any);
+    } catch (error) {
+        console.error("Error updating product:", error);
+        throw new Error("No se pudo actualizar el producto.");
+    }
   }
 
   const deleteProduct = async (id: string) => {
-    if (db) await deleteDoc(doc(db, 'products', id));
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        await deleteDoc(doc(db, 'products', id));
+    } catch (error) {
+        console.error("Error deleting product:", error);
+        throw new Error("No se pudo eliminar el producto.");
+    }
   }
 
   // --- Raw Material Management with Firestore ---
   const addRawMaterial = async (material: Omit<RawMaterial, 'id'>) => {
-    if (db) await addDoc(collection(db, 'rawMaterials'), material);
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        await addDoc(collection(db, 'rawMaterials'), material);
+    } catch (error) {
+        console.error("Error adding raw material:", error);
+        throw new Error("No se pudo añadir la materia prima.");
+    }
   };
 
   const addMultipleRawMaterials = async (materialsToProcess: RawMaterial[], mode: 'append' | 'replace' = 'append') => {
-    if (!db) return;
-    const batch = writeBatch(db);
-    if (mode === 'replace') {
-        const existingDocsSnapshot = await getDocs(collection(db, 'rawMaterials'));
-        existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const batch = writeBatch(db);
+        if (mode === 'replace') {
+            const existingDocsSnapshot = await getDocs(collection(db, 'rawMaterials'));
+            existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+        }
+        materialsToProcess.forEach(material => {
+            const { id, ...materialData } = material;
+            const docRef = id && mode === 'append' ? doc(db, 'rawMaterials', id) : doc(collection(db, 'rawMaterials'));
+            batch.set(docRef, materialData);
+        });
+        await batch.commit();
+    } catch (error) {
+        console.error("Error adding multiple raw materials:", error);
+        throw new Error("No se pudieron importar las materias primas.");
     }
-    materialsToProcess.forEach(material => {
-        const { id, ...materialData } = material;
-        const docRef = id && mode === 'append' ? doc(db, 'rawMaterials', id) : doc(collection(db, 'rawMaterials'));
-        batch.set(docRef, materialData);
-    });
-    await batch.commit();
   };
 
   const updateRawMaterial = async (updatedMaterial: RawMaterial) => {
-    if (!db) return;
-    const { id, ...materialData } = updatedMaterial;
-    const materialRef = doc(db, 'rawMaterials', id);
-    await updateDoc(materialRef, materialData as any);
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const { id, ...materialData } = updatedMaterial;
+        const materialRef = doc(db, 'rawMaterials', id);
+        await updateDoc(materialRef, materialData as any);
+    } catch(error) {
+        console.error("Error updating raw material:", error);
+        throw new Error("No se pudo actualizar la materia prima.");
+    }
   };
 
   const deleteRawMaterial = async (id: string) => {
-    if (db) await deleteDoc(doc(db, 'rawMaterials', id));
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        await deleteDoc(doc(db, 'rawMaterials', id));
+    } catch (error) {
+        console.error("Error deleting raw material:", error);
+        throw new Error("No se pudo eliminar la materia prima.");
+    }
   };
 
   // --- Client Management with Firestore ---
   const addClient = async (client: Omit<Client, 'id' | 'code'>): Promise<Client | undefined> => {
-    if (!db) return undefined;
-    
-    // Fetch a fresh snapshot of clients to ensure the code is unique and avoids race conditions
-    const querySnapshot = await getDocs(collection(db, 'clients'));
-    const currentClientsData = querySnapshot.docs.map(doc => doc.data() as Omit<Client, 'id'>);
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const querySnapshot = await getDocs(collection(db, 'clients'));
+        const currentClientsData = querySnapshot.docs.map(doc => doc.data() as Omit<Client, 'id'>);
 
-    const existingCodes = currentClientsData
-      .map(c => parseInt(c.code?.split('-')[1] || '0', 10))
-      .filter(n => !isNaN(n));
-      
-    const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
-    const newCode = `CLI-${(maxCode + 1).toString().padStart(3, '0')}`;
-    
-    const clientData = { ...client, code: newCode };
-    const docRef = await addDoc(collection(db, 'clients'), clientData);
-    return { id: docRef.id, ...clientData };
+        const existingCodes = currentClientsData
+        .map(c => parseInt(c.code?.split('-')[1] || '0', 10))
+        .filter(n => !isNaN(n));
+        
+        const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+        const newCode = `CLI-${(maxCode + 1).toString().padStart(3, '0')}`;
+        
+        const clientData = { ...client, code: newCode };
+        const docRef = await addDoc(collection(db, 'clients'), clientData);
+        return { id: docRef.id, ...clientData };
+    } catch (error) {
+        console.error("Error adding client:", error);
+        throw new Error("No se pudo añadir el cliente.");
+    }
   };
 
   const addMultipleClients = async (clientsToAdd: Omit<Client, 'id' | 'code'>[], mode: 'append' | 'replace' = 'append') => {
-    if (!db) return;
-    const batch = writeBatch(db);
-    
-    let startingMaxCode = 0;
-    if (mode === 'append') {
-        const querySnapshot = await getDocs(collection(db, 'clients'));
-        const currentClientsData = querySnapshot.docs.map(doc => doc.data() as Omit<Client, 'id'>);
-        const existingCodes = currentClientsData
-          .map(c => parseInt(c.code?.split('-')[1] || '0', 10))
-          .filter(n => !isNaN(n));
-        startingMaxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
-    } else { // mode === 'replace'
-        const existingDocsSnapshot = await getDocs(collection(db, 'clients'));
-        existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
-    }
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const batch = writeBatch(db);
+        
+        let startingMaxCode = 0;
+        if (mode === 'append') {
+            const querySnapshot = await getDocs(collection(db, 'clients'));
+            const currentClientsData = querySnapshot.docs.map(doc => doc.data() as Omit<Client, 'id'>);
+            const existingCodes = currentClientsData
+            .map(c => parseInt(c.code?.split('-')[1] || '0', 10))
+            .filter(n => !isNaN(n));
+            startingMaxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+        } else { // mode === 'replace'
+            const existingDocsSnapshot = await getDocs(collection(db, 'clients'));
+            existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+        }
 
-    let maxCode = startingMaxCode;
-    
-    clientsToAdd.forEach(client => {
-      maxCode++;
-      const newCode = `CLI-${maxCode.toString().padStart(3, '0')}`;
-      const docRef = doc(collection(db, 'clients'));
-      batch.set(docRef, { ...client, code: newCode });
-    });
-    await batch.commit();
+        let maxCode = startingMaxCode;
+        
+        clientsToAdd.forEach(client => {
+        maxCode++;
+        const newCode = `CLI-${maxCode.toString().padStart(3, '0')}`;
+        const docRef = doc(collection(db, 'clients'));
+        batch.set(docRef, { ...client, code: newCode });
+        });
+        await batch.commit();
+    } catch (error) {
+        console.error("Error adding multiple clients:", error);
+        throw new Error("No se pudieron importar los clientes.");
+    }
   };
 
   const updateClient = async (updatedClient: Client) => {
-    if (!db) return;
-    const { id, ...clientData } = updatedClient;
-    const clientRef = doc(db, 'clients', id);
-    await updateDoc(clientRef, clientData as any);
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const { id, ...clientData } = updatedClient;
+        const clientRef = doc(db, 'clients', id);
+        await updateDoc(clientRef, clientData as any);
+    } catch (error) {
+        console.error("Error updating client:", error);
+        throw new Error("No se pudo actualizar el cliente.");
+    }
   };
 
   const deleteClient = async (id: string) => {
-    if (db) await deleteDoc(doc(db, 'clients', id));
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        await deleteDoc(doc(db, 'clients', id));
+    } catch (error) {
+        console.error("Error deleting client:", error);
+        throw new Error("No se pudo eliminar el cliente.");
+    }
   };
 
   // --- Supplier Management with Firestore ---
   const addSupplier = async (supplier: Omit<Supplier, 'id' | 'code'>): Promise<Supplier | undefined> => {
-    if (!db) return undefined;
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const querySnapshot = await getDocs(collection(db, 'suppliers'));
+        const currentSuppliersData = querySnapshot.docs.map(doc => doc.data() as Omit<Supplier, 'id'>);
 
-    // Fetch a fresh snapshot of suppliers to ensure the code is unique and avoids race conditions
-    const querySnapshot = await getDocs(collection(db, 'suppliers'));
-    const currentSuppliersData = querySnapshot.docs.map(doc => doc.data() as Omit<Supplier, 'id'>);
-
-    const existingCodes = currentSuppliersData
-      .map(s => parseInt(s.code?.split('-')[1] || '0', 10))
-      .filter(n => !isNaN(n));
-      
-    const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
-    const newCode = `SUP-${(maxCode + 1).toString().padStart(3, '0')}`;
-    
-    const supplierData = { ...supplier, code: newCode };
-    const docRef = await addDoc(collection(db, 'suppliers'), supplierData);
-    return { id: docRef.id, ...supplierData };
+        const existingCodes = currentSuppliersData
+        .map(s => parseInt(s.code?.split('-')[1] || '0', 10))
+        .filter(n => !isNaN(n));
+        
+        const maxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+        const newCode = `SUP-${(maxCode + 1).toString().padStart(3, '0')}`;
+        
+        const supplierData = { ...supplier, code: newCode };
+        const docRef = await addDoc(collection(db, 'suppliers'), supplierData);
+        return { id: docRef.id, ...supplierData };
+    } catch (error) {
+        console.error("Error adding supplier:", error);
+        throw new Error("No se pudo añadir el suplidor.");
+    }
   };
 
   const addMultipleSuppliers = async (suppliersToAdd: Omit<Supplier, 'id' | 'code'>[], mode: 'append' | 'replace' = 'append') => {
-    if (!db) return;
-    const batch = writeBatch(db);
-    
-    let startingMaxCode = 0;
-    if (mode === 'append') {
-        const querySnapshot = await getDocs(collection(db, 'suppliers'));
-        const currentSuppliersData = querySnapshot.docs.map(doc => doc.data() as Omit<Supplier, 'id'>);
-        const existingCodes = currentSuppliersData
-          .map(s => parseInt(s.code?.split('-')[1] || '0', 10))
-          .filter(n => !isNaN(n));
-        startingMaxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
-    } else { // mode === 'replace'
-        const existingDocsSnapshot = await getDocs(collection(db, 'suppliers'));
-        existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const batch = writeBatch(db);
+        
+        let startingMaxCode = 0;
+        if (mode === 'append') {
+            const querySnapshot = await getDocs(collection(db, 'suppliers'));
+            const currentSuppliersData = querySnapshot.docs.map(doc => doc.data() as Omit<Supplier, 'id'>);
+            const existingCodes = currentSuppliersData
+            .map(s => parseInt(s.code?.split('-')[1] || '0', 10))
+            .filter(n => !isNaN(n));
+            startingMaxCode = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+        } else { // mode === 'replace'
+            const existingDocsSnapshot = await getDocs(collection(db, 'suppliers'));
+            existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
+        }
+
+        let maxCode = startingMaxCode;
+
+        suppliersToAdd.forEach(supplier => {
+            maxCode++;
+            const newCode = `SUP-${maxCode.toString().padStart(3, '0')}`;
+            const docRef = doc(collection(db, 'suppliers'));
+            batch.set(docRef, { ...supplier, code: newCode });
+        });
+        await batch.commit();
+    } catch(error) {
+        console.error("Error adding multiple suppliers:", error);
+        throw new Error("No se pudieron importar los suplidores.");
     }
-
-    let maxCode = startingMaxCode;
-
-    suppliersToAdd.forEach(supplier => {
-        maxCode++;
-        const newCode = `SUP-${maxCode.toString().padStart(3, '0')}`;
-        const docRef = doc(collection(db, 'suppliers'));
-        batch.set(docRef, { ...supplier, code: newCode });
-    });
-    await batch.commit();
   };
 
   const updateSupplier = async (updatedSupplier: Supplier) => {
-    if (!db) return;
-    const { id, ...supplierData } = updatedSupplier;
-    const supplierRef = doc(db, 'suppliers', id);
-    await updateDoc(supplierRef, supplierData as any);
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const { id, ...supplierData } = updatedSupplier;
+        const supplierRef = doc(db, 'suppliers', id);
+        await updateDoc(supplierRef, supplierData as any);
+    } catch(error) {
+        console.error("Error updating supplier:", error);
+        throw new Error("No se pudo actualizar el suplidor.");
+    }
   };
 
   const deleteSupplier = async (id: string) => {
-    if (db) await deleteDoc(doc(db, 'suppliers', id));
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        await deleteDoc(doc(db, 'suppliers', id));
+    } catch(error) {
+        console.error("Error deleting supplier:", error);
+        throw new Error("No se pudo eliminar el suplidor.");
+    }
   };
 
   if (!isConfigured || !db) {
