@@ -506,14 +506,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const incomeToDelete = incomes.find(i => i.id === id);
     if (!incomeToDelete) {
-        console.warn("No se encontró el ingreso a eliminar en el estado local. Eliminando solo de Firestore.");
+      console.warn("No se encontró el ingreso a eliminar. Es posible que ya haya sido borrado.");
+      // Even if not in local state, try to delete from DB in case of state desync.
+      try {
         await deleteDoc(doc(db, 'incomes', id));
-        return;
+      } catch (error) {
+        console.error("Error deleting income not found in local state:", error);
+        throw new Error("No se pudo eliminar el ingreso.");
+      }
+      return;
     }
-
-    const originalIncomes = [...incomes];
-    setIncomes(prev => prev.filter(i => i.id !== id));
-
+    
     try {
         const batch = writeBatch(db);
         const incomeRef = doc(db, 'incomes', id);
@@ -527,8 +530,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
 
         await batch.commit();
+        // UI will update automatically via onSnapshot listener
     } catch (error) {
-        setIncomes(originalIncomes);
         console.error("Error deleting income:", error);
         throw new Error("No se pudo eliminar el ingreso.");
     }
@@ -642,12 +645,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteExpense = async (id: string) => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    const originalExpenses = [...expenses];
-    setExpenses(prev => prev.filter(e => e.id !== id));
     try {
         await deleteDoc(doc(db, 'expenses', id));
     } catch (error) {
-        setExpenses(originalExpenses);
         console.error("Error deleting expense:", error);
         throw new Error("No se pudo eliminar el egreso.");
     }
@@ -715,12 +715,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteProduct = async (id: string) => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    const originalProducts = [...products];
-    setProducts(prev => prev.filter(p => p.id !== id));
     try {
         await deleteDoc(doc(db, 'products', id));
     } catch (error) {
-        setProducts(originalProducts);
         console.error("Error deleting product:", error);
         throw new Error("No se pudo eliminar el producto.");
     }
@@ -771,12 +768,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteRawMaterial = async (id: string) => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    const originalRawMaterials = [...rawMaterials];
-    setRawMaterials(prev => prev.filter(m => m.id !== id));
     try {
         await deleteDoc(doc(db, 'rawMaterials', id));
     } catch (error) {
-        setRawMaterials(originalRawMaterials);
         console.error("Error deleting raw material:", error);
         throw new Error("No se pudo eliminar la materia prima.");
     }
@@ -852,12 +846,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteClient = async (id: string) => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    const originalClients = [...clients];
-    setClients(prev => prev.filter(c => c.id !== id));
     try {
         await deleteDoc(doc(db, 'clients', id));
     } catch (error) {
-        setClients(originalClients);
         console.error("Error deleting client:", error);
         throw new Error("No se pudo eliminar el cliente.");
     }
@@ -933,12 +924,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteSupplier = async (id: string) => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    const originalSuppliers = [...suppliers];
-    setSuppliers(prev => prev.filter(s => s.id !== id));
     try {
         await deleteDoc(doc(db, 'suppliers', id));
     } catch(error) {
-        setSuppliers(originalSuppliers);
         console.error("Error deleting supplier:", error);
         throw new Error("No se pudo eliminar el suplidor.");
     }
