@@ -365,15 +365,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       
       const incomeRef = doc(collection(db, "incomes"));
 
-      const newIncomeData: Omit<Income, 'id'> = { ...income, payments: [], balance: 0, createdAt: new Date() };
+      const { paymentType, ...restOfIncome } = income;
+      const newIncomeData: any = { 
+        ...restOfIncome, 
+        payments: [], 
+        balance: 0, 
+        createdAt: new Date()
+      };
 
       if (income.paymentMethod === 'contado') {
           newIncomeData.balance = 0;
+          newIncomeData.paymentType = paymentType || (invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
           newIncomeData.payments.push({
               id: doc(collection(db, 'temp')).id,
               amount: income.totalAmount,
               date: income.date,
-              recordedBy: income.recordedBy
+              recordedBy: income.recordedBy,
+              createdAt: new Date(),
           });
       } else {
           newIncomeData.balance = income.totalAmount;
@@ -460,27 +468,47 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
         const originalIncome = incomes.find(i => i.id === updatedIncome.id);
         if (!originalIncome) {
-            console.warn("No se encontró el ingreso original a actualizar.");
+            throw new Error("No se encontró el ingreso original a actualizar.");
         }
         
         const batch = writeBatch(db);
         
-        const paymentSum = updatedIncome.payments.reduce((acc, p) => acc + p.amount, 0);
-        updatedIncome.balance = updatedIncome.totalAmount - paymentSum;
+        const dataToUpdate: any = { ...updatedIncome };
+
+        if (originalIncome.paymentMethod === 'credito' && dataToUpdate.paymentMethod === 'contado') {
+            dataToUpdate.payments = [{
+                id: doc(collection(db, 'temp')).id,
+                amount: dataToUpdate.totalAmount,
+                date: dataToUpdate.date,
+                recordedBy: dataToUpdate.recordedBy,
+                createdAt: new Date(),
+            }];
+             if (!dataToUpdate.paymentType) {
+                 dataToUpdate.paymentType = (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
+            }
+        } else if (originalIncome.paymentMethod === 'contado' && dataToUpdate.paymentMethod === 'credito') {
+            dataToUpdate.payments = [];
+            delete dataToUpdate.paymentType;
+        }
         
-        const { id, ...incomeData } = updatedIncome;
+        const paymentSum = dataToUpdate.payments.reduce((acc: number, p: Payment) => acc + p.amount, 0);
+        dataToUpdate.balance = dataToUpdate.totalAmount - paymentSum;
+
+        if (dataToUpdate.paymentMethod !== 'contado') {
+            delete dataToUpdate.paymentType;
+        }
+
+        const { id, ...incomeData } = dataToUpdate;
         const incomeRef = doc(db, 'incomes', id);
-        batch.update(incomeRef, incomeData as any);
+        batch.update(incomeRef, incomeData);
 
         const stockChanges = new Map<string, number>();
         
-        if (originalIncome) {
-            originalIncome.products.forEach(p => {
-                if (!p.productId.startsWith('generic_')) {
-                  stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
-                }
-            });
-        }
+        originalIncome.products.forEach(p => {
+            if (!p.productId.startsWith('generic_')) {
+              stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
+            }
+        });
 
         updatedIncome.products.forEach(p => {
             if (!p.productId.startsWith('generic_')) {
@@ -522,7 +550,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await batch.commit();
     } catch (error) {
         console.error("Error deleting income:", error);
-        throw error;
+        throw new Error("No se pudo eliminar el ingreso.");
     }
   };
   
@@ -668,7 +696,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await addDoc(collection(db, 'products'), product);
     } catch (error) {
         console.error("Error adding product:", error);
-        throw error;
+        throw new Error("No se pudo guardar el producto.");
     }
   }
 
@@ -688,7 +716,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await batch.commit();
     } catch (error) {
         console.error("Error adding multiple products:", error);
-        throw error;
+        throw new Error("No se pudieron importar los productos.");
     }
   }
 
@@ -700,7 +728,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await updateDoc(productRef, productData as any);
     } catch (error) {
         console.error("Error updating product:", error);
-        throw error;
+        throw new Error("No se pudo actualizar el producto.");
     }
   }
 
@@ -710,7 +738,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await deleteDoc(doc(db, 'products', id));
     } catch (error) {
         console.error("Error deleting product:", error);
-        throw error;
+        throw new Error("No se pudo eliminar el producto.");
     }
   }
 
@@ -721,7 +749,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await addDoc(collection(db, 'rawMaterials'), material);
     } catch (error) {
         console.error("Error adding raw material:", error);
-        throw error;
+        throw new Error("No se pudo guardar la materia prima.");
     }
   };
 
@@ -741,7 +769,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await batch.commit();
     } catch (error) {
         console.error("Error adding multiple raw materials:", error);
-        throw error;
+        throw new Error("No se pudieron importar las materias primas.");
     }
   };
 
@@ -753,7 +781,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await updateDoc(materialRef, materialData as any);
     } catch(error) {
         console.error("Error updating raw material:", error);
-        throw error;
+        throw new Error("No se pudo actualizar la materia prima.");
     }
   };
 
@@ -763,7 +791,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await deleteDoc(doc(db, 'rawMaterials', id));
     } catch (error) {
         console.error("Error deleting raw material:", error);
-        throw error;
+        throw new Error("No se pudo eliminar la materia prima.");
     }
   };
 
@@ -786,7 +814,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return { id: docRef.id, ...clientData };
     } catch (error) {
         console.error("Error adding client:", error);
-        throw error;
+        throw new Error("No se pudo guardar el cliente.");
     }
   };
 
@@ -819,7 +847,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await batch.commit();
     } catch (error) {
         console.error("Error adding multiple clients:", error);
-        throw error;
+        throw new Error("No se pudieron importar los clientes.");
     }
   };
 
@@ -831,7 +859,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await updateDoc(clientRef, clientData as any);
     } catch (error) {
         console.error("Error updating client:", error);
-        throw error;
+        throw new Error("No se pudo actualizar el cliente.");
     }
   };
 
@@ -841,7 +869,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await deleteDoc(doc(db, 'clients', id));
     } catch (error) {
         console.error("Error deleting client:", error);
-        throw error;
+        throw new Error("No se pudo eliminar el cliente.");
     }
   };
 
@@ -864,7 +892,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return { id: docRef.id, ...supplierData };
     } catch (error) {
         console.error("Error adding supplier:", error);
-        throw error;
+        throw new Error("No se pudo guardar el suplidor.");
     }
   };
 
@@ -897,7 +925,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await batch.commit();
     } catch(error) {
         console.error("Error adding multiple suppliers:", error);
-        throw error;
+        throw new Error("No se pudieron importar los suplidores.");
     }
   };
 
@@ -909,7 +937,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await updateDoc(supplierRef, supplierData as any);
     } catch(error) {
         console.error("Error updating supplier:", error);
-        throw error;
+        throw new Error("No se pudo actualizar el suplidor.");
     }
   };
 
@@ -919,7 +947,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await deleteDoc(doc(db, 'suppliers', id));
     } catch(error) {
         console.error("Error deleting supplier:", error);
-        throw error;
+        throw new Error("No se pudo eliminar el suplidor.");
     }
   };
 
