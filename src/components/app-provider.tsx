@@ -122,7 +122,7 @@ interface AppContextType {
   expenseCategories: string[];
   loading: boolean;
   addIncome: (income: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>) => Promise<void>;
-  addMultipleIncomes: (incomes: Income[], mode: 'append' | 'replace') => Promise<void>;
+  addMultipleIncomes: (incomes: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>[], mode: 'append' | 'replace') => Promise<void>;
   deleteIncome: (id: string) => Promise<void>;
   updateIncome: (income: Income) => Promise<void>;
   addPayment: (incomeId: string, payment: Omit<Payment, 'id' | 'createdAt'>) => Promise<void>;
@@ -132,11 +132,11 @@ interface AppContextType {
   updateExpense: (expense: Expense) => Promise<void>;
   addPaymentToExpense: (expenseId: string, payment: Omit<Payment, 'id' | 'createdAt'>) => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
-  addMultipleProducts: (products: Product[], mode: 'append' | 'replace') => Promise<void>;
+  addMultipleProducts: (products: Omit<Product, 'id'>[], mode: 'append' | 'replace') => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
   addRawMaterial: (material: Omit<RawMaterial, 'id'>) => Promise<void>;
-  addMultipleRawMaterials: (materials: RawMaterial[], mode: 'append' | 'replace') => Promise<void>;
+  addMultipleRawMaterials: (materials: Omit<RawMaterial, 'id'>[], mode: 'append' | 'replace') => Promise<void>;
   updateRawMaterial: (material: RawMaterial) => Promise<void>;
   deleteRawMaterial: (id: string) => Promise<void>;
   addClient: (client: Omit<Client, 'id' | 'code'>) => Promise<Client | undefined>;
@@ -385,6 +385,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           });
       } else {
           newIncomeData.balance = income.totalAmount;
+          delete newIncomeData.paymentType;
       }
 
       batch.set(incomeRef, newIncomeData);
@@ -403,12 +404,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addMultipleIncomes = async (incomesToProcess: Income[], mode: 'append' | 'replace' = 'append') => {
+  const addMultipleIncomes = async (incomesToProcess: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>[], mode: 'append' | 'replace' = 'append') => {
     if (!db) throw new Error("Firestore no está inicializado.");
     try {
         const batch = writeBatch(db);
         const stockChanges = new Map<string, number>();
-        const existingIncomesMap = new Map(incomes.map(i => [i.id, i]));
 
         if (mode === 'replace') {
             const allIncomesSnapshot = await getDocs(collection(db, "incomes"));
@@ -424,29 +424,32 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 batch.delete(docSnap.ref);
             }
         }
-
+        
         for (const income of incomesToProcess) {
-            const { id, ...incomeData } = { ...income, createdAt: new Date() };
-
-            if (mode === 'append' && id) {
-                const originalIncome = existingIncomesMap.get(id);
-                if (originalIncome) {
-                    originalIncome.products.forEach(p => {
-                        if (!p.productId.startsWith('generic_')) {
-                            stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) + p.quantity);
-                        }
-                    });
-                }
-            }
+            const newIncomeData: any = { ...income, createdAt: new Date(), payments: [] };
             
+            if (income.paymentMethod === 'contado') {
+                newIncomeData.balance = 0;
+                newIncomeData.payments.push({
+                    id: doc(collection(db, 'temp')).id,
+                    amount: income.totalAmount,
+                    date: income.date,
+                    recordedBy: income.recordedBy,
+                    createdAt: new Date(),
+                });
+            } else {
+                newIncomeData.balance = income.totalAmount;
+                delete newIncomeData.paymentType;
+            }
+
             income.products.forEach(p => {
                 if (!p.productId.startsWith('generic_')) {
                     stockChanges.set(p.productId, (stockChanges.get(p.productId) || 0) - p.quantity);
                 }
             });
 
-            const docRef = id && mode === 'append' ? doc(db, 'incomes', id) : doc(collection(db, 'incomes'));
-            batch.set(docRef, incomeData);
+            const docRef = doc(collection(db, 'incomes'));
+            batch.set(docRef, newIncomeData);
         }
         
         for (const [productId, quantityChange] of stockChanges.entries()) {
@@ -467,15 +470,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!db) throw new Error("Firestore no está inicializado.");
     try {
         const originalIncome = incomes.find(i => i.id === updatedIncome.id);
-        if (!originalIncome) {
-            throw new Error("No se encontró el ingreso original a actualizar.");
-        }
+        if (!originalIncome) throw new Error("No se encontró el ingreso original a actualizar.");
         
         const batch = writeBatch(db);
-        
-        const dataToUpdate: any = { ...updatedIncome };
+        const incomeRef = doc(db, 'incomes', updatedIncome.id);
 
-        if (originalIncome.paymentMethod === 'credito' && dataToUpdate.paymentMethod === 'contado') {
+        const dataToUpdate: any = { ...updatedIncome };
+        
+        const wasContado = originalIncome.paymentMethod === 'contado';
+        const isContado = updatedIncome.paymentMethod === 'contado';
+
+        // Recalculate balance based on new total and existing manual payments
+        const manualPayments = (wasContado ? [] : originalIncome.payments).filter(p => p.id);
+        const manualPaymentSum = manualPayments.reduce((acc, p) => acc + p.amount, 0);
+
+        if (isContado) {
+            dataToUpdate.balance = 0;
             dataToUpdate.payments = [{
                 id: doc(collection(db, 'temp')).id,
                 amount: dataToUpdate.totalAmount,
@@ -483,23 +493,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 recordedBy: dataToUpdate.recordedBy,
                 createdAt: new Date(),
             }];
-             if (!dataToUpdate.paymentType) {
-                 dataToUpdate.paymentType = (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
+            if (!dataToUpdate.paymentType) {
+                 dataToUpdate.paymentType = (invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
             }
-        } else if (originalIncome.paymentMethod === 'contado' && dataToUpdate.paymentMethod === 'credito') {
-            dataToUpdate.payments = [];
-            delete dataToUpdate.paymentType;
-        }
-        
-        const paymentSum = dataToUpdate.payments.reduce((acc: number, p: Payment) => acc + p.amount, 0);
-        dataToUpdate.balance = dataToUpdate.totalAmount - paymentSum;
-
-        if (dataToUpdate.paymentMethod !== 'contado') {
+        } else { // Is Credito
+            dataToUpdate.balance = dataToUpdate.totalAmount - manualPaymentSum;
+            dataToUpdate.payments = manualPayments; // Keep only manual payments
             delete dataToUpdate.paymentType;
         }
 
         const { id, ...incomeData } = dataToUpdate;
-        const incomeRef = doc(db, 'incomes', id);
         batch.update(incomeRef, incomeData);
 
         const stockChanges = new Map<string, number>();
@@ -593,6 +596,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 });
             } else {
                 dataToSave.balance = expense.amount;
+                delete dataToSave.paymentType;
             }
             
             await addDoc(collection(db, 'expenses'), dataToSave);
@@ -646,15 +650,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const updateExpense = async (updatedExpense: Expense) => {
     if(!db) throw new Error("Firestore no está inicializado.");
     try {
+        const originalExpense = expenses.find(e => e.id === updatedExpense.id);
+        if (!originalExpense) throw new Error("No se encontró el egreso original a actualizar.");
+        
         const dataToUpdate: any = { ...updatedExpense };
         
-        const paymentSum = dataToUpdate.payments.reduce((acc: number, p: Payment) => acc + p.amount, 0);
-        dataToUpdate.balance = dataToUpdate.amount - paymentSum;
+        const wasContado = originalExpense.paymentMethod === 'contado';
+        const isContado = updatedExpense.paymentMethod === 'contado';
 
-        if (dataToUpdate.paymentMethod !== 'contado') {
+        const manualPayments = (wasContado ? [] : originalExpense.payments).filter(p => p.id);
+        const manualPaymentSum = manualPayments.reduce((acc, p) => acc + p.amount, 0);
+
+        if (isContado) {
+            dataToUpdate.balance = 0;
+            dataToUpdate.payments = [{
+                id: doc(collection(db, 'temp')).id,
+                amount: dataToUpdate.amount,
+                date: dataToUpdate.date,
+                recordedBy: dataToUpdate.recordedBy,
+                createdAt: new Date(),
+            }];
+            if (!dataToUpdate.paymentType) {
+                dataToUpdate.paymentType = (invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
+            }
+        } else { // Is Credito
+            dataToUpdate.balance = dataToUpdate.amount - manualPaymentSum;
+            dataToUpdate.payments = manualPayments;
             delete dataToUpdate.paymentType;
-        } else if (!dataToUpdate.paymentType) {
-            dataToUpdate.paymentType = (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
         }
         
         const { id, ...finalExpenseData } = dataToUpdate;
@@ -703,7 +725,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const addMultipleProducts = async (productsToProcess: Product[], mode: 'append' | 'replace' = 'append') => {
+  const addMultipleProducts = async (productsToProcess: Omit<Product, 'id'>[], mode: 'append' | 'replace' = 'append') => {
     if (!db) throw new Error("Firestore no está inicializado.");
     try {
         const batch = writeBatch(db);
@@ -712,9 +734,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
         }
         productsToProcess.forEach(product => {
-        const { id, ...productData } = product;
-        const docRef = id && mode === 'append' ? doc(db, 'products', id) : doc(collection(db, 'products'));
-        batch.set(docRef, productData);
+            const docRef = doc(collection(db, 'products'));
+            batch.set(docRef, product);
         });
         await batch.commit();
     } catch (error) {
@@ -756,7 +777,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addMultipleRawMaterials = async (materialsToProcess: RawMaterial[], mode: 'append' | 'replace' = 'append') => {
+  const addMultipleRawMaterials = async (materialsToProcess: Omit<RawMaterial, 'id'>[], mode: 'append' | 'replace' = 'append') => {
     if (!db) throw new Error("Firestore no está inicializado.");
     try {
         const batch = writeBatch(db);
@@ -765,9 +786,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
         }
         materialsToProcess.forEach(material => {
-            const { id, ...materialData } = material;
-            const docRef = id && mode === 'append' ? doc(db, 'rawMaterials', id) : doc(collection(db, 'rawMaterials'));
-            batch.set(docRef, materialData);
+            const docRef = doc(collection(db, 'rawMaterials'));
+            batch.set(docRef, material);
         });
         await batch.commit();
     } catch (error) {

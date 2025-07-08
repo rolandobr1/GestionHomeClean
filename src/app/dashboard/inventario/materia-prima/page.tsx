@@ -240,7 +240,7 @@ export default function MateriaPrimaPage({ params, searchParams }: { params: any
                     });
                 }
                 
-                await addMultipleRawMaterials(newMaterials as RawMaterial[], importMode);
+                await addMultipleRawMaterials(newMaterials, importMode);
 
                 toast({
                     title: "Importación Exitosa",

@@ -147,12 +147,12 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                  toast({ title: "Ingreso Actualizado", description: "El registro ha sido actualizado." });
             } else {
                 const incomeToSave = { ...incomeData, recordedBy: user.name };
-                await addIncome(incomeToSave as Omit<Income, 'id' | 'balance' | 'payments'>);
+                await addIncome(incomeToSave as Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>);
                 toast({ title: "Ingreso Registrado", description: "El nuevo ingreso ha sido guardado." });
             }
             setIsDialogOpen(false);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo guardar el ingreso.' });
+        } catch (error: any) {
+             toast({ title: "Error al registrar ingreso", description: error.message, variant: "destructive"});
         }
     };
     
@@ -385,67 +385,41 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                 const delimiter = semicolonCount > commaCount ? ';' : ',';
 
                 const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
-                const requiredHeaders = ['cantidad', 'preciounitario'];
+                const requiredHeaders = ['producto', 'cantidad', 'preciounitario'];
                 const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
                 if (missingHeaders.length > 0) {
                     throw new Error(`Faltan las siguientes columnas obligatorias en el CSV: ${missingHeaders.join(', ')}`);
                 }
 
-                const transactionsMap = new Map<string, any[]>();
-                const rowsWithoutId: any[] = [];
+                const newIncomes: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>[] = [];
+                const newClientsCache = new Map<string, Client>();
+                let allClientsCurrentList = [...allClients];
 
-                // Group rows by transaction ID
                 for (let i = 1; i < lines.length; i++) {
                     const values = lines[i].split(delimiter);
                     const rowData: any = {};
                     headers.forEach((header, index) => {
                         rowData[header] = values[index]?.trim() || '';
                     });
-
-                    const transactionId = rowData.idtransaccion?.trim();
-
-                    if (transactionId) {
-                        if (!transactionsMap.has(transactionId)) {
-                            transactionsMap.set(transactionId, []);
-                        }
-                        transactionsMap.get(transactionId)!.push(rowData);
-                    } else {
-                        // Each row without an ID is its own transaction
-                        rowsWithoutId.push(rowData);
-                    }
-                }
-                
-                rowsWithoutId.forEach((rowData, index) => {
-                    transactionsMap.set(`new_transaction_${Date.now()}_${index}`, [rowData]);
-                });
-                
-                const newIncomes: Omit<Income, 'id'>[] = [];
-                const newClientsCache = new Map<string, Client>();
-                let allClientsCurrentList = [...allClients];
-                
-                for (const [transactionId, rows] of transactionsMap.entries()) {
-                    if (rows.length === 0) continue;
-
-                    const firstRow = rows[0];
-                    const date = firstRow.fecha || format(new Date(), 'yyyy-MM-dd');
-                    const clientName = (firstRow.cliente || 'Cliente Genérico').trim();
-                    const paymentMethodRaw = (firstRow.metododepago || 'contado').toLowerCase();
-                    const paymentMethod = (paymentMethodRaw === 'credito' || paymentMethodRaw === 'contado') ? paymentMethodRaw : 'contado';
-                    const recordedBy = firstRow.registradopor?.trim() || user.name;
                     
-                    const totalFacturaFromFile = firstRow.totalfactura ? parseFloat(firstRow.totalfactura) : null;
-                    if (totalFacturaFromFile !== null && isNaN(totalFacturaFromFile)) {
-                        throw new Error(`El Total Factura para la transacción ${transactionId.startsWith('new_transaction_') ? 'nueva' : transactionId} no es un número válido.`);
+                    const productName = rowData.producto?.trim();
+                    const quantityStr = rowData.cantidad;
+                    const unitPriceStr = rowData.preciounitario;
+
+                    if (!productName || !quantityStr || !unitPriceStr) {
+                        console.warn(`Saltando línea ${i + 1} por datos faltantes.`);
+                        continue;
                     }
 
-                    // Validate data consistency across rows of the same transaction
-                    for (const row of rows) {
-                        if (row.fecha && row.fecha !== date) throw new Error(`Fechas inconsistentes para transacción ${transactionId}.`);
-                        if (row.cliente && row.cliente !== clientName) throw new Error(`Clientes inconsistentes para transacción ${transactionId}.`);
-                        if (row.metododepago && row.metododepago.toLowerCase() !== paymentMethod) throw new Error(`Métodos de pago inconsistentes para transacción ${transactionId}.`);
-                        if (row.registradopor && row.registradopor.trim() !== recordedBy) throw new Error(`Registradores inconsistentes para transacción ${transactionId}.`);
+                    const quantity = parseFloat(quantityStr);
+                    const unitPrice = parseFloat(unitPriceStr);
+
+                    if (isNaN(quantity) || quantity <= 0 || isNaN(unitPrice) || unitPrice < 0) {
+                        console.warn(`Saltando línea ${i + 1} por valores numéricos inválidos.`);
+                        continue;
                     }
-                    
+
+                    const clientName = (rowData.cliente || 'Cliente Genérico').trim();
                     let client: Client | undefined;
                     client = allClientsCurrentList.find(c => c.name.toLowerCase() === clientName.toLowerCase());
 
@@ -465,96 +439,37 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     if (!client) {
                         client = allClients.find(s => s.id === 'generic');
                     }
+                    if (!client) throw new Error(`No se pudo encontrar o crear el cliente "${clientName}".`);
 
-                    if (!client) {
-                        throw new Error(`No se pudo encontrar o crear el cliente "${clientName}" para la transacción ${transactionId}.`);
-                    }
+
+                    const existingProduct = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
                     
-                    const soldProducts: SoldProduct[] = [];
-                    let calculatedTotal = 0;
-                    let rowIndex = 0;
-
-                    for (const row of rows) {
-                        rowIndex++;
-                        const quantityStr = row.cantidad;
-                        const unitPriceStr = row.preciounitario;
-                        
-                        // A row is only valid if it has quantity and price.
-                        if (!quantityStr || !unitPriceStr) {
-                            continue;
-                        }
-
-                        const quantity = parseFloat(quantityStr);
-                        const unitPrice = parseFloat(unitPriceStr);
-                        
-                        // Check if parsing was successful and values are valid.
-                        if (isNaN(quantity) || quantity <= 0 || isNaN(unitPrice) || unitPrice < 0) {
-                            continue;
-                        }
-
-                        // Default to 'Venta General' if product name is empty
-                        const productName = row.producto?.trim() || 'Venta General';
-                        
-                        const existingProduct = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
-                        const productId = existingProduct ? existingProduct.id : `generic_${transactionId}_${rowIndex}`;
-                        
-                        const subtotalFromFile = row.subtotalproducto ? parseFloat(row.subtotalproducto) : null;
-                        if (subtotalFromFile !== null) {
-                            if(isNaN(subtotalFromFile)) {
-                                throw new Error(`Subtotal para "${productName}" en transacción ${transactionId} no es un número válido.`);
-                            }
-                            const calculatedSubtotal = quantity * unitPrice;
-                            if (Math.abs(calculatedSubtotal - subtotalFromFile) > 0.01) {
-                                throw new Error(`Subtotal para "${productName}" (${subtotalFromFile.toFixed(2)}) no coincide con el cálculo (${calculatedSubtotal.toFixed(2)}) en transacción ${transactionId}.`);
-                            }
-                        }
-
-                        soldProducts.push({
-                            productId: productId,
-                            name: productName,
-                            quantity,
-                            price: unitPrice,
-                        });
-                        calculatedTotal += (quantity * unitPrice);
-                    }
+                    const soldProduct: SoldProduct = {
+                        productId: existingProduct ? existingProduct.id : `generic_${Date.now()}_${i}`,
+                        name: productName,
+                        quantity: quantity,
+                        price: unitPrice,
+                    };
                     
-                    if (soldProducts.length === 0) {
-                        continue;
-                    }
-
-                    if (totalFacturaFromFile !== null && Math.abs(calculatedTotal - totalFacturaFromFile) > 0.01) {
-                        throw new Error(`Total Factura (${totalFacturaFromFile.toFixed(2)}) no coincide con la suma de subtotales (${calculatedTotal.toFixed(2)}) en transacción ${transactionId}.`);
-                    }
+                    const paymentMethodRaw = (rowData.metododepago || 'contado').toLowerCase();
+                    const paymentMethod = (paymentMethodRaw === 'credito' || paymentMethodRaw === 'contado') ? paymentMethodRaw : 'contado';
                     
-                    const isNewTransaction = transactionId.startsWith('new_transaction_');
-
-                    const balance = paymentMethod === 'credito' ? calculatedTotal : 0;
-                    const payments: Payment[] = paymentMethod === 'contado' ? [{
-                        id: `payment_${Date.now()}`,
-                        amount: calculatedTotal,
-                        date: date,
-                        recordedBy: recordedBy,
-                    }] : [];
-
                     newIncomes.push({
-                        id: isNewTransaction ? '' : transactionId,
                         clientId: client.id,
-                        paymentMethod: paymentMethod as 'credito' | 'contado',
-                        date,
-                        products: soldProducts,
-                        totalAmount: calculatedTotal,
+                        paymentMethod,
+                        date: rowData.fecha || format(new Date(), 'yyyy-MM-dd'),
+                        products: [soldProduct],
+                        totalAmount: soldProduct.quantity * soldProduct.price,
                         category: 'Venta de Producto',
-                        recordedBy: recordedBy,
-                        balance: balance,
-                        payments: payments
+                        recordedBy: rowData.registradopor?.trim() || user.name,
                     });
                 }
                 
                 if (newIncomes.length === 0) {
-                    throw new Error("No se encontraron transacciones válidas para importar en el archivo. Verifica el formato y los datos.");
+                    throw new Error("No se encontraron transacciones válidas para importar en el archivo.");
                 }
 
-                await addMultipleIncomes(newIncomes as Income[], importMode);
+                await addMultipleIncomes(newIncomes, importMode);
 
                 toast({
                     title: "Importación Exitosa",

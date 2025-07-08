@@ -114,7 +114,7 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
                 throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
             }
 
-            const newProducts: Product[] = [];
+            const newProducts: Omit<Product, 'id'>[] = [];
             for (let i = 1; i < lines.length; i++) {
                 const values = lines[i].split(delimiter);
                 const productData: any = {};
@@ -123,7 +123,6 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
                 });
 
                 newProducts.push({
-                    id: productData.id || '', // Let provider assign ID
                     name: productData.name || 'N/A',
                     sku: productData.sku || 'N/A',
                     unit: productData.unit || 'N/A',
