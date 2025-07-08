@@ -573,23 +573,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const addExpense = async (expense: Omit<Expense, 'id' | 'balance' | 'payments' | 'createdAt'>) => {
         if (!db) throw new Error("Firestore no está inicializado.");
         try {
-            const dataToSave: any = { ...expense, payments: [], balance: 0, createdAt: new Date() };
+            const { paymentType, ...restOfExpense } = expense;
+            const dataToSave: any = {
+                ...restOfExpense,
+                payments: [],
+                balance: 0,
+                createdAt: new Date(),
+            };
 
-            if (dataToSave.paymentMethod === 'contado') {
+            if (expense.paymentMethod === 'contado') {
                 dataToSave.balance = 0;
-                if (!dataToSave.paymentType) {
-                    dataToSave.paymentType = (invoiceSettings.paymentMethods && invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
-                }
+                dataToSave.paymentType = paymentType || (invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : 'Efectivo');
                 dataToSave.payments.push({
                     id: doc(collection(db, 'temp')).id,
-                    amount: dataToSave.amount,
-                    date: dataToSave.date,
-                    recordedBy: dataToSave.recordedBy,
+                    amount: expense.amount,
+                    date: expense.date,
+                    recordedBy: expense.recordedBy,
                     createdAt: new Date(),
                 });
             } else {
-                dataToSave.balance = dataToSave.amount;
-                delete dataToSave.paymentType;
+                dataToSave.balance = expense.amount;
             }
             
             await addDoc(collection(db, 'expenses'), dataToSave);
