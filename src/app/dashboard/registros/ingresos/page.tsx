@@ -37,10 +37,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     const [selectedIncomeForInvoice, setSelectedIncomeForInvoice] = useState<Income | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: subDays(new Date(), 90),
-        to: new Date(),
-    });
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [clientSearchTerm, setClientSearchTerm] = useState('');
     const [productSearchTerm, setProductSearchTerm] = useState('');
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
@@ -118,7 +115,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     };
 
     const clearFilters = () => {
-        setDateRange({ from: undefined, to: undefined });
+        setDateRange(undefined);
         setClientSearchTerm('');
         setProductSearchTerm('');
     };
@@ -682,7 +679,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                             {editingIncome ? 'Actualiza los detalles de tu ingreso.' : 'Añade un nuevo ingreso a tus registros.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <IncomeForm income={editingIncome} onSave={handleSave} onClose={() => handleDialogChange(false)} />
+                    <IncomeForm income={editingIncome} onSave={handleSave} onClose={() => setIsDialogOpen(false)} />
                 </DialogContent>
             </Dialog>
 
