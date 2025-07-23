@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, Upload, ChevronsUpDown } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, Upload, ChevronsUpDown, User, Calendar, Tag, Banknote, Sigma } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -24,6 +24,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { IncomeForm } from '@/components/income-form';
+import { Badge } from '@/components/ui/badge';
 
 export default function IngresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes, invoiceSettings, addClient } = useAppData();
@@ -45,6 +46,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
+    const [detailsIncome, setDetailsIncome] = useState<Income | null>(null);
 
     const allClients = useMemo(() => [
         { id: 'generic', name: 'Cliente Genérico', code: 'CLI-000', email: '', phone: '', address: '' },
@@ -135,7 +137,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         }
     };
 
-    const handleSave = async (incomeData: Omit<Income, 'id' | 'balance' | 'payments' | 'recordedBy'> | Income) => {
+    const handleSave = async (incomeData: Omit<Income, 'id' | 'balance' | 'payments' | 'recordedBy' | 'createdAt'> | Income) => {
         if (!user) {
             toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
             return;
@@ -562,88 +564,111 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     </CardHeader>
                     <CollapsibleContent>
                         <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead onClick={() => handleSort('clientId')} className="cursor-pointer">Cliente</TableHead>
-                                        <TableHead>Productos</TableHead>
-                                        <TableHead onClick={() => handleSort('paymentMethod')} className="hidden sm:table-cell cursor-pointer">Método</TableHead>
-                                        <TableHead onClick={() => handleSort('recordedBy')} className="hidden lg:table-cell cursor-pointer">Registrado por</TableHead>
-                                        <TableHead onClick={() => handleSort('totalAmount')} className="text-right cursor-pointer">Monto Total</TableHead>
-                                        <TableHead onClick={() => handleSort('date')} className="text-right hidden md:table-cell cursor-pointer">Fecha</TableHead>
-                                        <TableHead className="text-right">Acciones</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredIncomes.length > 0 ? filteredIncomes.map((income) => {
-                                        const client = allClients.find(c => c.id === income.clientId);
-                                        
-                                        return (
-                                        <TableRow key={income.id}>
-                                            <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
-                                            <TableCell>
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger>
-                                                            <span className="cursor-pointer underline-dashed">{income.products.length} producto(s)</span>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                        <ul className="list-disc pl-4">
-                                                                {income.products.map(p => (
-                                                                    <li key={p.productId}>{p.quantity} x {p.name} @ RD${p.price.toFixed(2)}</li>
-                                                                ))}
-                                                        </ul>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            </TableCell>
-                                            <TableCell className="capitalize hidden sm:table-cell">{income.paymentMethod}</TableCell>
-                                            <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
-                                            <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'PPP', { locale: es })}</TableCell>
-                                            <TableCell className="text-right">
-                                                <AlertDialog>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                <span className="sr-only">Abrir menú</span>
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleGenerateInvoice(income)}><FileText className="mr-2 h-4 w-4" /> Generar Factura</DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => handleEdit(income)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                                            {user?.role === 'admin' && (
-                                                              <AlertDialogTrigger asChild>
-                                                                  <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                                                              </AlertDialogTrigger>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                        <AlertDialogTitle>¿Estás seguro de que quieres eliminar este ingreso?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del ingreso y devolverá los productos al stock.
-                                                        </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete(income.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}) : (
+                            {/* Desktop Table */}
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center">
-                                                No se encontraron resultados.
-                                            </TableCell>
+                                            <TableHead onClick={() => handleSort('clientId')} className="cursor-pointer">Cliente</TableHead>
+                                            <TableHead>Productos</TableHead>
+                                            <TableHead onClick={() => handleSort('paymentMethod')} className="hidden sm:table-cell cursor-pointer">Método</TableHead>
+                                            <TableHead onClick={() => handleSort('recordedBy')} className="hidden lg:table-cell cursor-pointer">Registrado por</TableHead>
+                                            <TableHead onClick={() => handleSort('totalAmount')} className="text-right cursor-pointer">Monto Total</TableHead>
+                                            <TableHead onClick={() => handleSort('date')} className="text-right hidden md:table-cell cursor-pointer">Fecha</TableHead>
+                                            <TableHead className="text-right">Acciones</TableHead>
                                         </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredIncomes.length > 0 ? filteredIncomes.map((income) => {
+                                            const client = allClients.find(c => c.id === income.clientId);
+                                            
+                                            return (
+                                            <TableRow key={income.id}>
+                                                <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
+                                                <TableCell>
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger>
+                                                                <span className="cursor-pointer underline-dashed">{income.products.length} producto(s)</span>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                            <ul className="list-disc pl-4">
+                                                                    {income.products.map(p => (
+                                                                        <li key={p.productId}>{p.quantity} x {p.name} @ RD${p.price.toFixed(2)}</li>
+                                                                    ))}
+                                                            </ul>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                </TableCell>
+                                                <TableCell className="capitalize hidden sm:table-cell">{income.paymentMethod}</TableCell>
+                                                <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
+                                                <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'PPP', { locale: es })}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <AlertDialog>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                    <span className="sr-only">Abrir menú</span>
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem onClick={() => handleGenerateInvoice(income)}><FileText className="mr-2 h-4 w-4" /> Generar Factura</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleEdit(income)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                                                {user?.role === 'admin' && (
+                                                                <AlertDialogTrigger asChild>
+                                                                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                                </AlertDialogTrigger>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                            <AlertDialogTitle>¿Estás seguro de que quieres eliminar este ingreso?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del ingreso y devolverá los productos al stock.
+                                                            </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(income.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}) : (
+                                            <TableRow>
+                                                <TableCell colSpan={7} className="h-24 text-center">
+                                                    No se encontraron resultados.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                             {/* Mobile Card View */}
+                            <div className="md:hidden space-y-3">
+                                {filteredIncomes.length > 0 ? filteredIncomes.map(income => {
+                                    const client = allClients.find(c => c.id === income.clientId);
+                                    return (
+                                        <Card key={income.id} className="p-4" onClick={() => setDetailsIncome(income)}>
+                                            <div className="flex justify-between items-start">
+                                                <div className="space-y-1">
+                                                    <p className="font-semibold">{client?.name || 'N/A'}</p>
+                                                    <p className="text-sm text-muted-foreground">{format(new Date(income.date + 'T00:00:00'), 'PPP', { locale: es })}</p>
+                                                </div>
+                                                <p className="font-bold text-lg">RD${income.totalAmount.toFixed(2)}</p>
+                                            </div>
+                                        </Card>
+                                )}) : (
+                                    <div className="text-center p-8 text-muted-foreground">
+                                        No se encontraron resultados.
+                                    </div>
+                                )}
+                            </div>
                         </CardContent>
                     </CollapsibleContent>
                 </Collapsible>
@@ -682,6 +707,55 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                             Compartir
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={!!detailsIncome} onOpenChange={(open) => !open && setDetailsIncome(null)}>
+                 <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Detalles del Ingreso</DialogTitle>
+                    </DialogHeader>
+                    {detailsIncome && (
+                        <div className="space-y-4 text-sm">
+                             <div className="flex justify-between items-center pb-2 border-b">
+                                <span className="text-muted-foreground">Monto Total</span>
+                                <span className="font-bold text-lg">RD${detailsIncome.totalAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="space-y-2">
+                                <p><strong className="text-muted-foreground w-24 inline-block">Cliente:</strong> {allClients.find(c => c.id === detailsIncome.clientId)?.name || 'N/A'}</p>
+                                <p><strong className="text-muted-foreground w-24 inline-block">Fecha:</strong> {format(new Date(detailsIncome.date + 'T00:00:00'), 'PPP', { locale: es })}</p>
+                                <p><strong className="text-muted-foreground w-24 inline-block">Condición:</strong> <span className="capitalize">{detailsIncome.paymentMethod}</span></p>
+                                {detailsIncome.paymentMethod === 'contado' && <p><strong className="text-muted-foreground w-24 inline-block">Pagado con:</strong> {detailsIncome.paymentType}</p>}
+                                <p><strong className="text-muted-foreground w-24 inline-block">Registrado por:</strong> {detailsIncome.recordedBy}</p>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold mb-2">Productos</h4>
+                                <div className="border rounded-md">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Producto</TableHead>
+                                                <TableHead className="text-right">Cant.</TableHead>
+                                                <TableHead className="text-right">Subtotal</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {detailsIncome.products.map(p => (
+                                                <TableRow key={p.productId}>
+                                                    <TableCell>{p.name}</TableCell>
+                                                    <TableCell className="text-right">{p.quantity}</TableCell>
+                                                    <TableCell className="text-right">RD${(p.quantity * p.price).toFixed(2)}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+                             <div className="flex justify-end gap-2 pt-4">
+                                <Button variant="outline" onClick={() => setDetailsIncome(null)}>Cerrar</Button>
+                                <Button onClick={() => { setDetailsIncome(null); handleEdit(detailsIncome); }}> <Edit className="mr-2 h-4 w-4"/>Editar</Button>
+                            </div>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
 
