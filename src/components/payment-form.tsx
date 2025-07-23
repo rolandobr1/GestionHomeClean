@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAppData } from '@/hooks/use-app-data';
-import type { Income } from '@/components/app-provider';
+import type { Income, Expense } from '@/components/app-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,19 +13,26 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Card } from './ui/card';
 
+interface PaymentFormProps {
+  income?: Income;
+  expense?: Expense;
+  onClose: () => void;
+}
+
 export const PaymentForm = ({
   income,
+  expense,
   onClose,
-}: {
-  income: Income;
-  onClose: () => void;
-}) => {
-  const { addPayment } = useAppData();
+}: PaymentFormProps) => {
+  const { addPayment, addPaymentToExpense, clients, suppliers } = useAppData();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [amount, setAmount] = useState<number | string>('');
   const [date, setDate] = useState('');
+
+  const transaction = income || expense;
+  const transactionType = income ? 'income' : 'expense';
 
   useEffect(() => {
     setDate(format(new Date(), 'yyyy-MM-dd'));
@@ -37,23 +44,35 @@ export const PaymentForm = ({
       toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
       return;
     }
+    if (!transaction) {
+      toast({ variant: "destructive", title: "Error", description: "Transacción no identificada." });
+      return;
+    }
+    
     const paymentAmount = Number(amount);
     if (paymentAmount <= 0) {
       toast({ variant: "destructive", title: "Monto Inválido", description: "El monto del abono debe ser mayor que cero." });
       return;
     }
-    if (paymentAmount > income.balance) {
+    if (paymentAmount > transaction.balance) {
       toast({ variant: "destructive", title: "Monto Excede Saldo", description: "El monto del abono no puede ser mayor que el saldo pendiente." });
       return;
     }
 
     setIsSaving(true);
     try {
-      await addPayment(income.id, {
+      const paymentData = {
         amount: paymentAmount,
         date,
         recordedBy: user.name,
-      });
+      };
+
+      if (transactionType === 'income') {
+        await addPayment(transaction.id, paymentData);
+      } else {
+        await addPaymentToExpense(transaction.id, paymentData);
+      }
+
       toast({
         title: "Pago Registrado",
         description: `Se ha registrado un abono por RD$${paymentAmount.toFixed(2)}.`,
@@ -66,24 +85,31 @@ export const PaymentForm = ({
       setIsSaving(false);
     }
   };
+  
+  if (!transaction) return null;
+  
+  const contactName = transactionType === 'income' 
+    ? clients.find(c => c.id === (transaction as Income).clientId)?.name || 'N/A'
+    : suppliers.find(s => s.id === (transaction as Expense).supplierId)?.name || 'N/A';
+
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4 py-4">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-muted-foreground">Cliente</p>
-            <p className="font-semibold">{useAppData().clients.find(c => c.id === income.clientId)?.name || 'N/A'}</p>
+            <p className="text-muted-foreground">{transactionType === 'income' ? 'Cliente' : 'Suplidor'}</p>
+            <p className="font-semibold">{contactName}</p>
           </div>
           <div className="text-right">
-            <p className="text-muted-foreground">Factura Nº</p>
-            <p className="font-semibold">{income.id.slice(-6).toUpperCase()}</p>
+            <p className="text-muted-foreground">{transactionType === 'income' ? 'Factura Nº' : 'Egreso Nº'}</p>
+            <p className="font-semibold">{transaction.id.slice(-6).toUpperCase()}</p>
           </div>
         </div>
         <Card className="p-4 bg-muted/50">
           <div className="flex justify-between items-center">
             <div className="text-muted-foreground">Saldo Pendiente</div>
-            <div className="text-2xl font-bold">RD${income.balance.toFixed(2)}</div>
+            <div className="text-2xl font-bold">RD${transaction.balance.toFixed(2)}</div>
           </div>
         </Card>
         <div className="space-y-2">
@@ -96,7 +122,7 @@ export const PaymentForm = ({
             placeholder="0.00"
             required 
             inputMode="decimal"
-            max={income.balance}
+            max={transaction.balance}
             onFocus={(e) => e.target.select()}
             disabled={isSaving}
           />
