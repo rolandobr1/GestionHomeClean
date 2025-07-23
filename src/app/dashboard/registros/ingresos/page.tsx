@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppData } from '@/hooks/use-app-data';
 import type { Income, Client, Payment, SoldProduct } from '@/components/app-provider';
@@ -25,6 +25,7 @@ import autoTable from 'jspdf-autotable';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { IncomeForm } from '@/components/income-form';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export default function IngresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes, invoiceSettings, addClient } = useAppData();
@@ -598,7 +599,15 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                                         </Tooltip>
                                                     </TooltipProvider>
                                                 </TableCell>
-                                                <TableCell className="capitalize hidden sm:table-cell">{income.paymentMethod}</TableCell>
+                                                <TableCell className="hidden sm:table-cell">
+                                                    {income.paymentMethod === 'contado' ? (
+                                                        <Badge variant="secondary">Contado</Badge>
+                                                    ) : (
+                                                        <Badge variant={income.balance <= 0 ? "default" : "destructive"} className={cn(income.balance <= 0 && "bg-green-600 hover:bg-green-700")}>
+                                                            {income.balance <= 0 ? 'Pagado' : 'Crédito'}
+                                                        </Badge>
+                                                    )}
+                                                </TableCell>
                                                 <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
                                                 <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
                                                 <TableCell className="text-right hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'PPP', { locale: es })}</TableCell>
