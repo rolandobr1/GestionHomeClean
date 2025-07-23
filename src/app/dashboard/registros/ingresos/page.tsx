@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, Upload, ChevronsUpDown, User, Calendar, Tag, Banknote, Sigma } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, Upload, ChevronsUpDown, User, Calendar, Tag, Banknote, Sigma, Wallet } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -27,6 +27,7 @@ import { IncomeForm } from '@/components/income-form';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PaymentForm } from '@/components/payment-form';
 
 export default function IngresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes, invoiceSettings, addClient } = useAppData();
@@ -47,6 +48,10 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
     const [detailsIncome, setDetailsIncome] = useState<Income | null>(null);
+    
+    const [paymentIncome, setPaymentIncome] = useState<Income | null>(null);
+    const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+
 
     const allClients = useMemo(() => [
         { id: 'generic', name: 'Cliente Genérico', code: 'CLI-000', email: '', phone: '', address: '' },
@@ -512,11 +517,25 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     };
 
     const getStatusClass = (income: Income) => {
+        if (income.paymentMethod === 'contado') {
+             return 'border-l-4 border-green-500';
+        }
         if (income.paymentMethod === 'credito') {
             return income.balance <= 0.01 ? 'border-l-4 border-green-500' : 'border-l-4 border-amber-500';
         }
-        return 'border-l-4 border-green-500'; // Contado also gets green
+        return '';
     };
+
+    const handleAddPaymentClick = (income: Income) => {
+        setPaymentIncome(income);
+        setIsPaymentDialogOpen(true);
+    };
+
+    useEffect(() => {
+        if (!isPaymentDialogOpen) {
+          setPaymentIncome(null);
+        }
+    }, [isPaymentDialogOpen]);
 
     return (
         <div className="space-y-6">
@@ -659,6 +678,11 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuItem onClick={() => handleGenerateInvoice(income)}><FileText className="mr-2 h-4 w-4" /> Generar Factura</DropdownMenuItem>
+                                                                {income.paymentMethod === 'credito' && income.balance > 0.01 && (
+                                                                    <DropdownMenuItem onClick={() => handleAddPaymentClick(income)}>
+                                                                        <Wallet className="mr-2 h-4 w-4" /> Registrar Pago
+                                                                    </DropdownMenuItem>
+                                                                )}
                                                                 <DropdownMenuItem onClick={() => handleEdit(income)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                                                                 {user?.role === 'admin' && (
                                                                 <AlertDialogTrigger asChild>
@@ -823,6 +847,16 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Registrar Pago a Factura</DialogTitle>
+                    <DialogDescription>Añade un nuevo abono a la cuenta pendiente.</DialogDescription>
+                </DialogHeader>
+                {paymentIncome && <PaymentForm income={paymentIncome} onClose={() => setIsPaymentDialogOpen(false)} />}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
