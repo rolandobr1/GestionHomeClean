@@ -3,7 +3,7 @@
 
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import { db, isConfigured, firebaseConfig } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, increment, setDoc, arrayUnion, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, increment, setDoc, arrayUnion, getDocs, arrayRemove } from 'firebase/firestore';
 import { FirebaseConfigStatus } from './config-status';
 
 // Type definitions
@@ -126,6 +126,7 @@ interface AppContextType {
   deleteIncome: (id: string) => Promise<void>;
   updateIncome: (income: Income) => Promise<void>;
   addPayment: (incomeId: string, payment: Omit<Payment, 'id' | 'createdAt'>) => Promise<void>;
+  deletePayment: (incomeId: string, paymentId: string) => Promise<void>;
   addExpense: (expense: Omit<Expense, 'id' | 'balance' | 'payments' | 'createdAt'>) => Promise<void>;
   addMultipleExpenses: (expenses: Omit<Expense, 'id' | 'balance' | 'payments' | 'createdAt'>[], mode: 'append' | 'replace') => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
@@ -572,6 +573,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const deletePayment = async (incomeId: string, paymentId: string) => {
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const incomeRef = doc(db, 'incomes', incomeId);
+        const income = incomes.find(i => i.id === incomeId);
+        if (!income) throw new Error("No se encontró el ingreso.");
+        
+        const paymentToDelete = income.payments.find(p => p.id === paymentId);
+        if (!paymentToDelete) throw new Error("No se encontró el pago a eliminar.");
+        
+        await updateDoc(incomeRef, {
+            payments: arrayRemove(paymentToDelete),
+            balance: increment(paymentToDelete.amount),
+        });
+    } catch (error) {
+        console.error("Error deleting payment:", error);
+        throw new Error("No se pudo eliminar el abono.");
+    }
+  };
+
   // --- Expense Management with Firestore ---
     const addExpense = async (expense: Omit<Expense, 'id' | 'balance' | 'payments' | 'createdAt'>) => {
         if (!db) throw new Error("Firestore no está inicializado.");
@@ -983,7 +1004,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         loading,
         incomes, expenses, products, rawMaterials, clients, suppliers, invoiceSettings,
         expenseCategories,
-        addIncome, addMultipleIncomes, deleteIncome, updateIncome, addPayment,
+        addIncome, addMultipleIncomes, deleteIncome, updateIncome, addPayment, deletePayment,
         addExpense, addMultipleExpenses, deleteExpense, updateExpense, addPaymentToExpense,
         addProduct, addMultipleProducts, deleteProduct, updateProduct,
         addRawMaterial, addMultipleRawMaterials, updateRawMaterial, deleteRawMaterial,

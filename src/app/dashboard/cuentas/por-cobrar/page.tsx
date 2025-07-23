@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Wallet, MoreHorizontal, X, Info, Sigma, Download, Share2, ChevronsUpDown } from "lucide-react";
+import { Wallet, MoreHorizontal, X, Info, Sigma, Download, Share2, ChevronsUpDown, Trash2 } from "lucide-react";
 import { useAppData } from '@/hooks/use-app-data';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -23,10 +23,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PaymentForm } from '@/components/payment-form';
+import { useAuth } from '@/hooks/use-auth';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 
 export default function CuentasPorCobrarPage({ params, searchParams }: { params: any; searchParams: any; }) {
-  const { incomes, clients, invoiceSettings } = useAppData();
+  const { incomes, clients, invoiceSettings, deletePayment } = useAppData();
+  const { user } = useAuth();
   const { toast } = useToast();
   
   const [paymentIncome, setPaymentIncome] = useState<Income | null>(null);
@@ -36,6 +39,8 @@ export default function CuentasPorCobrarPage({ params, searchParams }: { params:
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [recordedByFilter, setRecordedByFilter] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
+  const [historyIncome, setHistoryIncome] = useState<Income | null>(null);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
 
 
   const allClients = useMemo(() => [
@@ -119,6 +124,11 @@ export default function CuentasPorCobrarPage({ params, searchParams }: { params:
   const handleAddPaymentClick = (income: Income) => {
     setPaymentIncome(income);
     setIsPaymentDialogOpen(true);
+  };
+  
+  const handleOpenHistory = (income: Income) => {
+    setHistoryIncome(income);
+    setIsHistoryDialogOpen(true);
   };
 
   const generatePdfDoc = () => {
@@ -237,6 +247,26 @@ export default function CuentasPorCobrarPage({ params, searchParams }: { params:
     }
   };
 
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!historyIncome) return;
+    try {
+        await deletePayment(historyIncome.id, paymentId);
+        toast({ title: 'Abono Eliminado', description: 'El registro del abono ha sido eliminado.' });
+        
+        const updatedIncome = incomes.find(i => i.id === historyIncome.id);
+        if (updatedIncome) {
+            setHistoryIncome(updatedIncome);
+            if (updatedIncome.payments.length === 0) {
+                setIsHistoryDialogOpen(false);
+            }
+        } else {
+            setIsHistoryDialogOpen(false);
+        }
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar el abono.' });
+    }
+  };
+
 
   useEffect(() => {
     if (!isPaymentDialogOpen) {
@@ -345,19 +375,11 @@ export default function CuentasPorCobrarPage({ params, searchParams }: { params:
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuItem onClick={() => handleAddPaymentClick(income)}><Wallet className="mr-2 h-4 w-4" /> Registrar Pago</DropdownMenuItem>
-                                                    <TooltipProvider>
-                                                        <Tooltip><TooltipTrigger asChild>
-                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={!income.payments || income.payments.length === 0}>
-                                                                <Info className="mr-2 h-4 w-4" /> Ver Abonos
-                                                            </DropdownMenuItem>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent><p className="font-semibold mb-1">Historial de Pagos</p>
-                                                        {income.payments.map(p=>(<div key={p.id} className="text-xs">
-                                                            {format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy', { locale: es })}: RD${p.amount.toFixed(2)} ({p.recordedBy})
-                                                        </div>))}
-                                                        </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
+                                                    {income.payments && income.payments.length > 0 && (
+                                                        <DropdownMenuItem onClick={() => handleOpenHistory(income)}>
+                                                            <Info className="mr-2 h-4 w-4" /> Ver Abonos
+                                                        </DropdownMenuItem>
+                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
@@ -386,6 +408,53 @@ export default function CuentasPorCobrarPage({ params, searchParams }: { params:
           </DialogHeader>
           {paymentIncome && <PaymentForm income={paymentIncome} onClose={() => setIsPaymentDialogOpen(false)} />}
         </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Historial de Pagos y Productos</DialogTitle>
+                  <DialogDescription>
+                      Factura {historyIncome?.id.slice(-6).toUpperCase()} para {allClients.find(c => c.id === historyIncome?.clientId)?.name}
+                  </DialogDescription>
+              </DialogHeader>
+              {historyIncome && (
+                  <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+                      {historyIncome.payments.length > 0 && (
+                          <div>
+                              <h4 className="font-semibold mb-2 text-sm">Abonos Recibidos</h4>
+                              <div className="border rounded-md">
+                                  <Table>
+                                      <TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Monto</TableHead><TableHead>Registrado por</TableHead><TableHead className="text-right"></TableHead></TableRow></TableHeader>
+                                      <TableBody>
+                                          {historyIncome.payments.map(p => (
+                                              <TableRow key={p.id}>
+                                                  <TableCell>{format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy', { locale: es })}</TableCell>
+                                                  <TableCell>RD${p.amount.toFixed(2)}</TableCell>
+                                                  <TableCell>{p.recordedBy}</TableCell>
+                                                  <TableCell className="text-right">
+                                                      {user?.role === 'admin' && (
+                                                      <AlertDialog>
+                                                          <AlertDialogTrigger asChild>
+                                                              <Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                                          </AlertDialogTrigger>
+                                                          <AlertDialogContent>
+                                                              <AlertDialogHeader><AlertDialogTitle>¿Eliminar este abono?</AlertDialogTitle><AlertDialogDescription>Se eliminará el pago de RD${p.amount.toFixed(2)} y el monto se sumará de nuevo al saldo pendiente de la factura. Esta acción no se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
+                                                              <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDeletePayment(p.id)} className="bg-destructive hover:bg-destructive/90">Eliminar Abono</AlertDialogAction></AlertDialogFooter>
+                                                          </AlertDialogContent>
+                                                      </AlertDialog>
+                                                      )}
+                                                  </TableCell>
+                                              </TableRow>
+                                          ))}
+                                      </TableBody>
+                                  </Table>
+                              </div>
+                          </div>
+                      )}
+                  </div>
+              )}
+          </DialogContent>
       </Dialog>
     </div>
   );
