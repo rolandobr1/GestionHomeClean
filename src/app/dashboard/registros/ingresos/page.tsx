@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, Upload, ChevronsUpDown, User, Calendar, Tag, Banknote, Sigma, Wallet } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, FileText, Share2, Download, X, Upload, ChevronsUpDown, User, Calendar, Tag, Banknote, Sigma, Wallet, Info } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -517,11 +517,11 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     };
 
     const getStatusClass = (income: Income) => {
-        if (income.paymentMethod === 'contado') {
+        if (income.paymentMethod === 'contado' || (income.paymentMethod === 'credito' && income.balance <= 0.01)) {
              return 'border-l-4 border-green-500';
         }
-        if (income.paymentMethod === 'credito') {
-            return income.balance <= 0.01 ? 'border-l-4 border-green-500' : 'border-l-4 border-amber-500';
+        if (income.paymentMethod === 'credito' && income.balance > 0.01) {
+            return 'border-l-4 border-amber-500';
         }
         return '';
     };
@@ -656,13 +656,13 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                                     </TooltipProvider>
                                                 </TableCell>
                                                 <TableCell className="hidden sm:table-cell">
-                                                    {income.paymentMethod === 'contado' ? (
-                                                        <Badge variant="default" className="bg-green-600 hover:bg-green-700">Contado</Badge>
-                                                    ) : (
-                                                        <Badge variant={income.balance <= 0.01 ? "default" : "destructive"} className={cn(income.balance <= 0.01 && "bg-green-600 hover:bg-green-700")}>
-                                                            {income.balance <= 0.01 ? 'Pagado' : 'Crédito'}
-                                                        </Badge>
-                                                    )}
+                                                    <Badge variant={
+                                                      (income.paymentMethod === 'contado' || income.balance <= 0.01) ? "default" : "destructive"
+                                                    } className={cn(
+                                                      (income.paymentMethod === 'contado' || income.balance <= 0.01) && "bg-green-600 hover:bg-green-700"
+                                                    )}>
+                                                        {income.paymentMethod === 'contado' ? 'Contado' : (income.balance <= 0.01 ? 'Pagado' : 'Crédito')}
+                                                    </Badge>
                                                 </TableCell>
                                                 <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
                                                 <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
@@ -682,6 +682,25 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                                                     <DropdownMenuItem onClick={() => handleAddPaymentClick(income)}>
                                                                         <Wallet className="mr-2 h-4 w-4" /> Registrar Pago
                                                                     </DropdownMenuItem>
+                                                                )}
+                                                                {income.payments && income.payments.length > 0 && (
+                                                                    <TooltipProvider>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                                    <Info className="mr-2 h-4 w-4" /> Ver Abonos
+                                                                                </DropdownMenuItem>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                <p className="font-semibold mb-1">Historial de Pagos</p>
+                                                                                {income.payments.map(p => (
+                                                                                    <div key={p.id} className="text-xs">
+                                                                                        {format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy', { locale: es })}: RD${p.amount.toFixed(2)} ({p.recordedBy})
+                                                                                    </div>
+                                                                                ))}
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
                                                                 )}
                                                                 <DropdownMenuItem onClick={() => handleEdit(income)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                                                                 {user?.role === 'admin' && (
@@ -860,3 +879,5 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         </div>
     );
 }
+
+    
