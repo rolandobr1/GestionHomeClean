@@ -26,6 +26,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { IncomeForm } from '@/components/income-form';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function IngresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes, invoiceSettings, addClient } = useAppData();
@@ -41,6 +42,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [clientSearchTerm, setClientSearchTerm] = useState('');
     const [productSearchTerm, setProductSearchTerm] = useState('');
+    const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
@@ -78,6 +80,22 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                 }
             }
             
+            if (paymentStatusFilter !== 'all') {
+                switch (paymentStatusFilter) {
+                    case 'contado':
+                        if (income.paymentMethod !== 'contado') return false;
+                        break;
+                    case 'credito_pagado':
+                        if (income.paymentMethod !== 'credito' || income.balance > 0.01) return false;
+                        break;
+                    case 'credito_pendiente':
+                        if (income.paymentMethod !== 'credito' || income.balance <= 0.01) return false;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
             return true;
         });
         
@@ -106,7 +124,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
             return String(aValue).localeCompare(String(bValue)) * directionMultiplier;
         });
 
-    }, [incomes, dateRange, clientSearchTerm, productSearchTerm, allClients, sortConfig]);
+    }, [incomes, dateRange, clientSearchTerm, productSearchTerm, paymentStatusFilter, allClients, sortConfig]);
 
     const handleSort = (key: string) => {
         setSortConfig(prev => ({
@@ -119,6 +137,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         setDateRange(undefined);
         setClientSearchTerm('');
         setProductSearchTerm('');
+        setPaymentStatusFilter('all');
     };
 
     const handleEdit = (income: Income) => {
@@ -496,7 +515,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         if (income.paymentMethod === 'credito') {
             return income.balance <= 0.01 ? 'border-l-4 border-green-500' : 'border-l-4 border-amber-500';
         }
-        return 'border-l-4 border-transparent';
+        return 'border-l-4 border-green-500'; // Contado also gets green
     };
 
     return (
@@ -522,7 +541,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
             <Card>
                 <CardHeader>
                     <CardTitle>Filtros</CardTitle>
-                    <CardDescription>Filtra los ingresos por fecha, cliente o producto.</CardDescription>
+                    <CardDescription>Filtra los ingresos por fecha, cliente, producto o estado.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex flex-wrap gap-4">
@@ -532,15 +551,26 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                             placeholder="Buscar por cliente..."
                             value={clientSearchTerm}
                             onChange={(e) => setClientSearchTerm(e.target.value)}
-                            className="w-full md:w-[280px]"
+                            className="w-full md:w-[240px]"
                         />
                         
                         <Input 
                             placeholder="Buscar por producto..." 
                             value={productSearchTerm} 
                             onChange={(e) => setProductSearchTerm(e.target.value)} 
-                            className="w-full md:w-[280px]" 
+                            className="w-full md:w-[240px]" 
                         />
+                        <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                            <SelectTrigger className="w-full md:w-[240px]">
+                                <SelectValue placeholder="Filtrar por estado..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos los Estados</SelectItem>
+                                <SelectItem value="contado">Contado</SelectItem>
+                                <SelectItem value="credito_pagado">Crédito (Pagado)</SelectItem>
+                                <SelectItem value="credito_pendiente">Crédito (Pendiente)</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </CardContent>
                  <CardFooter>
@@ -608,7 +638,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                                 </TableCell>
                                                 <TableCell className="hidden sm:table-cell">
                                                     {income.paymentMethod === 'contado' ? (
-                                                        <Badge variant="secondary">Contado</Badge>
+                                                        <Badge variant="default" className="bg-green-600 hover:bg-green-700">Contado</Badge>
                                                     ) : (
                                                         <Badge variant={income.balance <= 0.01 ? "default" : "destructive"} className={cn(income.balance <= 0.01 && "bg-green-600 hover:bg-green-700")}>
                                                             {income.balance <= 0.01 ? 'Pagado' : 'Crédito'}
