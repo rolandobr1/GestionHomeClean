@@ -21,32 +21,33 @@ export const ExpenseForm = ({ expense = null, onSave, onClose }: ExpenseFormProp
     const { suppliers, expenseCategories, invoiceSettings } = useAppData();
     const [isSaving, setIsSaving] = useState(false);
     
-    const getInitialState = () => ({
-        description: '',
-        amount: 0,
-        date: format(new Date(), 'yyyy-MM-dd'),
-        category: expenseCategories.length > 0 ? expenseCategories[0] : 'Otro',
-        supplierId: 'generic',
-        paymentMethod: 'contado' as const,
-        paymentType: invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : ''
-    });
+    const getInitialState = (exp: Expense | null) => {
+        if (exp) {
+            return {
+                description: exp.description,
+                amount: exp.amount,
+                date: format(new Date(exp.date + 'T00:00:00'), 'yyyy-MM-dd'),
+                category: exp.category,
+                supplierId: exp.supplierId || 'generic',
+                paymentMethod: exp.paymentMethod || 'contado',
+                paymentType: exp.paymentType || (invoiceSettings.paymentMethods[0] || '')
+            };
+        }
+        return {
+            description: '',
+            amount: 0,
+            date: format(new Date(), 'yyyy-MM-dd'),
+            category: expenseCategories.length > 0 ? expenseCategories[0] : 'Otro',
+            supplierId: 'generic',
+            paymentMethod: 'contado' as const,
+            paymentType: invoiceSettings.paymentMethods.length > 0 ? invoiceSettings.paymentMethods[0] : ''
+        };
+    };
 
-    const [formData, setFormData] = useState(getInitialState());
+    const [formData, setFormData] = useState(getInitialState(expense));
 
     useEffect(() => {
-        if (expense) {
-            setFormData({
-                description: expense.description,
-                amount: expense.amount,
-                date: format(new Date(expense.date + 'T00:00:00'), 'yyyy-MM-dd'),
-                category: expense.category,
-                supplierId: expense.supplierId || 'generic',
-                paymentMethod: expense.paymentMethod || 'contado',
-                paymentType: expense.paymentType || (invoiceSettings.paymentMethods[0] || '')
-            });
-        } else {
-            setFormData(getInitialState());
-        }
+        setFormData(getInitialState(expense));
     }, [expense, expenseCategories, invoiceSettings.paymentMethods]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
