@@ -492,6 +492,13 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         reader.readAsText(file);
     };
 
+    const getStatusClass = (income: Income) => {
+        if (income.paymentMethod === 'credito') {
+            return income.balance <= 0.01 ? 'border-l-4 border-green-500' : 'border-l-4 border-amber-500';
+        }
+        return 'border-l-4 border-transparent';
+    };
+
     return (
         <div className="space-y-6">
              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv" />
@@ -581,7 +588,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                             const client = allClients.find(c => c.id === income.clientId);
                                             
                                             return (
-                                            <TableRow key={income.id}>
+                                            <TableRow key={income.id} className={getStatusClass(income)}>
                                                 <TableCell className="font-medium">{client?.name || 'N/A'}</TableCell>
                                                 <TableCell>
                                                     <TooltipProvider>
@@ -603,8 +610,8 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                                     {income.paymentMethod === 'contado' ? (
                                                         <Badge variant="secondary">Contado</Badge>
                                                     ) : (
-                                                        <Badge variant={income.balance <= 0 ? "default" : "destructive"} className={cn(income.balance <= 0 && "bg-green-600 hover:bg-green-700")}>
-                                                            {income.balance <= 0 ? 'Pagado' : 'Crédito'}
+                                                        <Badge variant={income.balance <= 0.01 ? "default" : "destructive"} className={cn(income.balance <= 0.01 && "bg-green-600 hover:bg-green-700")}>
+                                                            {income.balance <= 0.01 ? 'Pagado' : 'Crédito'}
                                                         </Badge>
                                                     )}
                                                 </TableCell>
@@ -660,10 +667,10 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                 {filteredIncomes.length > 0 ? filteredIncomes.map(income => {
                                     const client = allClients.find(c => c.id === income.clientId);
                                     return (
-                                        <Card key={income.id} className="p-4" onClick={() => setDetailsIncome(income)}>
+                                        <Card key={income.id} className={cn("p-4 relative overflow-hidden", getStatusClass(income))} onClick={() => setDetailsIncome(income)}>
                                             <div className="flex justify-between items-start">
                                                 <div className="space-y-1">
-                                                    <p className="font-semibold">{client?.name || 'N/A'}</p>
+                                                    <p className="font-semibold pr-4">{client?.name || 'N/A'}</p>
                                                     <p className="text-sm text-muted-foreground">{format(new Date(income.date + 'T00:00:00'), 'PPP', { locale: es })}</p>
                                                 </div>
                                                 <p className="font-bold text-lg">RD${income.totalAmount.toFixed(2)}</p>
