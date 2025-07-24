@@ -65,12 +65,13 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         let filtered = incomes.filter(income => {
             const incomeDate = new Date(income.date + 'T00:00:00');
             
-            if (dateRange?.from && dateRange?.to) {
+            if (dateRange?.from) {
                 const fromDate = new Date(dateRange.from.setHours(0,0,0,0));
+                if (incomeDate < fromDate) return false;
+            }
+            if (dateRange?.to) {
                 const toDate = new Date(dateRange.to.setHours(23,59,59,999));
-                if (incomeDate < fromDate || incomeDate > toDate) {
-                    return false;
-                }
+                if (incomeDate > toDate) return false;
             }
             
             if (clientSearchTerm) {
@@ -844,6 +845,11 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                             </div>
                              <div className="flex justify-end gap-2 pt-4">
                                 <Button variant="outline" onClick={() => setDetailsIncome(null)}>Cerrar</Button>
+                                {detailsIncome.paymentMethod === 'credito' && detailsIncome.balance > 0.01 && (
+                                    <Button onClick={() => { setDetailsIncome(null); handleAddPaymentClick(detailsIncome); }}>
+                                        <Wallet className="mr-2 h-4 w-4"/>Abonar
+                                    </Button>
+                                )}
                                 <Button onClick={() => { setDetailsIncome(null); handleEdit(detailsIncome); }}> <Edit className="mr-2 h-4 w-4"/>Editar</Button>
                             </div>
                         </div>
