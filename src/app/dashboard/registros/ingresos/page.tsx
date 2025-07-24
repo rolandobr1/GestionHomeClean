@@ -808,11 +808,30 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                         <DialogTitle>Detalles del Ingreso</DialogTitle>
                     </DialogHeader>
                     {detailsIncome && (
-                        <div className="space-y-4 text-sm">
-                             <div className="flex justify-between items-center pb-2 border-b">
-                                <span className="text-muted-foreground">Monto Total</span>
-                                <span className="font-bold text-lg">RD${detailsIncome.totalAmount.toFixed(2)}</span>
-                            </div>
+                        <div className="space-y-4 text-sm max-h-[70vh] overflow-y-auto pr-4">
+                            {detailsIncome.paymentMethod === 'credito' ? (
+                                <div className="text-sm space-y-1 p-3 rounded-md bg-muted/50">
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Monto Total:</span>
+                                        <span className="font-medium">RD${detailsIncome.totalAmount.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Total Abonado:</span>
+                                        <span className="font-medium text-green-600">RD${(detailsIncome.totalAmount - detailsIncome.balance).toFixed(2)}</span>
+                                    </div>
+                                    <Separator/>
+                                    <div className="flex justify-between text-base">
+                                        <span className="font-semibold">Saldo Pendiente:</span>
+                                        <span className="font-bold">RD${detailsIncome.balance.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-muted-foreground">Monto Total</span>
+                                    <span className="font-bold text-lg">RD${detailsIncome.totalAmount.toFixed(2)}</span>
+                                </div>
+                            )}
+
                             <div className="space-y-2">
                                 <p><strong className="text-muted-foreground w-24 inline-block">Cliente:</strong> {allClients.find(c => c.id === detailsIncome.clientId)?.name || 'N/A'}</p>
                                 <p><strong className="text-muted-foreground w-24 inline-block">Fecha:</strong> {format(new Date(detailsIncome.date + 'T00:00:00'), 'PPP', { locale: es })}</p>
@@ -820,6 +839,31 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                 {detailsIncome.paymentMethod === 'contado' && <p><strong className="text-muted-foreground w-24 inline-block">Pagado con:</strong> {detailsIncome.paymentType}</p>}
                                 <p><strong className="text-muted-foreground w-24 inline-block">Registrado por:</strong> {detailsIncome.recordedBy}</p>
                             </div>
+                            
+                            {detailsIncome.payments && detailsIncome.payments.length > 0 && detailsIncome.paymentMethod === 'credito' && (
+                                <div>
+                                    <h4 className="font-semibold mb-2">Historial de Abonos</h4>
+                                    <div className="border rounded-md">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Fecha</TableHead>
+                                                    <TableHead className="text-right">Monto</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {detailsIncome.payments.map(p => (
+                                                    <TableRow key={p.id}>
+                                                        <TableCell>{format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy', { locale: es })}</TableCell>
+                                                        <TableCell className="text-right">RD${p.amount.toFixed(2)}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </div>
+                            )}
+
                             <div>
                                 <h4 className="font-semibold mb-2">Productos</h4>
                                 <div className="border rounded-md">
