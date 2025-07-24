@@ -330,14 +330,6 @@ export default function BalancePage() {
                     colorBasedOnValue={true}
                     onClick={() => handleCardClick('realizedNetIncome', 'Ingresos Netos Realizados', 'Dinero total recibido menos dinero total pagado, mensualmente.', summaryData.realizedNetIncome)}
                 />
-                <BalanceCard
-                    title="Cuentas por Cobrar"
-                    value={summaryData.accountsReceivable}
-                    description="Total de dinero pendiente de pago de clientes."
-                    icon={Wallet}
-                    isLoading={loading}
-                    onClick={() => handleCardClick('accountsReceivable', 'Cuentas por Cobrar', 'Evolución del saldo total pendiente de pago por clientes al final de cada mes.', summaryData.accountsReceivable)}
-                />
             </div>
 
             <SectionTitle
@@ -392,6 +384,14 @@ export default function BalancePage() {
                     icon={Boxes}
                     isLoading={loading}
                     onClick={() => handleCardClick('inventoryValue', 'Valor Total de Inventario', 'Suma del valor de productos y materia prima.', summaryData.inventoryValue)}
+                />
+                <BalanceCard
+                    title="Cuentas por Cobrar"
+                    value={summaryData.accountsReceivable}
+                    description="Total de dinero pendiente de pago de clientes."
+                    icon={Wallet}
+                    isLoading={loading}
+                    onClick={() => handleCardClick('accountsReceivable', 'Cuentas por Cobrar', 'Evolución del saldo total pendiente de pago por clientes al final de cada mes.', summaryData.accountsReceivable)}
                 />
             </div>
 
