@@ -46,7 +46,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
-    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updatedAt', direction: 'desc' });
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
     const [detailsIncome, setDetailsIncome] = useState<Income | null>(null);
     
     const [paymentIncome, setPaymentIncome] = useState<Income | null>(null);
@@ -664,7 +664,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                             <TableHead onClick={() => handleSort('paymentMethod')} className="hidden sm:table-cell cursor-pointer">Método</TableHead>
                                             <TableHead onClick={() => handleSort('recordedBy')} className="hidden lg:table-cell cursor-pointer">Registrado por</TableHead>
                                             <TableHead onClick={() => handleSort('totalAmount')} className="text-right cursor-pointer">Monto Total</TableHead>
-                                            <TableHead onClick={() => handleSort('updatedAt')} className="text-right hidden md:table-cell cursor-pointer">Fecha</TableHead>
+                                            <TableHead onClick={() => handleSort('date')} className="text-right hidden md:table-cell cursor-pointer">Fecha</TableHead>
                                             <TableHead className="text-right">Acciones</TableHead>
                                         </TableRow>
                                     </TableHeader>
