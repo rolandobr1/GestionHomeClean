@@ -46,7 +46,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
     const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
-    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updatedAt', direction: 'desc' });
     const [detailsIncome, setDetailsIncome] = useState<Income | null>(null);
     
     const [paymentIncome, setPaymentIncome] = useState<Income | null>(null);
@@ -124,6 +124,10 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
             if (bValue === null || bValue === undefined) return -1;
             
             const directionMultiplier = sortConfig.direction === 'asc' ? 1 : -1;
+            
+            if (key === 'updatedAt' && a.updatedAt && b.updatedAt) {
+                return (b.updatedAt.toMillis() - a.updatedAt.toMillis()) * directionMultiplier;
+            }
             if (key === 'date') {
                 return (new Date(a.date + 'T00:00:00').getTime() - new Date(b.date + 'T00:00:00').getTime()) * directionMultiplier;
             }
@@ -163,7 +167,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         }
     };
 
-    const handleSave = async (incomeData: Omit<Income, 'id' | 'balance' | 'payments' | 'recordedBy' | 'createdAt'> | Income) => {
+    const handleSave = async (incomeData: Omit<Income, 'id' | 'balance' | 'payments' | 'recordedBy' | 'createdAt' | 'updatedAt'> | Income) => {
         if (!user) {
             toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
             return;
@@ -175,7 +179,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                  toast({ title: "Ingreso Actualizado", description: "El registro ha sido actualizado." });
             } else {
                 const incomeToSave = { ...incomeData, recordedBy: user.name };
-                await addIncome(incomeToSave as Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>);
+                await addIncome(incomeToSave as Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt' | 'updatedAt'>);
                 toast({ title: "Ingreso Registrado", description: "El nuevo ingreso ha sido guardado." });
             }
             setIsDialogOpen(false);
@@ -420,7 +424,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     throw new Error(`Faltan las siguientes columnas obligatorias en el CSV: ${missingHeaders.join(', ')}`);
                 }
 
-                const newIncomes: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>[] = [];
+                const newIncomes: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt' | 'updatedAt'>[] = [];
                 const newClientsCache = new Map<string, Client>();
                 let allClientsCurrentList = [...allClients];
 
@@ -660,7 +664,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                             <TableHead onClick={() => handleSort('paymentMethod')} className="hidden sm:table-cell cursor-pointer">Método</TableHead>
                                             <TableHead onClick={() => handleSort('recordedBy')} className="hidden lg:table-cell cursor-pointer">Registrado por</TableHead>
                                             <TableHead onClick={() => handleSort('totalAmount')} className="text-right cursor-pointer">Monto Total</TableHead>
-                                            <TableHead onClick={() => handleSort('date')} className="text-right hidden md:table-cell cursor-pointer">Fecha</TableHead>
+                                            <TableHead onClick={() => handleSort('updatedAt')} className="text-right hidden md:table-cell cursor-pointer">Fecha</TableHead>
                                             <TableHead className="text-right">Acciones</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -687,7 +691,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                                 </TableCell>
                                                 <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
                                                 <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right hidden md:table-cell">{format(new Date(income.date + 'T00:00:00'), 'PPP', { locale: es })}</TableCell>
+                                                <TableCell className="text-right hidden md:table-cell">{format(income.updatedAt.toDate(), 'PPP', { locale: es })}</TableCell>
                                                 <TableCell className="text-right">
                                                     <AlertDialog>
                                                         <DropdownMenu>

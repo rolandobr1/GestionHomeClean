@@ -28,6 +28,7 @@ export type Income = {
   balance: number;
   date: string;
   createdAt: any;
+  updatedAt: any;
   category: string;
   clientId: string;
   paymentMethod: 'credito' | 'contado';
@@ -121,8 +122,8 @@ interface AppContextType {
   invoiceSettings: InvoiceSettings;
   expenseCategories: string[];
   loading: boolean;
-  addIncome: (income: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>) => Promise<void>;
-  addMultipleIncomes: (incomes: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>[], mode: 'append' | 'replace') => Promise<void>;
+  addIncome: (income: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addMultipleIncomes: (incomes: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt' | 'updatedAt'>[], mode: 'append' | 'replace') => Promise<void>;
   deleteIncome: (id: string) => Promise<void>;
   updateIncome: (income: Income) => Promise<void>;
   addPayment: (incomeId: string, payment: Omit<Payment, 'id' | 'createdAt'>) => Promise<void>;
@@ -221,6 +222,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 } else {
                     incomeData.balance = incomeData.totalAmount - paymentsTotal;
                 }
+            }
+            if (!incomeData.updatedAt) {
+                incomeData.updatedAt = incomeData.createdAt;
             }
             return incomeData;
         });
@@ -359,19 +363,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // --- Income Management with Firestore ---
-  const addIncome = async (income: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>) => {
+  const addIncome = async (income: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt' | 'updatedAt'>) => {
     if (!db) throw new Error("Firestore no está inicializado.");
     try {
       const batch = writeBatch(db);
       
       const incomeRef = doc(collection(db, "incomes"));
-
+      const now = new Date();
       const { paymentType, ...restOfIncome } = income;
       const newIncomeData: any = { 
         ...restOfIncome, 
         payments: [], 
         balance: 0, 
-        createdAt: new Date()
+        createdAt: now,
+        updatedAt: now,
       };
 
       if (income.paymentMethod === 'contado') {
@@ -382,7 +387,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               amount: income.totalAmount,
               date: income.date,
               recordedBy: income.recordedBy,
-              createdAt: new Date(),
+              createdAt: now,
           });
       } else {
           newIncomeData.balance = income.totalAmount;
@@ -405,7 +410,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addMultipleIncomes = async (incomesToProcess: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt'>[], mode: 'append' | 'replace' = 'append') => {
+  const addMultipleIncomes = async (incomesToProcess: Omit<Income, 'id' | 'balance' | 'payments' | 'createdAt' | 'updatedAt'>[], mode: 'append' | 'replace' = 'append') => {
     if (!db) throw new Error("Firestore no está inicializado.");
     try {
         const batch = writeBatch(db);
@@ -427,7 +432,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
         
         for (const income of incomesToProcess) {
-            const newIncomeData: any = { ...income, createdAt: new Date(), payments: [] };
+            const now = new Date();
+            const newIncomeData: any = { ...income, createdAt: now, updatedAt: now, payments: [] };
             
             if (income.paymentMethod === 'contado') {
                 newIncomeData.balance = 0;
@@ -436,7 +442,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     amount: income.totalAmount,
                     date: income.date,
                     recordedBy: income.recordedBy,
-                    createdAt: new Date(),
+                    createdAt: now,
                 });
             } else {
                 newIncomeData.balance = income.totalAmount;
@@ -476,7 +482,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const batch = writeBatch(db);
         const incomeRef = doc(db, 'incomes', updatedIncome.id);
 
-        const dataToUpdate: any = { ...updatedIncome };
+        const dataToUpdate: any = { ...updatedIncome, updatedAt: new Date() };
         
         const wasContado = originalIncome.paymentMethod === 'contado';
         const isContado = updatedIncome.paymentMethod === 'contado';
@@ -565,7 +571,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const newPayment = { ...payment, id: doc(collection(db, 'temp')).id, createdAt: new Date() };
         await updateDoc(incomeRef, {
             payments: arrayUnion(newPayment),
-            balance: increment(-payment.amount)
+            balance: increment(-payment.amount),
+            updatedAt: new Date()
         });
     } catch (error) {
         console.error("Error adding payment:", error);
@@ -586,6 +593,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await updateDoc(incomeRef, {
             payments: arrayRemove(paymentToDelete),
             balance: increment(paymentToDelete.amount),
+            updatedAt: new Date()
         });
     } catch (error) {
         console.error("Error deleting payment:", error);
