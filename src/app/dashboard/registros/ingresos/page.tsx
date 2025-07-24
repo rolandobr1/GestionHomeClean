@@ -691,7 +691,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                                 </TableCell>
                                                 <TableCell className="hidden lg:table-cell">{income.recordedBy}</TableCell>
                                                 <TableCell className="text-right">RD${income.totalAmount.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right hidden md:table-cell">{format(income.updatedAt.toDate(), 'PPP', { locale: es })}</TableCell>
+                                                <TableCell className="text-right hidden md:table-cell">{income.updatedAt ? format(income.updatedAt.toDate(), 'PPP', { locale: es }) : format(new Date(income.date + 'T00:00:00'), 'PPP', { locale: es })}</TableCell>
                                                 <TableCell className="text-right">
                                                     <AlertDialog>
                                                         <DropdownMenu>
@@ -1014,5 +1014,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         </div>
     );
 }
+
+    
 
     
