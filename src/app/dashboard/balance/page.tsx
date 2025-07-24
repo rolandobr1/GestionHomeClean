@@ -124,49 +124,11 @@ export default function BalancePage() {
         const rawMaterialsValue = rawMaterials.reduce((acc, material) => acc + (material.purchasePrice * material.stock), 0);
         const inventoryValue = productsValue + rawMaterialsValue;
         
-        const accountsReceivable = incomes
-            .filter(i => i.balance > 0.01)
+        const accountsReceivable = filteredIncomes
+            .filter(i => i.paymentMethod === 'credito')
             .reduce((acc, income) => acc + income.balance, 0);
-            
-        const currentAssets = inventoryValue + accountsReceivable;
 
-        const fromDate = dateRange?.from ? new Date(dateRange.from.setHours(0,0,0,0)) : null;
-        const toDate = dateRange?.to ? new Date(dateRange.to.setHours(23,59,59,999)) : null;
-        
-        let realizedIncomeInPeriod = 0;
-        let realizedExpenseInPeriod = 0;
-
-        incomes.forEach(income => {
-            if (income.paymentMethod === 'contado') {
-                const incomeDate = new Date(income.date + 'T00:00:00');
-                if ((!fromDate || incomeDate >= fromDate) && (!toDate || incomeDate <= toDate)) {
-                    realizedIncomeInPeriod += income.totalAmount;
-                }
-            }
-            (income.payments || []).forEach(payment => {
-                const paymentDate = new Date(payment.date + 'T00:00:00');
-                if ((!fromDate || paymentDate >= fromDate) && (!toDate || paymentDate <= toDate)) {
-                    realizedIncomeInPeriod += payment.amount;
-                }
-            });
-        });
-
-        expenses.forEach(expense => {
-            if (expense.paymentMethod === 'contado') {
-                const expenseDate = new Date(expense.date + 'T00:00:00');
-                if ((!fromDate || expenseDate >= fromDate) && (!toDate || expenseDate <= toDate)) {
-                    realizedExpenseInPeriod += expense.amount;
-                }
-            }
-            (expense.payments || []).forEach(payment => {
-                const paymentDate = new Date(payment.date + 'T00:00:00');
-                if ((!fromDate || paymentDate >= fromDate) && (!toDate || paymentDate <= toDate)) {
-                    realizedExpenseInPeriod += payment.amount;
-                }
-            });
-        });
-
-        const realizedNetIncome = realizedIncomeInPeriod - realizedExpenseInPeriod;
+        const realizedNetIncome = netBalance - accountsReceivable;
 
         return {
             totalIncome,
@@ -174,41 +136,31 @@ export default function BalancePage() {
             netBalance,
             inventoryValue,
             accountsReceivable,
-            currentAssets,
             realizedNetIncome
         };
-    }, [filteredData, products, rawMaterials, incomes, expenses, dateRange]);
+    }, [filteredData, products, rawMaterials]);
     
     const handleCardClick = (metric: string, title: string, description: string, currentValue: number) => {
         const today = new Date();
         const historicalData: { month: string; value: number }[] = [];
         let hasHistory = true;
 
-        const monthlyMetrics: { [key: string]: { income: number, expense: number, realizedIncome: number, realizedExpense: number } } = {};
+        const monthlyMetrics: { [key: string]: { income: number, expense: number, balance: number, receivable: number } } = {};
         
         for (let i = 5; i >= 0; i--) {
             const d = subMonths(today, i);
             const key = format(d, 'yyyy-MM');
-            monthlyMetrics[key] = { income: 0, expense: 0, realizedIncome: 0, realizedExpense: 0 };
+            monthlyMetrics[key] = { income: 0, expense: 0, balance: 0, receivable: 0 };
         }
 
         incomes.forEach(income => {
             const incomeMonthKey = format(new Date(income.date + 'T00:00:00'), 'yyyy-MM');
             if (monthlyMetrics[incomeMonthKey]) {
                 monthlyMetrics[incomeMonthKey].income += income.totalAmount;
-            }
-            if (income.paymentMethod === 'contado') {
-                const cashDateKey = format(new Date(income.date + 'T00:00:00'), 'yyyy-MM');
-                if (monthlyMetrics[cashDateKey]) {
-                    monthlyMetrics[cashDateKey].realizedIncome += income.totalAmount;
+                if(income.paymentMethod === 'credito') {
+                    monthlyMetrics[incomeMonthKey].receivable += income.balance;
                 }
             }
-            (income.payments || []).forEach(payment => {
-                const paymentMonthKey = format(new Date(payment.date + 'T00:00:00'), 'yyyy-MM');
-                 if (monthlyMetrics[paymentMonthKey]) {
-                    monthlyMetrics[paymentMonthKey].realizedIncome += payment.amount;
-                }
-            });
         });
 
         expenses.forEach(expense => {
@@ -216,19 +168,11 @@ export default function BalancePage() {
             if (monthlyMetrics[expenseMonthKey]) {
                 monthlyMetrics[expenseMonthKey].expense += expense.amount;
             }
-            if (expense.paymentMethod === 'contado') {
-                const cashDateKey = format(new Date(expense.date + 'T00:00:00'), 'yyyy-MM');
-                if (monthlyMetrics[cashDateKey]) {
-                    monthlyMetrics[cashDateKey].realizedExpense += expense.amount;
-                }
-            }
-            (expense.payments || []).forEach(payment => {
-                const paymentMonthKey = format(new Date(payment.date + 'T00:00:00'), 'yyyy-MM');
-                 if (monthlyMetrics[paymentMonthKey]) {
-                    monthlyMetrics[paymentMonthKey].realizedExpense += payment.amount;
-                }
-            });
         });
+
+        Object.keys(monthlyMetrics).forEach(key => {
+            monthlyMetrics[key].balance = monthlyMetrics[key].income - monthlyMetrics[key].expense;
+        })
 
         if (['realizedNetIncome', 'netBalance', 'totalIncome', 'totalExpenses'].includes(metric)) {
              for (let i = 5; i >= 0; i--) {
@@ -239,10 +183,10 @@ export default function BalancePage() {
                 let value = 0;
                 switch(metric) {
                     case 'realizedNetIncome':
-                        value = monthlyMetrics[monthKey].realizedIncome - monthlyMetrics[monthKey].realizedExpense;
+                        value = monthlyMetrics[monthKey].balance - monthlyMetrics[monthKey].receivable;
                         break;
                     case 'netBalance':
-                        value = monthlyMetrics[monthKey].income - monthlyMetrics[monthKey].expense;
+                        value = monthlyMetrics[monthKey].balance;
                         break;
                     case 'totalIncome':
                         value = monthlyMetrics[monthKey].income;
@@ -324,7 +268,7 @@ export default function BalancePage() {
                  <BalanceCard
                     title="Ingresos Netos Realizados"
                     value={summaryData.realizedNetIncome}
-                    description="Dinero total recibido menos dinero total pagado."
+                    description="Balance Neto - Cuentas por Cobrar."
                     icon={Banknote}
                     isLoading={loading}
                     colorBasedOnValue={true}
@@ -369,14 +313,6 @@ export default function BalancePage() {
                 tooltipText="El valor de los recursos que posee tu negocio."
             />
              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                 <BalanceCard
-                    title="Activos Circulantes"
-                    value={summaryData.currentAssets}
-                    description="Valor de inventario + Cuentas por Cobrar."
-                    icon={Landmark}
-                    isLoading={loading}
-                    onClick={() => handleCardClick('currentAssets', 'Activos Circulantes', 'Valor de inventario más cuentas por cobrar.', summaryData.currentAssets)}
-                />
                 <BalanceCard
                     title="Valor Total de Inventario"
                     value={summaryData.inventoryValue}
@@ -451,3 +387,5 @@ export default function BalancePage() {
         </div>
     );
 }
+
+    
