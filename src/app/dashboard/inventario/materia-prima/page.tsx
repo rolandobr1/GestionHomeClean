@@ -1,10 +1,10 @@
 
 "use client";
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, ChevronsUpDown } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -18,6 +18,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { InventoryForm } from '@/components/inventory-form';
 import { useSort } from '@/hooks/use-sort';
 import { useCsvExport } from '@/hooks/use-csv-export';
+import { cn } from '@/lib/utils';
 
 export default function MateriaPrimaPage() {
     const { rawMaterials, suppliers, addRawMaterial, updateRawMaterial, deleteRawMaterial, addMultipleRawMaterials, addSupplier } = useAppData();
@@ -31,6 +32,8 @@ export default function MateriaPrimaPage() {
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
     
+    const [isPending, startTransition] = useTransition();
+
     const { sortedData: sortedRawMaterials, handleSort, renderSortArrow } = useSort<RawMaterial>(rawMaterials, 'name');
 
     const allSuppliers = useMemo(() => [
@@ -44,6 +47,8 @@ export default function MateriaPrimaPage() {
 
         const reader = new FileReader();
         reader.onload = async (e) => {
+            let addedCount = 0;
+            let skippedCount = 0;
             try {
                 const text = e.target?.result as string;
                 const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -55,10 +60,10 @@ export default function MateriaPrimaPage() {
                 const delimiter = semicolonCount > commaCount ? ';' : ',';
 
                 const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
-                const requiredHeaders = ['name', 'sku', 'unit', 'purchaseprice', 'stock', 'reorderlevel', 'supplier'];
+                const requiredHeaders = ['name', 'unit', 'purchaseprice', 'stock'];
                 const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
                 if (missingHeaders.length > 0) {
-                    throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
+                    throw new Error(`Faltan las siguientes columnas obligatorias en el CSV: ${missingHeaders.join(', ')}`);
                 }
 
                 const newMaterials: Omit<RawMaterial, 'id'>[] = [];
@@ -72,6 +77,11 @@ export default function MateriaPrimaPage() {
                         materialData[header] = values[index]?.trim() || '';
                     });
                     
+                    if (!materialData.name || !materialData.unit || !materialData.purchaseprice || !materialData.stock) {
+                        skippedCount++;
+                        continue;
+                    }
+
                     const supplierName = (materialData.supplier || 'Suplidor Genérico').trim();
                     let supplier: Supplier | undefined;
 
@@ -95,22 +105,25 @@ export default function MateriaPrimaPage() {
                     }
                     
                     newMaterials.push({
-                        name: materialData.name || 'N/A',
-                        sku: materialData.sku || 'N/A',
-                        unit: materialData.unit || 'N/A',
+                        name: materialData.name,
+                        sku: materialData.sku || '',
+                        unit: materialData.unit,
                         purchasePrice: parseFloat(materialData.purchaseprice) || 0,
                         stock: parseInt(materialData.stock, 10) || 0,
                         reorderLevel: parseInt(materialData.reorderlevel, 10) || 0,
                         supplierId: supplier!.id,
                         recordedBy: materialData.recordedby || user.name,
                     });
+                    addedCount++;
                 }
                 
-                await addMultipleRawMaterials(newMaterials, importMode);
+                if (addedCount > 0) {
+                    await addMultipleRawMaterials(newMaterials, importMode);
+                }
 
                 toast({
                     title: "Importación Exitosa",
-                    description: `${newMaterials.length} materias primas han sido importadas.`,
+                    description: `${addedCount} materias primas importadas. ${skippedCount > 0 ? `${skippedCount} filas omitidas.` : ''}`,
                 });
 
             } catch (error: any) {
@@ -226,73 +239,80 @@ export default function MateriaPrimaPage() {
                     </CardHeader>
                     <CollapsibleContent>
                         <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
-                                            <div className="flex items-center">Nombre {renderSortArrow('name')}</div>
-                                        </TableHead>
-                                        <TableHead onClick={() => handleSort('supplierId')} className="hidden md:table-cell cursor-pointer">
-                                            <div className="flex items-center">Suplidor {renderSortArrow('supplierId')}</div>
-                                        </TableHead>
-                                        <TableHead onClick={() => handleSort('stock')} className="text-right cursor-pointer">
-                                            <div className="flex items-center justify-end">Stock {renderSortArrow('stock')}</div>
-                                        </TableHead>
-                                        <TableHead onClick={() => handleSort('purchasePrice')} className="text-right hidden sm:table-cell cursor-pointer">
-                                            <div className="flex items-center justify-end">Precio Compra {renderSortArrow('purchasePrice')}</div>
-                                        </TableHead>
-                                        <TableHead className="text-right">Acciones</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {sortedRawMaterials.map((material) => {
-                                        const supplier = allSuppliers.find(s => s.id === material.supplierId);
-                                        return (
-                                        <TableRow key={material.id}>
-                                            <TableCell className="font-medium">{material.name}</TableCell>
-                                            <TableCell className="hidden md:table-cell">{supplier?.name || 'N/A'}</TableCell>
-                                            <TableCell className="text-right">
-                                                {material.stock <= material.reorderLevel ? (
-                                                    <Badge variant="destructive">{material.stock} {material.unit}</Badge>
-                                                ) : (
-                                                    <Badge variant="secondary">{material.stock} {material.unit}</Badge>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-right hidden sm:table-cell">RD${material.purchasePrice.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right">
-                                                <AlertDialog>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                <span className="sr-only">Abrir menú</span>
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleEdit(material)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                                            {user?.role === 'admin' && (
-                                                                <AlertDialogTrigger asChild>
-                                                                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                                                                </AlertDialogTrigger>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                        <AlertDialogTitle>¿Estás seguro de que quieres eliminar este material?</AlertDialogTitle>
-                                                        <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete(material.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </TableCell>
+                            <div className="relative">
+                                {isPending && (
+                                    <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-10">
+                                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                    </div>
+                                )}
+                                <Table className={cn(isPending && "opacity-50")}>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
+                                                <div className="flex items-center">Nombre {renderSortArrow('name')}</div>
+                                            </TableHead>
+                                            <TableHead onClick={() => handleSort('supplierId')} className="hidden md:table-cell cursor-pointer">
+                                                <div className="flex items-center">Suplidor {renderSortArrow('supplierId')}</div>
+                                            </TableHead>
+                                            <TableHead onClick={() => handleSort('stock')} className="text-right cursor-pointer">
+                                                <div className="flex items-center justify-end">Stock {renderSortArrow('stock')}</div>
+                                            </TableHead>
+                                            <TableHead onClick={() => handleSort('purchasePrice')} className="text-right hidden sm:table-cell cursor-pointer">
+                                                <div className="flex items-center justify-end">Precio Compra {renderSortArrow('purchasePrice')}</div>
+                                            </TableHead>
+                                            <TableHead className="text-right">Acciones</TableHead>
                                         </TableRow>
-                                    )})}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {sortedRawMaterials.map((material) => {
+                                            const supplier = allSuppliers.find(s => s.id === material.supplierId);
+                                            return (
+                                            <TableRow key={material.id}>
+                                                <TableCell className="font-medium">{material.name}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{supplier?.name || 'N/A'}</TableCell>
+                                                <TableCell className="text-right">
+                                                    {material.stock <= material.reorderLevel ? (
+                                                        <Badge variant="destructive">{material.stock} {material.unit}</Badge>
+                                                    ) : (
+                                                        <Badge variant="secondary">{material.stock} {material.unit}</Badge>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right hidden sm:table-cell">RD${material.purchasePrice.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <AlertDialog>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                    <span className="sr-only">Abrir menú</span>
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem onClick={() => handleEdit(material)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                                                {user?.role === 'admin' && (
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                            <AlertDialogTitle>¿Estás seguro de que quieres eliminar este material?</AlertDialogTitle>
+                                                            <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(material.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </TableCell>
+                                            </TableRow>
+                                        )})}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </CollapsibleContent>
                 </Collapsible>

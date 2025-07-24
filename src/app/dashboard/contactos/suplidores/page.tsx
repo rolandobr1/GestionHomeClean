@@ -1,10 +1,10 @@
 
 "use client";
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, Search, ChevronsUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, Search, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -16,53 +16,41 @@ import type { Supplier } from '@/components/app-provider';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/hooks/use-auth';
 import { ContactForm } from '@/components/contact-form';
+import { useSort } from '@/hooks/use-sort';
+import { useCsvExport } from '@/hooks/use-csv-export';
+import { cn } from '@/lib/utils';
 
 export default function SuplidoresPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { suppliers, addSupplier, updateSupplier, deleteSupplier, addMultipleSuppliers } = useAppData();
     const { user } = useAuth();
+    const { toast } = useToast();
+    const { downloadCSV } = useCsvExport();
+
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-    const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
-    const [sortConfig, setSortConfig] = useState<{ key: keyof Supplier; direction: 'asc' | 'desc' }>({ key: 'code', direction: 'asc' });
+    
+    const [isPending, startTransition] = useTransition();
 
-    const sortedSuppliers = useMemo(() => {
-        let filtered = suppliers;
-        if (searchTerm) {
-            const lowercasedTerm = searchTerm.toLowerCase();
-            filtered = suppliers.filter(supplier =>
-                (supplier.name && supplier.name.toLowerCase().includes(lowercasedTerm)) ||
-                (supplier.code && supplier.code.toLowerCase().includes(lowercasedTerm)) ||
-                (supplier.email && supplier.email.toLowerCase().includes(lowercasedTerm)) ||
-                (supplier.phone && supplier.phone.toLowerCase().includes(lowercasedTerm))
-            );
-        }
-
-        return [...filtered].sort((a, b) => {
-            const aValue = a[sortConfig.key];
-            const bValue = b[sortConfig.key];
-
-            if (aValue === null || aValue === undefined) return 1;
-            if (bValue === null || bValue === undefined) return -1;
-
-            if (sortConfig.direction === 'asc') {
-                return String(aValue).localeCompare(String(bValue), undefined, { numeric: true });
-            } else {
-                return String(bValue).localeCompare(String(aValue), undefined, { numeric: true });
-            }
-        });
-    }, [suppliers, searchTerm, sortConfig]);
-
-    const handleSort = (key: keyof Supplier) => {
-        setSortConfig(prev => {
-            const isSameKey = prev.key === key;
-            const newDirection = isSameKey ? (prev.direction === 'asc' ? 'desc' : 'asc') : 'asc';
-            return { key, direction: newDirection };
-        });
-    };
+    const { sortedData: sortedSuppliers, handleSort, renderSortArrow } = useSort<Supplier>(
+        suppliers,
+        'code',
+        'asc'
+    );
+    
+    const filteredSuppliers = useMemo(() => {
+        if (!searchTerm) return sortedSuppliers;
+        const lowercasedTerm = searchTerm.toLowerCase();
+        return sortedSuppliers.filter(supplier =>
+            (supplier.name && supplier.name.toLowerCase().includes(lowercasedTerm)) ||
+            (supplier.code && supplier.code.toLowerCase().includes(lowercasedTerm)) ||
+            (supplier.email && supplier.email.toLowerCase().includes(lowercasedTerm)) ||
+            (supplier.phone && supplier.phone.toLowerCase().includes(lowercasedTerm))
+        );
+    }, [searchTerm, sortedSuppliers]);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -70,6 +58,8 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
 
         const reader = new FileReader();
         reader.onload = async (e) => {
+        let addedCount = 0;
+        let skippedCount = 0;
         try {
             const text = e.target?.result as string;
             const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -81,10 +71,10 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
             const delimiter = semicolonCount > commaCount ? ';' : ',';
 
             const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase());
-            const requiredHeaders = ['name', 'email', 'phone', 'address'];
+            const requiredHeaders = ['name'];
             const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
             if (missingHeaders.length > 0) {
-                throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
+                throw new Error(`Faltan las siguientes columnas obligatorias en el CSV: ${missingHeaders.join(', ')}`);
             }
 
             const newSuppliers: Omit<Supplier, 'id' | 'code'>[] = [];
@@ -95,19 +85,27 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                     supplierData[header] = values[index]?.trim() || '';
                 });
 
+                if (!supplierData.name) {
+                    skippedCount++;
+                    continue;
+                }
+
                 newSuppliers.push({
-                    name: supplierData.name || 'N/A',
-                    email: supplierData.email || 'N/A',
-                    phone: supplierData.phone || 'N/A',
-                    address: supplierData.address || 'N/A',
+                    name: supplierData.name,
+                    email: supplierData.email || '',
+                    phone: supplierData.phone || '',
+                    address: supplierData.address || '',
                 });
+                addedCount++;
             }
             
-            await addMultipleSuppliers(newSuppliers, importMode);
+            if (addedCount > 0) {
+              await addMultipleSuppliers(newSuppliers, importMode);
+            }
 
             toast({
-            title: "Importación Exitosa",
-            description: `${newSuppliers.length} suplidores han sido importados en modo '${importMode === 'append' ? 'Añadir' : 'Reemplazar'}'.`,
+                title: "Importación Completada",
+                description: `${addedCount} suplidores importados. ${skippedCount > 0 ? `${skippedCount} filas omitidas.` : ''}`,
             });
             setSearchTerm('');
 
@@ -140,48 +138,7 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
         fileInputRef.current?.click();
     };
 
-    const convertArrayOfObjectsToCSV = (data: any[]) => {
-        if (data.length === 0) return '';
-        const columnDelimiter = ',';
-        const lineDelimiter = '\n';
-        const keys = Object.keys(data[0]);
-        let result = keys.join(columnDelimiter) + lineDelimiter;
-        data.forEach(item => {
-            let ctr = 0;
-            keys.forEach(key => {
-                if (ctr > 0) result += columnDelimiter;
-                let value = item[key] ?? '';
-                if (typeof value === 'string' && value.includes('"')) {
-                   value = value.replace(/"/g, '""');
-                }
-                if (typeof value === 'string' && value.includes(columnDelimiter)) {
-                   value = `"${value}"`;
-                }
-                result += value;
-                ctr++;
-            });
-            result += lineDelimiter;
-        });
-        return result;
-    }
-
-    const downloadCSV = (csvStr: string, fileName: string) => {
-        const blob = new Blob([`\uFEFF${csvStr}`], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileName);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
     const handleExport = () => {
-        if (suppliers.length === 0) {
-            toast({ title: 'No hay datos', description: 'No hay suplidores para exportar.', variant: 'destructive' });
-            return;
-        }
         const dataToExport = suppliers.map(s => ({
             code: s.code,
             name: s.name,
@@ -189,9 +146,8 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
             phone: s.phone,
             address: s.address
         }));
-        const csvString = convertArrayOfObjectsToCSV(dataToExport);
-        downloadCSV(csvString, 'suplidores.csv');
-        toast({ title: 'Exportación Exitosa', description: 'Tus suplidores han sido descargados.' });
+        const headers = ['code', 'name', 'email', 'phone', 'address'];
+        downloadCSV(dataToExport, headers, 'suplidores.csv');
     };
 
     const handleAddNew = () => {
@@ -228,13 +184,6 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
         if (!open) {
             setEditingSupplier(null);
         }
-    };
-
-    const renderSortArrow = (key: keyof Supplier) => {
-        if (sortConfig.key === key) {
-            return sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />;
-        }
-        return null;
     };
 
 
@@ -282,74 +231,81 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                                     <Input
                                         placeholder="Buscar suplidor..."
                                         value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        onChange={(e) => startTransition(() => setSearchTerm(e.target.value))}
                                         className="pl-8"
                                     />
                                 </div>
                             </div>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead onClick={() => handleSort('code')} className="cursor-pointer">
-                                            <div className="flex items-center">Código {renderSortArrow('code')}</div>
-                                        </TableHead>
-                                        <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
-                                            <div className="flex items-center">Nombre {renderSortArrow('name')}</div>
-                                        </TableHead>
-                                        <TableHead>Teléfono</TableHead>
-                                        <TableHead>Correo</TableHead>
-                                        <TableHead className="text-right">Acciones</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {sortedSuppliers.length > 0 ? sortedSuppliers.map((supplier) => (
-                                        <TableRow key={supplier.id}>
-                                            <TableCell className="font-mono">{supplier.code}</TableCell>
-                                            <TableCell className="font-medium">{supplier.name}</TableCell>
-                                            <TableCell>{supplier.phone}</TableCell>
-                                            <TableCell>{supplier.email}</TableCell>
-                                            <TableCell className="text-right">
-                                                <AlertDialog>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                <span className="sr-only">Abrir menú</span>
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleEdit(supplier)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                                            {user?.role === 'admin' && (
-                                                                <AlertDialogTrigger asChild>
-                                                                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                                                                </AlertDialogTrigger>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                        <AlertDialogTitle>¿Estás seguro de que quieres eliminar este suplidor?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del suplidor.
-                                                        </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete(supplier.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </TableCell>
-                                        </TableRow>
-                                    )) : (
+                            <div className="relative">
+                                {isPending && (
+                                    <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-10">
+                                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                    </div>
+                                )}
+                                <Table className={cn(isPending && "opacity-50")}>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
-                                                No se encontraron suplidores.
-                                            </TableCell>
+                                            <TableHead onClick={() => handleSort('code')} className="cursor-pointer">
+                                                <div className="flex items-center">Código {renderSortArrow('code')}</div>
+                                            </TableHead>
+                                            <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
+                                                <div className="flex items-center">Nombre {renderSortArrow('name')}</div>
+                                            </TableHead>
+                                            <TableHead>Teléfono</TableHead>
+                                            <TableHead>Correo</TableHead>
+                                            <TableHead className="text-right">Acciones</TableHead>
                                         </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredSuppliers.length > 0 ? filteredSuppliers.map((supplier) => (
+                                            <TableRow key={supplier.id}>
+                                                <TableCell className="font-mono">{supplier.code}</TableCell>
+                                                <TableCell className="font-medium">{supplier.name}</TableCell>
+                                                <TableCell>{supplier.phone}</TableCell>
+                                                <TableCell>{supplier.email}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <AlertDialog>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                    <span className="sr-only">Abrir menú</span>
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem onClick={() => handleEdit(supplier)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                                                {user?.role === 'admin' && (
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                            <AlertDialogTitle>¿Estás seguro de que quieres eliminar este suplidor?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del suplidor.
+                                                            </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(supplier.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="h-24 text-center">
+                                                    No se encontraron suplidores.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </CollapsibleContent>
                 </Collapsible>

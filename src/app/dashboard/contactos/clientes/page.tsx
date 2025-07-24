@@ -1,10 +1,10 @@
 
 "use client";
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, Search, ChevronsUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, Search, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -16,53 +16,43 @@ import type { Client } from '@/components/app-provider';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/hooks/use-auth';
 import { ContactForm } from '@/components/contact-form';
+import { useSort } from '@/hooks/use-sort';
+import { useCsvExport } from '@/hooks/use-csv-export';
+import { cn } from '@/lib/utils';
+
 
 export default function ClientesPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { clients, addClient, updateClient, deleteClient, addMultipleClients } = useAppData();
     const { user } = useAuth();
+    const { toast } = useToast();
+    const { downloadCSV } = useCsvExport();
+    
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
-    const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
-    const [sortConfig, setSortConfig] = useState<{ key: keyof Client; direction: 'asc' | 'desc' }>({ key: 'code', direction: 'asc' });
+    
+    const [isPending, startTransition] = useTransition();
 
-    const sortedClients = useMemo(() => {
-        let filtered = clients;
-        if (searchTerm) {
-            const lowercasedTerm = searchTerm.toLowerCase();
-            filtered = clients.filter(client =>
-                (client.name && client.name.toLowerCase().includes(lowercasedTerm)) ||
-                (client.code && client.code.toLowerCase().includes(lowercasedTerm)) ||
-                (client.email && client.email.toLowerCase().includes(lowercasedTerm)) ||
-                (client.phone && client.phone.toLowerCase().includes(lowercasedTerm))
-            );
-        }
+    const { sortedData: sortedClients, handleSort, renderSortArrow } = useSort<Client>(
+        clients,
+        'code',
+        'asc'
+    );
+    
+    const filteredClients = useMemo(() => {
+        if (!searchTerm) return sortedClients;
+        const lowercasedTerm = searchTerm.toLowerCase();
+        return sortedClients.filter(client =>
+            (client.name && client.name.toLowerCase().includes(lowercasedTerm)) ||
+            (client.code && client.code.toLowerCase().includes(lowercasedTerm)) ||
+            (client.email && client.email.toLowerCase().includes(lowercasedTerm)) ||
+            (client.phone && client.phone.toLowerCase().includes(lowercasedTerm))
+        );
+    }, [searchTerm, sortedClients]);
 
-        return [...filtered].sort((a, b) => {
-            const aValue = a[sortConfig.key];
-            const bValue = b[sortConfig.key];
-
-            if (aValue === null || aValue === undefined) return 1;
-            if (bValue === null || bValue === undefined) return -1;
-
-            if (sortConfig.direction === 'asc') {
-                return String(aValue).localeCompare(String(bValue), undefined, { numeric: true });
-            } else {
-                return String(bValue).localeCompare(String(aValue), undefined, { numeric: true });
-            }
-        });
-    }, [clients, searchTerm, sortConfig]);
-
-    const handleSort = (key: keyof Client) => {
-        setSortConfig(prev => {
-            const isSameKey = prev.key === key;
-            const newDirection = isSameKey ? (prev.direction === 'asc' ? 'desc' : 'asc') : 'asc';
-            return { key, direction: newDirection };
-        });
-    };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -70,6 +60,8 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
 
         const reader = new FileReader();
         reader.onload = async (e) => {
+        let addedCount = 0;
+        let skippedCount = 0;
         try {
             const text = e.target?.result as string;
             const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -81,10 +73,10 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
             const delimiter = semicolonCount > commaCount ? ';' : ',';
 
             const headers = headerLine.split(delimiter).map(h => h.trim().toLowerCase());
-            const requiredHeaders = ['name', 'email', 'phone', 'address'];
+            const requiredHeaders = ['name'];
             const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
             if (missingHeaders.length > 0) {
-                throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
+                throw new Error(`Faltan las siguientes columnas obligatorias en el CSV: ${missingHeaders.join(', ')}`);
             }
 
             const newClients: Omit<Client, 'id' | 'code'>[] = [];
@@ -94,37 +86,41 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
                 headers.forEach((header, index) => {
                     clientData[header] = values[index]?.trim() || '';
                 });
+                
+                if (!clientData.name) {
+                    skippedCount++;
+                    continue;
+                }
 
                 newClients.push({
-                    name: clientData.name || 'N/A',
-                    email: clientData.email || 'N/A',
-                    phone: clientData.phone || 'N/A',
-                    address: clientData.address || 'N/A',
+                    name: clientData.name,
+                    email: clientData.email || '',
+                    phone: clientData.phone || '',
+                    address: clientData.address || '',
                 });
+                addedCount++;
             }
             
-            await addMultipleClients(newClients, importMode);
+            if (addedCount > 0) {
+              await addMultipleClients(newClients, importMode);
+            }
 
             toast({
-            title: "Importación Exitosa",
-            description: `${newClients.length} clientes han sido importados en modo '${importMode === 'append' ? 'Añadir' : 'Reemplazar'}'.`,
+                title: "Importación Completada",
+                description: `${addedCount} clientes importados. ${skippedCount > 0 ? `${skippedCount} filas omitidas por datos incompletos.` : ''}`,
             });
             setSearchTerm('');
 
         } catch (error: any) {
             toast({
-            variant: "destructive",
-            title: "Error de Importación",
-            description: error.message || "No se pudo procesar el archivo CSV.",
+                variant: "destructive",
+                title: "Error de Importación",
+                description: error.message || "No se pudo procesar el archivo CSV.",
             });
         }
         };
         reader.onerror = () => {
-            toast({
-                variant: 'destructive',
-                title: 'Error de Lectura',
-                description: 'No se pudo leer el archivo.',
-            });
+            toast({ variant: 'destructive', title: 'Error de Lectura', description: 'No se pudo leer el archivo.' });
         };
         reader.readAsText(file);
 
@@ -140,48 +136,7 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
         fileInputRef.current?.click();
     };
 
-    const convertArrayOfObjectsToCSV = (data: any[]) => {
-        if (data.length === 0) return '';
-        const columnDelimiter = ',';
-        const lineDelimiter = '\n';
-        const keys = Object.keys(data[0]);
-        let result = keys.join(columnDelimiter) + lineDelimiter;
-        data.forEach(item => {
-            let ctr = 0;
-            keys.forEach(key => {
-                if (ctr > 0) result += columnDelimiter;
-                let value = item[key] ?? '';
-                if (typeof value === 'string' && value.includes('"')) {
-                   value = value.replace(/"/g, '""');
-                }
-                if (typeof value === 'string' && value.includes(columnDelimiter)) {
-                   value = `"${value}"`;
-                }
-                result += value;
-                ctr++;
-            });
-            result += lineDelimiter;
-        });
-        return result;
-    }
-
-    const downloadCSV = (csvStr: string, fileName: string) => {
-        const blob = new Blob([`\uFEFF${csvStr}`], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileName);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
     const handleExport = () => {
-        if (clients.length === 0) {
-            toast({ title: 'No hay datos', description: 'No hay clientes para exportar.', variant: 'destructive' });
-            return;
-        }
         const dataToExport = clients.map(c => ({
             code: c.code,
             name: c.name,
@@ -189,9 +144,8 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
             phone: c.phone,
             address: c.address,
         }));
-        const csvString = convertArrayOfObjectsToCSV(dataToExport);
-        downloadCSV(csvString, 'clientes.csv');
-        toast({ title: 'Exportación Exitosa', description: 'Tus clientes han sido descargados.' });
+        const headers = ['code', 'name', 'email', 'phone', 'address'];
+        downloadCSV(dataToExport, headers, 'clientes.csv');
     };
 
     const handleAddNew = () => {
@@ -228,13 +182,6 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
         if (!open) {
             setEditingClient(null);
         }
-    };
-
-    const renderSortArrow = (key: keyof Client) => {
-        if (sortConfig.key === key) {
-            return sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />;
-        }
-        return null;
     };
 
 
@@ -282,74 +229,81 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
                                 <Input
                                     placeholder="Buscar cliente..."
                                     value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onChange={(e) => startTransition(() => setSearchTerm(e.target.value))}
                                     className="pl-8"
                                 />
                             </div>
                         </div>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead onClick={() => handleSort('code')} className="cursor-pointer">
-                                        <div className="flex items-center">Código {renderSortArrow('code')}</div>
-                                    </TableHead>
-                                    <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
-                                        <div className="flex items-center">Nombre {renderSortArrow('name')}</div>
-                                    </TableHead>
-                                    <TableHead>Teléfono</TableHead>
-                                    <TableHead>Correo</TableHead>
-                                    <TableHead className="text-right">Acciones</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {sortedClients.length > 0 ? sortedClients.map((client) => (
-                                    <TableRow key={client.id}>
-                                        <TableCell className="font-mono">{client.code}</TableCell>
-                                        <TableCell className="font-medium">{client.name}</TableCell>
-                                        <TableCell>{client.phone}</TableCell>
-                                        <TableCell>{client.email}</TableCell>
-                                        <TableCell className="text-right">
-                                            <AlertDialog>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" className="h-8 w-8 p-0">
-                                                            <span className="sr-only">Abrir menú</span>
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => handleEdit(client)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                                        {user?.role === 'admin' && (
-                                                            <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                                                            </AlertDialogTrigger>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>¿Estás seguro de que quieres eliminar este cliente?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del cliente.
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(client.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </TableCell>
-                                    </TableRow>
-                                )) : (
+                         <div className="relative">
+                             {isPending && (
+                                <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-10">
+                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                </div>
+                            )}
+                            <Table className={cn(isPending && "opacity-50")}>
+                                <TableHeader>
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center">
-                                            No se encontraron clientes.
-                                        </TableCell>
+                                        <TableHead onClick={() => handleSort('code')} className="cursor-pointer">
+                                            <div className="flex items-center">Código {renderSortArrow('code')}</div>
+                                        </TableHead>
+                                        <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
+                                            <div className="flex items-center">Nombre {renderSortArrow('name')}</div>
+                                        </TableHead>
+                                        <TableHead>Teléfono</TableHead>
+                                        <TableHead>Correo</TableHead>
+                                        <TableHead className="text-right">Acciones</TableHead>
                                     </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredClients.length > 0 ? filteredClients.map((client) => (
+                                        <TableRow key={client.id}>
+                                            <TableCell className="font-mono">{client.code}</TableCell>
+                                            <TableCell className="font-medium">{client.name}</TableCell>
+                                            <TableCell>{client.phone}</TableCell>
+                                            <TableCell>{client.email}</TableCell>
+                                            <TableCell className="text-right">
+                                                <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <span className="sr-only">Abrir menú</span>
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleEdit(client)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                                            {user?.role === 'admin' && (
+                                                                <AlertDialogTrigger asChild>
+                                                                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                                </AlertDialogTrigger>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                        <AlertDialogTitle>¿Estás seguro de que quieres eliminar este cliente?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del cliente.
+                                                        </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete(client.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-24 text-center">
+                                                No se encontraron clientes.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </CollapsibleContent>
             </Collapsible>
