@@ -1,4 +1,4 @@
-# Guía para Construir una App de Gestión como QuimioGest desde Cero
+# Guía para Construir una App de Gestión como HOMECLEAN desde Cero
 
 Esta guía describe los pasos y conceptos fundamentales para construir una aplicación de gestión empresarial (ERP/CRM) completa utilizando Next.js, Firebase y ShadCN UI, similar a la que hemos desarrollado.
 
@@ -12,7 +12,7 @@ El primer paso es establecer las bases de nuestra aplicación.
     Abre tu terminal y ejecuta el siguiente comando. Esto iniciará un asistente para configurar tu proyecto.
 
     ```bash
-    npx create-next-app@latest quimio-gest
+    npx create-next-app@latest homeclean-app
     ```
 
     Selecciona estas opciones cuando se te pregunte:
