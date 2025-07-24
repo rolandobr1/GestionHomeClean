@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAppData } from '@/hooks/use-app-data';
-import { Scale, TrendingUp, TrendingDown, Wallet, Boxes, Landmark, Banknote, X } from 'lucide-react';
+import { Scale, TrendingUp, TrendingDown, Wallet, Boxes, Landmark, Banknote, X, HelpCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -22,6 +22,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import type { DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
 
 const chartConfigBase = {
   value: {
@@ -29,6 +31,22 @@ const chartConfigBase = {
     color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig;
+
+const SectionTitle = ({ title, tooltipText }: { title: string; tooltipText: string }) => (
+    <div className="flex items-center gap-2 mb-4 mt-6">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p className="max-w-xs">{tooltipText}</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    </div>
+);
 
 const BalanceCard = ({ title, value, description, icon: Icon, isLoading, formatAsCurrency = true, colorBasedOnValue = false, onClick }: { title: string, value: number, description: string, icon: React.ElementType, isLoading: boolean, formatAsCurrency?: boolean, colorBasedOnValue?: boolean, onClick?: () => void }) => {
     const valueColorClass = colorBasedOnValue ? (value >= 0 ? 'text-green-600' : 'text-red-600') : '';
@@ -119,14 +137,12 @@ export default function BalancePage() {
         let realizedExpenseInPeriod = 0;
 
         incomes.forEach(income => {
-            // Contado sales within the period
             if (income.paymentMethod === 'contado') {
                 const incomeDate = new Date(income.date + 'T00:00:00');
                 if ((!fromDate || incomeDate >= fromDate) && (!toDate || incomeDate <= toDate)) {
                     realizedIncomeInPeriod += income.totalAmount;
                 }
             }
-            // Payments for credit sales that occurred in the period
             (income.payments || []).forEach(payment => {
                 const paymentDate = new Date(payment.date + 'T00:00:00');
                 if ((!fromDate || paymentDate >= fromDate) && (!toDate || paymentDate <= toDate)) {
@@ -136,14 +152,12 @@ export default function BalancePage() {
         });
 
         expenses.forEach(expense => {
-            // Contado expenses within the period
             if (expense.paymentMethod === 'contado') {
                 const expenseDate = new Date(expense.date + 'T00:00:00');
                 if ((!fromDate || expenseDate >= fromDate) && (!toDate || expenseDate <= toDate)) {
                     realizedExpenseInPeriod += expense.amount;
                 }
             }
-            // Payments for credit expenses that occurred in the period
             (expense.payments || []).forEach(payment => {
                 const paymentDate = new Date(payment.date + 'T00:00:00');
                 if ((!fromDate || paymentDate >= fromDate) && (!toDate || paymentDate <= toDate)) {
@@ -179,19 +193,17 @@ export default function BalancePage() {
         }
 
         incomes.forEach(income => {
-            // Accrual-based income
             const incomeMonthKey = format(new Date(income.date + 'T00:00:00'), 'yyyy-MM');
             if (monthlyMetrics[incomeMonthKey]) {
                 monthlyMetrics[incomeMonthKey].income += income.totalAmount;
             }
-            // Cash-based income
             if (income.paymentMethod === 'contado') {
                 const cashDateKey = format(new Date(income.date + 'T00:00:00'), 'yyyy-MM');
                 if (monthlyMetrics[cashDateKey]) {
                     monthlyMetrics[cashDateKey].realizedIncome += income.totalAmount;
                 }
             }
-            income.payments.forEach(payment => {
+            (income.payments || []).forEach(payment => {
                 const paymentMonthKey = format(new Date(payment.date + 'T00:00:00'), 'yyyy-MM');
                  if (monthlyMetrics[paymentMonthKey]) {
                     monthlyMetrics[paymentMonthKey].realizedIncome += payment.amount;
@@ -200,19 +212,17 @@ export default function BalancePage() {
         });
 
         expenses.forEach(expense => {
-            // Accrual-based expense
             const expenseMonthKey = format(new Date(expense.date + 'T00:00:00'), 'yyyy-MM');
             if (monthlyMetrics[expenseMonthKey]) {
                 monthlyMetrics[expenseMonthKey].expense += expense.amount;
             }
-            // Cash-based expense
             if (expense.paymentMethod === 'contado') {
                 const cashDateKey = format(new Date(expense.date + 'T00:00:00'), 'yyyy-MM');
                 if (monthlyMetrics[cashDateKey]) {
                     monthlyMetrics[cashDateKey].realizedExpense += expense.amount;
                 }
             }
-            expense.payments.forEach(payment => {
+            (expense.payments || []).forEach(payment => {
                 const paymentMonthKey = format(new Date(payment.date + 'T00:00:00'), 'yyyy-MM');
                  if (monthlyMetrics[paymentMonthKey]) {
                     monthlyMetrics[paymentMonthKey].realizedExpense += payment.amount;
@@ -252,10 +262,18 @@ export default function BalancePage() {
                 const creditIncomesUpToMonth = incomes.filter(inc => 
                     inc.paymentMethod === 'credito' && new Date(inc.date + 'T00:00:00') <= endOfMonthDate
                 );
-                const totalOwed = creditIncomesUpToMonth.reduce((sum, inc) => sum + inc.totalAmount, 0);
-                const paymentsMadeUpToMonth = creditIncomesUpToMonth.flatMap(inc => inc.payments)
-                    .filter(p => new Date(p.date + 'T00:00:00') <= endOfMonthDate)
-                    .reduce((sum, p) => sum + p.amount, 0);
+                
+                let totalOwed = 0;
+                let paymentsMadeUpToMonth = 0;
+
+                creditIncomesUpToMonth.forEach(inc => {
+                    totalOwed += inc.totalAmount;
+                    (inc.payments || []).forEach(p => {
+                         if (new Date(p.date + 'T00:00:00') <= endOfMonthDate) {
+                            paymentsMadeUpToMonth += p.amount;
+                        }
+                    });
+                });
                 
                 historicalData.push({ month: monthLabel, value: totalOwed - paymentsMadeUpToMonth });
             }
@@ -298,56 +316,74 @@ export default function BalancePage() {
                 )}
             </Card>
 
+            <SectionTitle 
+                title="Resumen de Flujo de Caja (Efectivo)"
+                tooltipText="Mide el dinero REAL que ha entrado y salido de tu negocio en el período seleccionado."
+            />
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                  <BalanceCard
                     title="Ingresos Netos Realizados"
                     value={summaryData.realizedNetIncome}
-                    description={isFiltered ? "Flujo de caja neto en el período seleccionado." : "Flujo de caja neto total (histórico)."}
+                    description="Dinero total recibido menos dinero total pagado."
                     icon={Banknote}
                     isLoading={loading}
                     colorBasedOnValue={true}
                     onClick={() => handleCardClick('realizedNetIncome', 'Ingresos Netos Realizados', 'Dinero total recibido menos dinero total pagado, mensualmente.', summaryData.realizedNetIncome)}
                 />
                 <BalanceCard
+                    title="Cuentas por Cobrar"
+                    value={summaryData.accountsReceivable}
+                    description="Total de dinero pendiente de pago de clientes."
+                    icon={Wallet}
+                    isLoading={loading}
+                    onClick={() => handleCardClick('accountsReceivable', 'Cuentas por Cobrar', 'Evolución del saldo total pendiente de pago por clientes al final de cada mes.', summaryData.accountsReceivable)}
+                />
+            </div>
+
+            <SectionTitle
+                title="Resumen de Rentabilidad (Acumulado)"
+                tooltipText="Mide la rentabilidad 'en papel', registrando ventas y gastos cuando se facturan, no cuando se pagan."
+            />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <BalanceCard
                     title="Balance Neto"
                     value={summaryData.netBalance}
-                    description={isFiltered ? "Ingresos menos egresos en el período." : "Ingresos totales menos egresos totales (histórico)."}
+                    description="Ingresos facturados menos egresos incurridos."
                     icon={Scale}
                     isLoading={loading}
                     colorBasedOnValue={true}
                     onClick={() => handleCardClick('netBalance', 'Balance Neto Total', 'Diferencia mensual entre ingresos y egresos totales.', summaryData.netBalance)}
                 />
-                 <BalanceCard
-                    title="Activos Circulantes"
-                    value={summaryData.currentAssets}
-                    description="Valor de inventario más cuentas por cobrar."
-                    icon={Landmark}
-                    isLoading={loading}
-                    onClick={() => handleCardClick('currentAssets', 'Activos Circulantes', 'Valor de inventario más cuentas por cobrar.', summaryData.currentAssets)}
-                />
                 <BalanceCard
-                    title="Cuentas por Cobrar"
-                    value={summaryData.accountsReceivable}
-                    description="Total de dinero pendiente de pago (histórico)."
-                    icon={Wallet}
-                    isLoading={loading}
-                    onClick={() => handleCardClick('accountsReceivable', 'Cuentas por Cobrar', 'Evolución del saldo total pendiente de pago por clientes al final de cada mes.', summaryData.accountsReceivable)}
-                />
-                <BalanceCard
-                    title="Ingresos Totales"
+                    title="Ingresos Totales (Facturado)"
                     value={summaryData.totalIncome}
-                    description={isFiltered ? "Suma de ingresos en el período." : "Suma de todos los ingresos registrados (histórico)."}
+                    description="Suma de todas las facturas de venta emitidas."
                     icon={TrendingUp}
                     isLoading={loading}
                     onClick={() => handleCardClick('totalIncome', 'Ingresos Totales', 'Suma de todos los ingresos registrados en cada mes.', summaryData.totalIncome)}
                 />
                 <BalanceCard
-                    title="Egresos Totales"
+                    title="Egresos Totales (Incurrido)"
                     value={summaryData.totalExpenses}
-                    description={isFiltered ? "Suma de egresos en el período." : "Suma de todos los egresos registrados (histórico)."}
+                    description="Suma de todos los gastos registrados."
                     icon={TrendingDown}
                     isLoading={loading}
                     onClick={() => handleCardClick('totalExpenses', 'Egresos Totales', 'Suma de todos los egresos registrados en cada mes.', summaryData.totalExpenses)}
+                />
+            </div>
+            
+            <SectionTitle
+                title="Resumen de Activos"
+                tooltipText="El valor de los recursos que posee tu negocio."
+            />
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                 <BalanceCard
+                    title="Activos Circulantes"
+                    value={summaryData.currentAssets}
+                    description="Valor de inventario + Cuentas por Cobrar."
+                    icon={Landmark}
+                    isLoading={loading}
+                    onClick={() => handleCardClick('currentAssets', 'Activos Circulantes', 'Valor de inventario más cuentas por cobrar.', summaryData.currentAssets)}
                 />
                 <BalanceCard
                     title="Valor Total de Inventario"
@@ -358,6 +394,7 @@ export default function BalancePage() {
                     onClick={() => handleCardClick('inventoryValue', 'Valor Total de Inventario', 'Suma del valor de productos y materia prima.', summaryData.inventoryValue)}
                 />
             </div>
+
             <Dialog open={isChartDialogOpen} onOpenChange={setIsChartDialogOpen}>
                 <DialogContent className="sm:max-w-xl">
                     <DialogHeader>
