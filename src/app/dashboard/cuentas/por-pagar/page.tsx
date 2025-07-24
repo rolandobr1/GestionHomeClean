@@ -5,28 +5,29 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Wallet, MoreHorizontal, X, Info, Sigma, Download, Share2, ChevronsUpDown } from "lucide-react";
+import { Wallet, MoreHorizontal, X, Info, Sigma, Download, Share2, ChevronsUpDown, Trash2 } from "lucide-react";
 import { useAppData } from '@/hooks/use-app-data';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import type { Expense, Supplier, Payment } from '@/components/app-provider';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import type { Expense, Supplier } from '@/components/app-provider';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import type { DateRange } from 'react-day-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PaymentForm } from '@/components/payment-form';
+import { useAuth } from '@/hooks/use-auth';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Separator } from '@/components/ui/separator';
 
-
-export default function CuentasPorPagarPage({ params, searchParams }: { params: any; searchParams: any; }) {
-  const { expenses, suppliers, invoiceSettings } = useAppData();
+export default function CuentasPorPagarPage() {
+  const { expenses, suppliers, invoiceSettings, deletePaymentFromExpense } = useAppData();
+  const { user } = useAuth();
   const { toast } = useToast();
   
   const [paymentExpense, setPaymentExpense] = useState<Expense | null>(null);
@@ -36,7 +37,8 @@ export default function CuentasPorPagarPage({ params, searchParams }: { params: 
   const [supplierSearchTerm, setSupplierSearchTerm] = useState('');
   const [recordedByFilter, setRecordedByFilter] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
-
+  const [historyExpense, setHistoryExpense] = useState<Expense | null>(null);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
 
   const allSuppliers = useMemo(() => [
     { id: 'generic', name: 'Suplidor Genérico', email: '', phone: '', address: '' },
@@ -120,6 +122,11 @@ export default function CuentasPorPagarPage({ params, searchParams }: { params: 
     setPaymentExpense(expense);
     setIsPaymentDialogOpen(true);
   };
+  
+  const handleOpenHistory = (expense: Expense) => {
+    setHistoryExpense(expense);
+    setIsHistoryDialogOpen(true);
+  };
 
   const generatePdfDoc = () => {
     const doc = new jsPDF();
@@ -202,17 +209,12 @@ export default function CuentasPorPagarPage({ params, searchParams }: { params: 
         toast({
             variant: "destructive",
             title: "No hay datos para compartir",
-            description: "No hay cuentas que coincidan con los filtros seleccionados.",
         });
         return;
     }
 
     if (!navigator.share) {
-        toast({
-          variant: 'destructive',
-          title: 'No Soportado',
-          description: 'Tu navegador no soporta la función de compartir.',
-        });
+        toast({ variant: 'destructive', title: 'No Soportado' });
         return;
     }
 
@@ -229,15 +231,28 @@ export default function CuentasPorPagarPage({ params, searchParams }: { params: 
       });
     } catch (error: any) {
         if (error.name !== 'AbortError') {
-             toast({
-                variant: 'destructive',
-                title: 'Error al Compartir',
-                description: 'No se pudo compartir el reporte.',
-             });
+             toast({ variant: 'destructive', title: 'Error al Compartir' });
         }
     }
   };
 
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!historyExpense) return;
+    try {
+        await deletePaymentFromExpense(historyExpense.id, paymentId);
+        toast({ title: 'Abono Eliminado', description: 'El registro del abono ha sido eliminado.' });
+        
+        const updatedExpense = expenses.find(i => i.id === historyExpense.id);
+        if (updatedExpense) {
+            setHistoryExpense(updatedExpense);
+            if (updatedExpense.payments.length === 0) setIsHistoryDialogOpen(false);
+        } else {
+            setIsHistoryDialogOpen(false);
+        }
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar el abono.' });
+    }
+  };
 
   useEffect(() => {
     if (!isPaymentDialogOpen) {
@@ -299,20 +314,9 @@ export default function CuentasPorPagarPage({ params, searchParams }: { params: 
                     <CardDescription>Un listado de todas las compras a crédito con saldo pendiente de pago.</CardDescription>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
-                    <Button onClick={handleShare} variant="outline" size="sm">
-                        <Share2 className="h-4 w-4" />
-                        <span className="hidden sm:inline">Compartir</span>
-                    </Button>
-                    <Button onClick={handleExportPdf} variant="outline" size="sm">
-                        <Download className="h-4 w-4" />
-                        <span className="hidden sm:inline">Exportar</span>
-                    </Button>
-                    <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <ChevronsUpDown className="h-4 w-4" />
-                            <span className="sr-only">Mostrar/Ocultar</span>
-                        </Button>
-                    </CollapsibleTrigger>
+                    <Button onClick={handleShare} variant="outline" size="sm"><Share2 className="h-4 w-4" /><span className="hidden sm:inline">Compartir</span></Button>
+                    <Button onClick={handleExportPdf} variant="outline" size="sm"><Download className="h-4 w-4" /><span className="hidden sm:inline">Exportar</span></Button>
+                    <CollapsibleTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><ChevronsUpDown className="h-4 w-4" /><span className="sr-only">Toggle</span></Button></CollapsibleTrigger>
                 </div>
             </CardHeader>
             <CollapsibleContent>
@@ -341,24 +345,14 @@ export default function CuentasPorPagarPage({ params, searchParams }: { params: 
                                         <TableCell className="hidden lg:table-cell">{expense.recordedBy}</TableCell>
                                         <TableCell className="text-right">
                                             <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Abrir menú</span><MoreHorizontal className="h-4 w-4" /></Button>
-                                                </DropdownMenuTrigger>
+                                                <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Menú</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuItem onClick={() => handleAddPaymentClick(expense)}><Wallet className="mr-2 h-4 w-4" /> Registrar Pago</DropdownMenuItem>
-                                                    <TooltipProvider>
-                                                        <Tooltip><TooltipTrigger asChild>
-                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={!expense.payments || expense.payments.length === 0}>
-                                                                <Info className="mr-2 h-4 w-4" /> Ver Abonos
-                                                            </DropdownMenuItem>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent><p className="font-semibold mb-1">Historial de Pagos</p>
-                                                        {expense.payments.map(p=>(<div key={p.id} className="text-xs">
-                                                            {format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy', { locale: es })}: RD${p.amount.toFixed(2)} ({p.recordedBy})
-                                                        </div>))}
-                                                        </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
+                                                    {expense.payments && expense.payments.length > 0 && (
+                                                        <DropdownMenuItem onClick={() => handleOpenHistory(expense)}>
+                                                            <Info className="mr-2 h-4 w-4" /> Ver Abonos
+                                                        </DropdownMenuItem>
+                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
@@ -371,7 +365,7 @@ export default function CuentasPorPagarPage({ params, searchParams }: { params: 
                     <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
                         <Wallet className="h-16 w-16 text-muted-foreground/50" />
                         <h3 className="mt-4 text-lg font-semibold">Todo al día</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">No se encontraron cuentas por pagar con los filtros actuales.</p>
+                        <p className="mt-1 text-sm text-muted-foreground">No se encontraron cuentas por pagar.</p>
                     </div>
                     )}
                 </CardContent>
@@ -387,6 +381,58 @@ export default function CuentasPorPagarPage({ params, searchParams }: { params: 
           </DialogHeader>
           {paymentExpense && <PaymentForm expense={paymentExpense} onClose={() => setIsPaymentDialogOpen(false)} />}
         </DialogContent>
+      </Dialog>
+      
+       <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Historial de Pagos</DialogTitle>
+                  <DialogDescription>
+                      Egreso para {allSuppliers.find(c => c.id === historyExpense?.supplierId)?.name}
+                  </DialogDescription>
+              </DialogHeader>
+              {historyExpense && (
+                  <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+                      <div className="text-sm space-y-1">
+                          <div className="flex justify-between"><span className="text-muted-foreground">Monto Total:</span><span className="font-medium">RD${historyExpense.amount.toFixed(2)}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Total Abonado:</span><span className="font-medium text-green-600">RD${(historyExpense.amount - historyExpense.balance).toFixed(2)}</span></div>
+                          <Separator/>
+                           <div className="flex justify-between text-base"><span className="font-semibold">Saldo Pendiente:</span><span className="font-bold">RD${historyExpense.balance.toFixed(2)}</span></div>
+                      </div>
+
+                      {historyExpense.payments.length > 0 && (
+                          <div>
+                              <h4 className="font-semibold mb-2 text-sm">Abonos Realizados</h4>
+                              <div className="border rounded-md">
+                                  <Table>
+                                      <TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Monto</TableHead><TableHead>Por</TableHead><TableHead className="text-right"></TableHead></TableRow></TableHeader>
+                                      <TableBody>
+                                          {historyExpense.payments.map(p => (
+                                              <TableRow key={p.id}>
+                                                  <TableCell>{format(new Date(p.date + 'T00:00:00'), 'dd/MM/yy', { locale: es })}</TableCell>
+                                                  <TableCell>RD${p.amount.toFixed(2)}</TableCell>
+                                                  <TableCell>{p.recordedBy}</TableCell>
+                                                  <TableCell className="text-right">
+                                                      {user?.role === 'admin' && (
+                                                      <AlertDialog>
+                                                          <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="h-4 w-4 text-destructive" /></Button></AlertDialogTrigger>
+                                                          <AlertDialogContent>
+                                                              <AlertDialogHeader><AlertDialogTitle>¿Eliminar este abono?</AlertDialogTitle><AlertDialogDescription>Se eliminará el pago de RD${p.amount.toFixed(2)} y el monto se sumará de nuevo al saldo pendiente. Esta acción no se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
+                                                              <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDeletePayment(p.id)} className="bg-destructive hover:bg-destructive/90">Eliminar Abono</AlertDialogAction></AlertDialogFooter>
+                                                          </AlertDialogContent>
+                                                      </AlertDialog>
+                                                      )}
+                                                  </TableCell>
+                                              </TableRow>
+                                          ))}
+                                      </TableBody>
+                                  </Table>
+                              </div>
+                          </div>
+                      )}
+                  </div>
+              )}
+          </DialogContent>
       </Dialog>
     </div>
   );

@@ -1,3 +1,4 @@
-export default function IngresosPage() {
+
+export default function IngresosRedirect() {
   return null;
 }

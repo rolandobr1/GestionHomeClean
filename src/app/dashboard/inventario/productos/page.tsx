@@ -4,92 +4,34 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, ChevronsUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-  } from "@/components/ui/alert-dialog"
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Upload, Download, ChevronsUpDown } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAppData } from '@/hooks/use-app-data';
 import type { Product } from '@/components/app-provider';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/hooks/use-auth';
+import { InventoryForm } from '@/components/inventory-form';
+import { useSort } from '@/hooks/use-sort';
+import { useCsvExport } from '@/hooks/use-csv-export';
 
-
-export default function ProductosPage({ params, searchParams }: { params: any; searchParams: any; }) {
+export default function ProductosPage() {
     const { products, addProduct, updateProduct, deleteProduct, addMultipleProducts } = useAppData();
     const { user } = useAuth();
+    const { toast } = useToast();
+    const { downloadCSV } = useCsvExport();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-    const { toast } = useToast();
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isImportAlertOpen, setIsImportAlertOpen] = useState(false);
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
-    const [sortConfig, setSortConfig] = useState<{ key: keyof Product; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
 
-    const sortedProducts = useMemo(() => {
-        return [...products].sort((a, b) => {
-            const aValue = a[sortConfig.key];
-            const bValue = b[sortConfig.key];
-
-            if (aValue === null || aValue === undefined) return 1;
-            if (bValue === null || bValue === undefined) return -1;
-            
-            const directionMultiplier = sortConfig.direction === 'asc' ? 1 : -1;
-            if (typeof aValue === 'number' && typeof bValue === 'number') {
-                return (aValue - bValue) * directionMultiplier;
-            }
-            return String(aValue).localeCompare(String(bValue)) * directionMultiplier;
-        });
-    }, [products, sortConfig]);
-
-    const handleSort = (key: keyof Product) => {
-        setSortConfig(prev => ({
-            key,
-            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
-        }));
-    };
-
-    const renderSortArrow = (key: keyof Product) => {
-        if (sortConfig.key === key) {
-            return sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />;
-        }
-        return null;
-    };
-
+    const { sortedData: sortedProducts, handleSort, renderSortArrow } = useSort<Product>(products, 'name');
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -134,169 +76,61 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
             }
             
             await addMultipleProducts(newProducts, importMode);
-
-            toast({
-                title: "Importación Exitosa",
-                description: `${newProducts.length} productos han sido importados en modo '${importMode === 'append' ? 'Añadir' : 'Reemplazar'}'.`,
-            });
-
+            toast({ title: "Importación Exitosa", description: `${newProducts.length} productos importados.` });
         } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Error de Importación",
-                description: error.message || "No se pudo procesar el archivo CSV.",
-            });
+            toast({ variant: "destructive", title: "Error de Importación", description: error.message });
         }
         };
-        reader.onerror = () => {
-            toast({
-                variant: 'destructive',
-                title: 'Error de Lectura',
-                description: 'No se pudo leer el archivo.',
-            });
-        };
+        reader.onerror = () => toast({ variant: 'destructive', title: 'Error de Lectura' });
         reader.readAsText(file);
-
         if(event.target) event.target.value = '';
     };
 
-
-    const handleImportClick = () => {
-        setIsImportAlertOpen(true);
-    };
+    const handleImportClick = () => setIsImportAlertOpen(true);
     
     const triggerFileInput = (mode: 'append' | 'replace') => {
         setImportMode(mode);
         fileInputRef.current?.click();
     };
 
-    const convertArrayOfObjectsToCSV = (data: any[]) => {
-        if (data.length === 0) return '';
-        const columnDelimiter = ',';
-        const lineDelimiter = '\n';
-        const keys = Object.keys(data[0]);
-        let result = keys.join(columnDelimiter) + lineDelimiter;
-        data.forEach(item => {
-            let ctr = 0;
-            keys.forEach(key => {
-                if (ctr > 0) result += columnDelimiter;
-                let value = item[key] ?? '';
-                if (typeof value === 'string' && value.includes('"')) {
-                   value = value.replace(/"/g, '""');
-                }
-                if (typeof value === 'string' && value.includes(columnDelimiter)) {
-                   value = `"${value}"`;
-                }
-                result += value;
-                ctr++;
-            });
-            result += lineDelimiter;
-        });
-        return result;
-    }
-
-    const downloadCSV = (csvStr: string, fileName: string) => {
-        const blob = new Blob([`\uFEFF${csvStr}`], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileName);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
     const handleExport = () => {
-        if (products.length === 0) {
-            toast({ title: 'No hay datos', description: 'No hay productos para exportar.', variant: 'destructive' });
-            return;
-        }
         const dataToExport = products.map(({ id, ...rest }) => rest);
-        const csvString = convertArrayOfObjectsToCSV(dataToExport);
-        downloadCSV(csvString, 'productos.csv');
-        toast({ title: 'Exportación Exitosa', description: 'Tus productos han sido descargados.' });
+        const headers = ['name', 'sku', 'unit', 'salePriceRetail', 'salePriceWholesale', 'stock', 'reorderLevel'];
+        downloadCSV(dataToExport, headers, 'productos.csv');
     };
 
     const handleEdit = (product: Product) => {
         setEditingProduct(product);
         setIsDialogOpen(true);
     };
+    
+    const handleAddNew = () => {
+        setEditingProduct(null);
+        setIsDialogOpen(true);
+    };
+
+    const handleDialogClose = () => {
+        setEditingProduct(null);
+        setIsDialogOpen(false);
+    }
 
     const handleDelete = (productId: string) => {
         deleteProduct(productId);
     };
 
-    const handleSave = (product: Product) => {
-        if (editingProduct) {
-            updateProduct(product);
-        } else {
-            const { id, ...newProduct } = product;
-            addProduct(newProduct);
+    const handleSave = async (productData: Omit<Product, 'id'> | Product) => {
+        try {
+            if ('id' in productData && productData.id) {
+                await updateProduct(productData as Product);
+                toast({ title: "Producto Actualizado" });
+            } else {
+                await addProduct(productData as Omit<Product, 'id'>);
+                toast({ title: "Producto Añadido" });
+            }
+            handleDialogClose();
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error al guardar' });
         }
-        setEditingProduct(null);
-        setIsDialogOpen(false);
-    };
-
-    const ProductForm = ({ product, onSave }: { product: Product | null, onSave: (product: Product) => void }) => {
-        const [formData, setFormData] = useState(product || {
-            name: '', sku: '', unit: '', salePriceRetail: 0, salePriceWholesale: 0, stock: 0, reorderLevel: 0
-        });
-
-        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const { id, value, type } = e.target;
-            setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
-        };
-
-        const handleSubmit = (e: React.FormEvent) => {
-            e.preventDefault();
-            onSave({ ...formData, id: product?.id || '' });
-        }
-        
-        return (
-            <form onSubmit={handleSubmit}>
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="name">Nombre</Label>
-                        <Input id="name" value={formData.name} onChange={handleChange} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="sku">SKU</Label>
-                        <Input id="sku" value={formData.sku} onChange={handleChange} />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="stock">Stock</Label>
-                            <Input id="stock" type="number" value={formData.stock} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="unit">Unidad</Label>
-                            <Input id="unit" value={formData.unit} onChange={handleChange} />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="salePriceRetail">Precio Detalle</Label>
-                            <Input id="salePriceRetail" type="number" value={formData.salePriceRetail} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="salePriceWholesale">Precio Por Mayor</Label>
-                            <Input id="salePriceWholesale" type="number" value={formData.salePriceWholesale} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="reorderLevel">Nivel Reorden</Label>
-                        <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()}/>
-                    </div>
-                </div>
-                 <DialogFooter>
-                    <DialogClose asChild>
-                         <Button type="button" variant="secondary">Cancelar</Button>
-                    </DialogClose>
-                    <Button type="submit">Guardar</Button>
-                </DialogFooter>
-            </form>
-        );
     };
 
     return (
@@ -313,7 +147,7 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
                     <Download className="mr-2 h-4 w-4" />
                     Exp.
                 </Button>
-                <Button onClick={() => { setEditingProduct(null); setIsDialogOpen(true); }}>
+                <Button onClick={handleAddNew}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Producto
                 </Button>
@@ -388,10 +222,8 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
                                                     </DropdownMenu>
                                                     <AlertDialogContent>
                                                         <AlertDialogHeader>
-                                                        <AlertDialogTitle>¿Estás seguro de que quieres eliminar este producto?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            Esta acción no se puede deshacer. Esto eliminará permanentemente el producto de tus registros.
-                                                        </AlertDialogDescription>
+                                                        <AlertDialogTitle>¿Eliminar este producto?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
                                                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
@@ -410,14 +242,14 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
             </Card>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>{editingProduct ? 'Editar Producto' : 'Añadir Producto'}</DialogTitle>
                         <DialogDescription>
                             {editingProduct ? 'Actualiza los detalles de tu producto.' : 'Añade un nuevo producto a tu inventario.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <ProductForm product={editingProduct} onSave={handleSave} />
+                    <InventoryForm item={editingProduct} itemType="product" onSave={handleSave} onClose={handleDialogClose} />
                 </DialogContent>
             </Dialog>
 
@@ -426,24 +258,18 @@ export default function ProductosPage({ params, searchParams }: { params: any; s
                     <AlertDialogHeader>
                         <AlertDialogTitle>Selecciona el modo de importación</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Puedes añadir los nuevos productos a los existentes o reemplazar todos los datos actuales con los del archivo.
+                            Puedes añadir los nuevos productos a los existentes o reemplazar todos los datos actuales.
                             <br/>
-                            <span className="font-bold text-destructive">¡La opción de reemplazar borrará permanentemente todos los productos actuales!</span>
+                            <span className="font-bold text-destructive">¡Reemplazar borrará permanentemente todos los productos actuales!</span>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => triggerFileInput('append')}>
-                            Añadir a Registros
-                        </AlertDialogAction>
-                        <AlertDialogAction onClick={() => triggerFileInput('replace')} className="bg-destructive hover:bg-destructive/90">
-                            Reemplazar Todo
-                        </AlertDialogAction>
+                        <AlertDialogAction onClick={() => triggerFileInput('append')}>Añadir a Registros</AlertDialogAction>
+                        <AlertDialogAction onClick={() => triggerFileInput('replace')} className="bg-destructive hover:bg-destructive/90">Reemplazar Todo</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
         </>
     );
 }
-
-    
