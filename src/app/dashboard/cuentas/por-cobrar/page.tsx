@@ -25,6 +25,7 @@ import autoTable from 'jspdf-autotable';
 import { PaymentForm } from '@/components/payment-form';
 import { useAuth } from '@/hooks/use-auth';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Separator } from '@/components/ui/separator';
 
 
 export default function CuentasPorCobrarPage({ params, searchParams }: { params: any; searchParams: any; }) {
@@ -420,6 +421,23 @@ export default function CuentasPorCobrarPage({ params, searchParams }: { params:
               </DialogHeader>
               {historyIncome && (
                   <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+                      
+                      <div className="text-sm space-y-1">
+                          <div className="flex justify-between">
+                              <span className="text-muted-foreground">Monto Total:</span>
+                              <span className="font-medium">RD${historyIncome.totalAmount.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                              <span className="text-muted-foreground">Total Abonado:</span>
+                              <span className="font-medium text-green-600">RD${(historyIncome.totalAmount - historyIncome.balance).toFixed(2)}</span>
+                          </div>
+                          <Separator/>
+                           <div className="flex justify-between text-base">
+                              <span className="font-semibold">Saldo Pendiente:</span>
+                              <span className="font-bold">RD${historyIncome.balance.toFixed(2)}</span>
+                          </div>
+                      </div>
+
                       {historyIncome.payments.length > 0 && (
                           <div>
                               <h4 className="font-semibold mb-2 text-sm">Abonos Recibidos</h4>
@@ -459,3 +477,5 @@ export default function CuentasPorCobrarPage({ params, searchParams }: { params:
     </div>
   );
 }
+
+    

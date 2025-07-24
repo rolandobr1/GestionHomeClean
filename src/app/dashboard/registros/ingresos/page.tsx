@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PaymentForm } from '@/components/payment-form';
+import { Separator } from '@/components/ui/separator';
 
 export default function IngresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes, invoiceSettings, addClient, deletePayment } = useAppData();
@@ -250,6 +251,7 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                 1: { halign: 'center' },
                 2: { halign: 'right' },
                 3: { halign: 'right' },
+                4: { halign: 'right' },
             }
         });
 
@@ -859,6 +861,21 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                     </DialogHeader>
                     {historyIncome && (
                         <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+                            <div className="text-sm space-y-1">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Monto Total:</span>
+                                    <span className="font-medium">RD${historyIncome.totalAmount.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Total Abonado:</span>
+                                    <span className="font-medium text-green-600">RD${(historyIncome.totalAmount - historyIncome.balance).toFixed(2)}</span>
+                                </div>
+                                <Separator/>
+                                <div className="flex justify-between text-base">
+                                    <span className="font-semibold">Saldo Pendiente:</span>
+                                    <span className="font-bold">RD${historyIncome.balance.toFixed(2)}</span>
+                                </div>
+                            </div>
                             <div>
                                 <h4 className="font-semibold mb-2 text-sm">Productos Vendidos</h4>
                                 <div className="border rounded-md">
