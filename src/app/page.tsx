@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const storedEmail = localStorage.getItem("homeclean-user-email");
@@ -66,8 +68,9 @@ export default function LoginPage() {
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Correo Electrónico</Label>
+                <Label htmlFor="email" onClick={() => emailInputRef.current?.focus()}>Correo Electrónico</Label>
                 <Input
+                  ref={emailInputRef}
                   id="email"
                   type="email"
                   placeholder="m@ejemplo.com"
@@ -78,8 +81,9 @@ export default function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password" onClick={() => passwordInputRef.current?.focus()}>Contraseña</Label>
                 <Input 
+                  ref={passwordInputRef}
                   id="password" 
                   type="password" 
                   required 
