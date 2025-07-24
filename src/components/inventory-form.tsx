@@ -20,30 +20,46 @@ interface InventoryFormProps {
   onClose: () => void;
 }
 
+const getInitialState = (item: InventoryItem | null, itemType: 'product' | 'rawMaterial'): FormDataType => {
+    if (item) {
+        const { stock, ...rest } = item;
+        return rest;
+    }
+    
+    const baseState = {
+        name: '',
+        sku: '',
+        unit: '',
+        stock: 0,
+        reorderLevel: 0,
+    };
+
+    if (itemType === 'product') {
+        return {
+            ...baseState,
+            salePriceRetail: 0,
+            salePriceWholesale: 0,
+        };
+    }
+
+    // itemType === 'rawMaterial'
+    return {
+        ...baseState,
+        purchasePrice: 0,
+        supplierId: 'generic',
+    };
+};
+
 export const InventoryForm = ({ item, itemType, onSave, onClose }: InventoryFormProps) => {
   const { suppliers } = useAppData();
-  const [formData, setFormData] = useState<FormDataType>({});
+  const [formData, setFormData] = useState<FormDataType>(getInitialState(item, itemType));
   const [stockAdjustment, setStockAdjustment] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
 
   const allSuppliers = [{ id: 'generic', name: 'Suplidor Genérico', code: 'SUP-000', email: '', phone: '', address: '' }, ...suppliers];
 
   useEffect(() => {
-    if (item) {
-      // Don't include stock in the editable form data
-      const { stock, ...rest } = item;
-      setFormData(rest);
-    } else {
-      setFormData({
-        name: '',
-        sku: '',
-        unit: '',
-        stock: 0,
-        reorderLevel: 0,
-        ...(itemType === 'product' ? { salePriceRetail: 0, salePriceWholesale: 0 } : {}),
-        ...(itemType === 'rawMaterial' ? { purchasePrice: 0, supplierId: 'generic' } : {}),
-      });
-    }
+    setFormData(getInitialState(item, itemType));
     setStockAdjustment(0);
   }, [item, itemType]);
 
@@ -72,11 +88,11 @@ export const InventoryForm = ({ item, itemType, onSave, onClose }: InventoryForm
       <div className="grid gap-4 py-4 max-h-[65vh] overflow-y-auto pr-4">
         <div className="space-y-2">
             <Label htmlFor="name">Nombre</Label>
-            <Input id="name" value={formData.name} onChange={handleChange} required disabled={isSaving}/>
+            <Input id="name" value={formData.name || ''} onChange={handleChange} required disabled={isSaving}/>
         </div>
         <div className="space-y-2">
             <Label htmlFor="sku">SKU</Label>
-            <Input id="sku" value={formData.sku} onChange={handleChange} disabled={isSaving}/>
+            <Input id="sku" value={formData.sku || ''} onChange={handleChange} disabled={isSaving}/>
         </div>
         
         {item ? (
@@ -102,24 +118,24 @@ export const InventoryForm = ({ item, itemType, onSave, onClose }: InventoryForm
         ) : (
              <div className="space-y-2">
                 <Label htmlFor="stock">Stock Inicial</Label>
-                <Input id="stock" type="number" value={formData.stock} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
+                <Input id="stock" type="number" value={formData.stock || 0} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
             </div>
         )}
 
         <div className="space-y-2">
             <Label htmlFor="unit">Unidad</Label>
-            <Input id="unit" value={formData.unit} onChange={handleChange} disabled={isSaving}/>
+            <Input id="unit" value={formData.unit || ''} onChange={handleChange} disabled={isSaving}/>
         </div>
 
         {itemType === 'product' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                   <Label htmlFor="salePriceRetail">Precio Detalle</Label>
-                  <Input id="salePriceRetail" type="number" value={formData.salePriceRetail} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving} />
+                  <Input id="salePriceRetail" type="number" value={formData.salePriceRetail || 0} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving} />
               </div>
               <div className="space-y-2">
                   <Label htmlFor="salePriceWholesale">Precio Por Mayor</Label>
-                  <Input id="salePriceWholesale" type="number" value={formData.salePriceWholesale} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving} />
+                  <Input id="salePriceWholesale" type="number" value={formData.salePriceWholesale || 0} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving} />
               </div>
           </div>
         )}
@@ -128,11 +144,11 @@ export const InventoryForm = ({ item, itemType, onSave, onClose }: InventoryForm
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
                 <Label htmlFor="purchasePrice">Precio Compra</Label>
-                <Input id="purchasePrice" type="number" value={formData.purchasePrice} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
+                <Input id="purchasePrice" type="number" value={formData.purchasePrice || 0} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="reorderLevel">Nivel Reorden</Label>
-                <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
+                <Input id="reorderLevel" type="number" value={formData.reorderLevel || 0} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
             </div>
           </div>
         )}
@@ -140,14 +156,14 @@ export const InventoryForm = ({ item, itemType, onSave, onClose }: InventoryForm
         {itemType === 'product' && (
             <div className="space-y-2">
                 <Label htmlFor="reorderLevel">Nivel Reorden</Label>
-                <Input id="reorderLevel" type="number" value={formData.reorderLevel} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
+                <Input id="reorderLevel" type="number" value={formData.reorderLevel || 0} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
             </div>
         )}
 
         {itemType === 'rawMaterial' && (
           <div className="space-y-2">
               <Label htmlFor="supplierId">Suplidor</Label>
-              <Select onValueChange={handleSelectChange} value={formData.supplierId} disabled={isSaving}>
+              <Select onValueChange={handleSelectChange} value={formData.supplierId || 'generic'} disabled={isSaving}>
                   <SelectTrigger id="supplierId">
                       <SelectValue placeholder="Selecciona un suplidor" />
                   </SelectTrigger>
