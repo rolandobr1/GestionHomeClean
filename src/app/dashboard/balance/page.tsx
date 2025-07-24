@@ -6,11 +6,12 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { useAppData } from '@/hooks/use-app-data';
-import { Scale, TrendingUp, TrendingDown, Wallet, Boxes, Landmark, Banknote } from 'lucide-react';
+import { Scale, TrendingUp, TrendingDown, Wallet, Boxes, Landmark, Banknote, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -18,6 +19,9 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
 import { format, subMonths, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
+import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
+import type { DateRange } from 'react-day-picker';
+import { Button } from '@/components/ui/button';
 
 const chartConfigBase = {
   value: {
@@ -59,38 +63,95 @@ const BalanceCard = ({ title, value, description, icon: Icon, isLoading, formatA
 
 export default function BalancePage() {
     const { incomes, expenses, products, rawMaterials, loading } = useAppData();
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [isChartDialogOpen, setIsChartDialogOpen] = useState(false);
     const [chartData, setChartData] = useState<any[]>([]);
     const [chartConfig, setChartConfig] = useState<ChartConfig>(chartConfigBase);
     const [selectedMetric, setSelectedMetric] = useState<{ title: string; description: string; hasHistory: boolean; currentValue: number } | null>(null);
 
+    const filteredData = useMemo(() => {
+        if (!dateRange || (!dateRange.from && !dateRange.to)) {
+            return { filteredIncomes: incomes, filteredExpenses: expenses };
+        }
+
+        const fromDate = dateRange.from ? new Date(dateRange.from.setHours(0,0,0,0)) : null;
+        const toDate = dateRange.to ? new Date(dateRange.to.setHours(23,59,59,999)) : null;
+
+        const filteredIncomes = incomes.filter(i => {
+            const incomeDate = new Date(i.date + 'T00:00:00');
+            if (fromDate && incomeDate < fromDate) return false;
+            if (toDate && incomeDate > toDate) return false;
+            return true;
+        });
+
+        const filteredExpenses = expenses.filter(e => {
+            const expenseDate = new Date(e.date + 'T00:00:00');
+            if (fromDate && expenseDate < fromDate) return false;
+            if (toDate && expenseDate > toDate) return false;
+            return true;
+        });
+
+        return { filteredIncomes, filteredExpenses };
+
+    }, [incomes, expenses, dateRange]);
+
     const summaryData = useMemo(() => {
-        const totalIncomeAllTime = incomes.reduce((acc, income) => acc + income.totalAmount, 0);
-        const totalExpensesAllTime = expenses.reduce((acc, expense) => acc + expense.amount, 0);
-        const netBalance = totalIncomeAllTime - totalExpensesAllTime;
+        const { filteredIncomes, filteredExpenses } = filteredData;
         
+        const totalIncome = filteredIncomes.reduce((acc, income) => acc + income.totalAmount, 0);
+        const totalExpenses = filteredExpenses.reduce((acc, expense) => acc + expense.amount, 0);
+        const netBalance = totalIncome - totalExpenses;
+        
+        // These values are "point in time" and should not be affected by date filters.
         const productsValue = products.reduce((acc, product) => acc + (product.salePriceWholesale * product.stock), 0);
         const rawMaterialsValue = rawMaterials.reduce((acc, material) => acc + (material.purchasePrice * material.stock), 0);
         const inventoryValue = productsValue + rawMaterialsValue;
         
-        const accountsReceivable = incomes
+        const accountsReceivable = incomes // Based on all incomes, not filtered ones
             .filter(i => i.balance > 0.01)
             .reduce((acc, income) => acc + income.balance, 0);
             
         const currentAssets = inventoryValue + accountsReceivable;
 
-        const realizedNetIncome = netBalance - accountsReceivable;
+        // This should be based on the filtered period, but considering only the cash flow within that period.
+        const realizedIncomeInPeriod = filteredIncomes
+            .filter(i => i.paymentMethod === 'contado')
+            .reduce((acc, i) => acc + i.totalAmount, 0)
+            + 
+            incomes.flatMap(i => i.payments).filter(p => {
+                const paymentDate = new Date(p.date + 'T00:00:00');
+                const fromDate = dateRange?.from ? new Date(dateRange.from.setHours(0,0,0,0)) : null;
+                const toDate = dateRange?.to ? new Date(dateRange.to.setHours(23,59,59,999)) : null;
+                if (fromDate && paymentDate < fromDate) return false;
+                if (toDate && paymentDate > toDate) return false;
+                return true;
+            }).reduce((acc, p) => acc + p.amount, 0);
+
+        const realizedExpenseInPeriod = filteredExpenses
+            .filter(e => e.paymentMethod === 'contado')
+            .reduce((acc, e) => acc + e.amount, 0)
+             + 
+            expenses.flatMap(e => e.payments).filter(p => {
+                const paymentDate = new Date(p.date + 'T00:00:00');
+                const fromDate = dateRange?.from ? new Date(dateRange.from.setHours(0,0,0,0)) : null;
+                const toDate = dateRange?.to ? new Date(dateRange.to.setHours(23,59,59,999)) : null;
+                if (fromDate && paymentDate < fromDate) return false;
+                if (toDate && paymentDate > toDate) return false;
+                return true;
+            }).reduce((acc, p) => acc + p.amount, 0);
+
+        const realizedNetIncome = realizedIncomeInPeriod - realizedExpenseInPeriod;
 
         return {
-            totalIncomeAllTime,
-            totalExpensesAllTime,
+            totalIncome,
+            totalExpenses,
             netBalance,
             inventoryValue,
             accountsReceivable,
             currentAssets,
             realizedNetIncome
         };
-    }, [incomes, expenses, products, rawMaterials]);
+    }, [filteredData, products, rawMaterials, incomes, expenses, dateRange]);
     
     const handleCardClick = (metric: string, title: string, description: string, currentValue: number) => {
         const today = new Date();
@@ -137,7 +198,7 @@ export default function BalancePage() {
             });
         });
 
-        if (['realizedNetIncome', 'netBalance', 'totalIncomeAllTime', 'totalExpensesAllTime'].includes(metric)) {
+        if (['realizedNetIncome', 'netBalance', 'totalIncome', 'totalExpenses'].includes(metric)) {
              for (let i = 5; i >= 0; i--) {
                 const d = subMonths(today, i);
                 const monthKey = format(d, 'yyyy-MM');
@@ -151,10 +212,10 @@ export default function BalancePage() {
                     case 'netBalance':
                         value = monthlyMetrics[monthKey].income - monthlyMetrics[monthKey].expense;
                         break;
-                    case 'totalIncomeAllTime':
+                    case 'totalIncome':
                         value = monthlyMetrics[monthKey].income;
                         break;
-                    case 'totalExpensesAllTime':
+                    case 'totalExpenses':
                         value = monthlyMetrics[monthKey].expense;
                         break;
                 }
@@ -186,30 +247,52 @@ export default function BalancePage() {
         setIsChartDialogOpen(true);
     };
 
+    const clearFilters = () => {
+        setDateRange(undefined);
+    };
+
+    const isFiltered = dateRange?.from || dateRange?.to;
+
     return (
         <div className="space-y-6">
             <div>
                 <h1 className="text-2xl font-bold">Balance General</h1>
                 <p className="text-muted-foreground">
-                    Un resumen financiero completo de tu negocio a lo largo del tiempo.
+                    Un resumen financiero completo de tu negocio.
                 </p>
             </div>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Filtros</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />
+                </CardContent>
+                {isFiltered && (
+                    <CardFooter>
+                        <Button variant="ghost" onClick={clearFilters}><X className="mr-2 h-4 w-4"/>Limpiar Filtros</Button>
+                    </CardFooter>
+                )}
+            </Card>
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                  <BalanceCard
                     title="Ingresos Netos Realizados"
                     value={summaryData.realizedNetIncome}
-                    description="Balance total menos las cuentas por cobrar."
+                    description={isFiltered ? "Flujo de caja neto en el período seleccionado." : "Balance total menos las cuentas por cobrar."}
                     icon={Banknote}
                     isLoading={loading}
                     colorBasedOnValue={true}
                     onClick={() => handleCardClick('realizedNetIncome', 'Ingresos Netos Realizados', 'Balance total menos las cuentas por cobrar.', summaryData.realizedNetIncome)}
                 />
                 <BalanceCard
-                    title="Balance Neto Total"
+                    title="Balance Neto"
                     value={summaryData.netBalance}
-                    description="Ingresos totales menos egresos totales."
+                    description={isFiltered ? "Ingresos menos egresos en el período." : "Ingresos totales menos egresos totales (histórico)."}
                     icon={Scale}
                     isLoading={loading}
+                    colorBasedOnValue={true}
                     onClick={() => handleCardClick('netBalance', 'Balance Neto Total', 'Diferencia mensual entre ingresos y egresos totales.', summaryData.netBalance)}
                 />
                  <BalanceCard
@@ -223,26 +306,26 @@ export default function BalancePage() {
                 <BalanceCard
                     title="Cuentas por Cobrar"
                     value={summaryData.accountsReceivable}
-                    description="Total de dinero pendiente de pago por clientes."
+                    description="Total de dinero pendiente de pago (histórico)."
                     icon={Wallet}
                     isLoading={loading}
                     onClick={() => handleCardClick('accountsReceivable', 'Cuentas por Cobrar', 'Evolución del saldo total pendiente de pago por clientes al final de cada mes.', summaryData.accountsReceivable)}
                 />
                 <BalanceCard
-                    title="Ingresos Totales (Histórico)"
-                    value={summaryData.totalIncomeAllTime}
-                    description="Suma de todos los ingresos registrados."
+                    title="Ingresos Totales"
+                    value={summaryData.totalIncome}
+                    description={isFiltered ? "Suma de ingresos en el período." : "Suma de todos los ingresos registrados (histórico)."}
                     icon={TrendingUp}
                     isLoading={loading}
-                    onClick={() => handleCardClick('totalIncomeAllTime', 'Ingresos Totales', 'Suma de todos los ingresos registrados en cada mes.', summaryData.totalIncomeAllTime)}
+                    onClick={() => handleCardClick('totalIncome', 'Ingresos Totales', 'Suma de todos los ingresos registrados en cada mes.', summaryData.totalIncome)}
                 />
                 <BalanceCard
-                    title="Egresos Totales (Histórico)"
-                    value={summaryData.totalExpensesAllTime}
-                    description="Suma de todos los egresos registrados."
+                    title="Egresos Totales"
+                    value={summaryData.totalExpenses}
+                    description={isFiltered ? "Suma de egresos en el período." : "Suma de todos los egresos registrados (histórico)."}
                     icon={TrendingDown}
                     isLoading={loading}
-                    onClick={() => handleCardClick('totalExpensesAllTime', 'Egresos Totales', 'Suma de todos los egresos registrados en cada mes.', summaryData.totalExpensesAllTime)}
+                    onClick={() => handleCardClick('totalExpenses', 'Egresos Totales', 'Suma de todos los egresos registrados en cada mes.', summaryData.totalExpenses)}
                 />
                 <BalanceCard
                     title="Valor Total de Inventario"
@@ -309,3 +392,4 @@ export default function BalancePage() {
         </div>
     );
 }
+
