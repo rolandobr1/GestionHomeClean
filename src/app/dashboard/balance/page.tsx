@@ -102,60 +102,55 @@ export default function BalancePage() {
         const totalExpenses = filteredExpenses.reduce((acc, expense) => acc + expense.amount, 0);
         const netBalance = totalIncome - totalExpenses;
         
-        // These values are "point in time" and should not be affected by date filters.
         const productsValue = products.reduce((acc, product) => acc + (product.salePriceWholesale * product.stock), 0);
         const rawMaterialsValue = rawMaterials.reduce((acc, material) => acc + (material.purchasePrice * material.stock), 0);
         const inventoryValue = productsValue + rawMaterialsValue;
         
-        const accountsReceivable = incomes // Based on all incomes, not filtered ones
+        const accountsReceivable = incomes
             .filter(i => i.balance > 0.01)
             .reduce((acc, income) => acc + income.balance, 0);
             
         const currentAssets = inventoryValue + accountsReceivable;
 
-        // This is the CASH FLOW calculation for the selected period.
         const fromDate = dateRange?.from ? new Date(dateRange.from.setHours(0,0,0,0)) : null;
         const toDate = dateRange?.to ? new Date(dateRange.to.setHours(23,59,59,999)) : null;
+        
+        let realizedIncomeInPeriod = 0;
+        let realizedExpenseInPeriod = 0;
 
-        const realizedIncomeInPeriod = incomes.flatMap(i => {
-            const paymentsInPeriod = [];
-            // If it's a 'contado' sale within the period, count the full amount.
-            if (i.paymentMethod === 'contado') {
-                const incomeDate = new Date(i.date + 'T00:00:00');
+        incomes.forEach(income => {
+            // Contado sales within the period
+            if (income.paymentMethod === 'contado') {
+                const incomeDate = new Date(income.date + 'T00:00:00');
                 if ((!fromDate || incomeDate >= fromDate) && (!toDate || incomeDate <= toDate)) {
-                    paymentsInPeriod.push({ amount: i.totalAmount });
+                    realizedIncomeInPeriod += income.totalAmount;
                 }
             }
-            // Add any credit payments that occurred within the period.
-            if (i.payments) {
-                i.payments.forEach(p => {
-                    const paymentDate = new Date(p.date + 'T00:00:00');
-                     if ((!fromDate || paymentDate >= fromDate) && (!toDate || paymentDate <= toDate)) {
-                        paymentsInPeriod.push({ amount: p.amount });
-                    }
-                })
-            }
-            return paymentsInPeriod;
-        }).reduce((acc, p) => acc + p.amount, 0);
+            // Payments for credit sales that occurred in the period
+            (income.payments || []).forEach(payment => {
+                const paymentDate = new Date(payment.date + 'T00:00:00');
+                if ((!fromDate || paymentDate >= fromDate) && (!toDate || paymentDate <= toDate)) {
+                    realizedIncomeInPeriod += payment.amount;
+                }
+            });
+        });
 
-        const realizedExpenseInPeriod = expenses.flatMap(e => {
-            const paymentsInPeriod = [];
-            if (e.paymentMethod === 'contado') {
-                const expenseDate = new Date(e.date + 'T00:00:00');
+        expenses.forEach(expense => {
+            // Contado expenses within the period
+            if (expense.paymentMethod === 'contado') {
+                const expenseDate = new Date(expense.date + 'T00:00:00');
                 if ((!fromDate || expenseDate >= fromDate) && (!toDate || expenseDate <= toDate)) {
-                    paymentsInPeriod.push({ amount: e.amount });
+                    realizedExpenseInPeriod += expense.amount;
                 }
             }
-            if (e.payments) {
-                e.payments.forEach(p => {
-                    const paymentDate = new Date(p.date + 'T00:00:00');
-                    if ((!fromDate || paymentDate >= fromDate) && (!toDate || paymentDate <= toDate)) {
-                        paymentsInPeriod.push({ amount: p.amount });
-                    }
-                });
-            }
-            return paymentsInPeriod;
-        }).reduce((acc, p) => acc + p.amount, 0);
+            // Payments for credit expenses that occurred in the period
+            (expense.payments || []).forEach(payment => {
+                const paymentDate = new Date(payment.date + 'T00:00:00');
+                if ((!fromDate || paymentDate >= fromDate) && (!toDate || paymentDate <= toDate)) {
+                    realizedExpenseInPeriod += payment.amount;
+                }
+            });
+        });
 
         const realizedNetIncome = realizedIncomeInPeriod - realizedExpenseInPeriod;
 
