@@ -113,32 +113,49 @@ export default function BalancePage() {
             
         const currentAssets = inventoryValue + accountsReceivable;
 
-        // This should be based on the filtered period, but considering only the cash flow within that period.
-        const realizedIncomeInPeriod = filteredIncomes
-            .filter(i => i.paymentMethod === 'contado')
-            .reduce((acc, i) => acc + i.totalAmount, 0)
-            + 
-            incomes.flatMap(i => i.payments).filter(p => {
-                const paymentDate = new Date(p.date + 'T00:00:00');
-                const fromDate = dateRange?.from ? new Date(dateRange.from.setHours(0,0,0,0)) : null;
-                const toDate = dateRange?.to ? new Date(dateRange.to.setHours(23,59,59,999)) : null;
-                if (fromDate && paymentDate < fromDate) return false;
-                if (toDate && paymentDate > toDate) return false;
-                return true;
-            }).reduce((acc, p) => acc + p.amount, 0);
+        // This is the CASH FLOW calculation for the selected period.
+        const fromDate = dateRange?.from ? new Date(dateRange.from.setHours(0,0,0,0)) : null;
+        const toDate = dateRange?.to ? new Date(dateRange.to.setHours(23,59,59,999)) : null;
 
-        const realizedExpenseInPeriod = filteredExpenses
-            .filter(e => e.paymentMethod === 'contado')
-            .reduce((acc, e) => acc + e.amount, 0)
-             + 
-            expenses.flatMap(e => e.payments).filter(p => {
-                const paymentDate = new Date(p.date + 'T00:00:00');
-                const fromDate = dateRange?.from ? new Date(dateRange.from.setHours(0,0,0,0)) : null;
-                const toDate = dateRange?.to ? new Date(dateRange.to.setHours(23,59,59,999)) : null;
-                if (fromDate && paymentDate < fromDate) return false;
-                if (toDate && paymentDate > toDate) return false;
-                return true;
-            }).reduce((acc, p) => acc + p.amount, 0);
+        const realizedIncomeInPeriod = incomes.flatMap(i => {
+            const paymentsInPeriod = [];
+            // If it's a 'contado' sale within the period, count the full amount.
+            if (i.paymentMethod === 'contado') {
+                const incomeDate = new Date(i.date + 'T00:00:00');
+                if ((!fromDate || incomeDate >= fromDate) && (!toDate || incomeDate <= toDate)) {
+                    paymentsInPeriod.push({ amount: i.totalAmount });
+                }
+            }
+            // Add any credit payments that occurred within the period.
+            if (i.payments) {
+                i.payments.forEach(p => {
+                    const paymentDate = new Date(p.date + 'T00:00:00');
+                     if ((!fromDate || paymentDate >= fromDate) && (!toDate || paymentDate <= toDate)) {
+                        paymentsInPeriod.push({ amount: p.amount });
+                    }
+                })
+            }
+            return paymentsInPeriod;
+        }).reduce((acc, p) => acc + p.amount, 0);
+
+        const realizedExpenseInPeriod = expenses.flatMap(e => {
+            const paymentsInPeriod = [];
+            if (e.paymentMethod === 'contado') {
+                const expenseDate = new Date(e.date + 'T00:00:00');
+                if ((!fromDate || expenseDate >= fromDate) && (!toDate || expenseDate <= toDate)) {
+                    paymentsInPeriod.push({ amount: e.amount });
+                }
+            }
+            if (e.payments) {
+                e.payments.forEach(p => {
+                    const paymentDate = new Date(p.date + 'T00:00:00');
+                    if ((!fromDate || paymentDate >= fromDate) && (!toDate || paymentDate <= toDate)) {
+                        paymentsInPeriod.push({ amount: p.amount });
+                    }
+                });
+            }
+            return paymentsInPeriod;
+        }).reduce((acc, p) => acc + p.amount, 0);
 
         const realizedNetIncome = realizedIncomeInPeriod - realizedExpenseInPeriod;
 
@@ -167,11 +184,16 @@ export default function BalancePage() {
         }
 
         incomes.forEach(income => {
+            // Accrual-based income
             const incomeMonthKey = format(new Date(income.date + 'T00:00:00'), 'yyyy-MM');
             if (monthlyMetrics[incomeMonthKey]) {
                 monthlyMetrics[incomeMonthKey].income += income.totalAmount;
-                if (income.paymentMethod === 'contado') {
-                    monthlyMetrics[incomeMonthKey].realizedIncome += income.totalAmount;
+            }
+            // Cash-based income
+            if (income.paymentMethod === 'contado') {
+                const cashDateKey = format(new Date(income.date + 'T00:00:00'), 'yyyy-MM');
+                if (monthlyMetrics[cashDateKey]) {
+                    monthlyMetrics[cashDateKey].realizedIncome += income.totalAmount;
                 }
             }
             income.payments.forEach(payment => {
@@ -183,11 +205,16 @@ export default function BalancePage() {
         });
 
         expenses.forEach(expense => {
+            // Accrual-based expense
             const expenseMonthKey = format(new Date(expense.date + 'T00:00:00'), 'yyyy-MM');
             if (monthlyMetrics[expenseMonthKey]) {
                 monthlyMetrics[expenseMonthKey].expense += expense.amount;
-                 if (expense.paymentMethod === 'contado') {
-                    monthlyMetrics[expenseMonthKey].realizedExpense += expense.amount;
+            }
+            // Cash-based expense
+            if (expense.paymentMethod === 'contado') {
+                const cashDateKey = format(new Date(expense.date + 'T00:00:00'), 'yyyy-MM');
+                if (monthlyMetrics[cashDateKey]) {
+                    monthlyMetrics[cashDateKey].realizedExpense += expense.amount;
                 }
             }
             expense.payments.forEach(payment => {
@@ -280,11 +307,11 @@ export default function BalancePage() {
                  <BalanceCard
                     title="Ingresos Netos Realizados"
                     value={summaryData.realizedNetIncome}
-                    description={isFiltered ? "Flujo de caja neto en el período seleccionado." : "Balance total menos las cuentas por cobrar."}
+                    description={isFiltered ? "Flujo de caja neto en el período seleccionado." : "Flujo de caja neto total (histórico)."}
                     icon={Banknote}
                     isLoading={loading}
                     colorBasedOnValue={true}
-                    onClick={() => handleCardClick('realizedNetIncome', 'Ingresos Netos Realizados', 'Balance total menos las cuentas por cobrar.', summaryData.realizedNetIncome)}
+                    onClick={() => handleCardClick('realizedNetIncome', 'Ingresos Netos Realizados', 'Dinero total recibido menos dinero total pagado, mensualmente.', summaryData.realizedNetIncome)}
                 />
                 <BalanceCard
                     title="Balance Neto"
@@ -392,4 +419,3 @@ export default function BalancePage() {
         </div>
     );
 }
-
