@@ -135,10 +135,10 @@ export default function ProductosPage() {
         deleteProduct(productId);
     };
 
-    const handleSave = async (productData: Omit<Product, 'id'> | Product) => {
+    const handleSave = async (productData: Omit<Product, 'id'> | Product, stockAdjustment: number = 0) => {
         try {
             if ('id' in productData && productData.id) {
-                await updateProduct(productData as Product);
+                await updateProduct(productData as Product, stockAdjustment);
                 toast({ title: "Producto Actualizado" });
             } else {
                 await addProduct(productData as Omit<Product, 'id'>);

@@ -133,13 +133,14 @@ interface AppContextType {
   deleteExpense: (id: string) => Promise<void>;
   updateExpense: (expense: Expense) => Promise<void>;
   addPaymentToExpense: (expenseId: string, payment: Omit<Payment, 'id' | 'createdAt'>) => Promise<void>;
+  deletePaymentFromExpense: (expenseId: string, paymentId: string) => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   addMultipleProducts: (products: Omit<Product, 'id'>[], mode: 'append' | 'replace') => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
-  updateProduct: (product: Product) => Promise<void>;
+  updateProduct: (product: Product, stockAdjustment: number) => Promise<void>;
   addRawMaterial: (material: Omit<RawMaterial, 'id'>) => Promise<void>;
   addMultipleRawMaterials: (materials: Omit<RawMaterial, 'id'>[], mode: 'append' | 'replace') => Promise<void>;
-  updateRawMaterial: (material: RawMaterial) => Promise<void>;
+  updateRawMaterial: (material: RawMaterial, stockAdjustment: number) => Promise<void>;
   deleteRawMaterial: (id: string) => Promise<void>;
   addClient: (client: Omit<Client, 'id' | 'code'>) => Promise<Client | undefined>;
   addMultipleClients: (clients: Omit<Client, 'id' | 'code'>[], mode: 'append' | 'replace') => Promise<void>;
@@ -743,6 +744,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const deletePaymentFromExpense = async (expenseId: string, paymentId: string) => {
+    if (!db) throw new Error("Firestore no está inicializado.");
+    try {
+        const expenseRef = doc(db, 'expenses', expenseId);
+        const expense = expenses.find(i => i.id === expenseId);
+        if (!expense) throw new Error("No se encontró el egreso.");
+        
+        const paymentToDelete = expense.payments.find(p => p.id === paymentId);
+        if (!paymentToDelete) throw new Error("No se encontró el pago a eliminar.");
+        
+        await updateDoc(expenseRef, {
+            payments: arrayRemove(paymentToDelete),
+            balance: increment(paymentToDelete.amount),
+        });
+    } catch (error) {
+        console.error("Error deleting payment from expense:", error);
+        throw new Error("No se pudo eliminar el abono.");
+    }
+  };
+
   // --- Product Management with Firestore ---
   const addProduct = async (product: Omit<Product, 'id'>) => {
     if (!db) throw new Error("Firestore no está inicializado.");
@@ -773,12 +794,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const updateProduct = async (updatedProduct: Product) => {
+  const updateProduct = async (updatedProduct: Product, stockAdjustment: number) => {
     if (!db) throw new Error("Firestore no está inicializado.");
     try {
-        const { id, ...productData } = updatedProduct;
+        const { id, stock, ...productData } = updatedProduct;
         const productRef = doc(db, 'products', id);
-        await updateDoc(productRef, productData as any);
+        const dataToUpdate: any = { ...productData };
+        if (stockAdjustment !== 0) {
+            dataToUpdate.stock = increment(stockAdjustment);
+        }
+        await updateDoc(productRef, dataToUpdate);
     } catch (error) {
         console.error("Error updating product:", error);
         throw new Error("No se pudo actualizar el producto.");
@@ -825,12 +850,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateRawMaterial = async (updatedMaterial: RawMaterial) => {
+  const updateRawMaterial = async (updatedMaterial: RawMaterial, stockAdjustment: number) => {
     if (!db) throw new Error("Firestore no está inicializado.");
     try {
-        const { id, ...materialData } = updatedMaterial;
+        const { id, stock, ...materialData } = updatedMaterial;
         const materialRef = doc(db, 'rawMaterials', id);
-        await updateDoc(materialRef, materialData as any);
+        const dataToUpdate: any = { ...materialData };
+        if (stockAdjustment !== 0) {
+            dataToUpdate.stock = increment(stockAdjustment);
+        }
+        await updateDoc(materialRef, dataToUpdate);
     } catch(error) {
         console.error("Error updating raw material:", error);
         throw new Error("No se pudo actualizar la materia prima.");
@@ -903,10 +932,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateClient = async (updatedClient: Client) => {
+  const updateClient = async (client: Client) => {
     if (!db) throw new Error("Firestore no está inicializado.");
     try {
-        const { id, ...clientData } = updatedClient;
+        const { id, ...clientData } = client;
         const clientRef = doc(db, 'clients', id);
         await updateDoc(clientRef, clientData as any);
     } catch (error) {
@@ -981,10 +1010,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateSupplier = async (updatedSupplier: Supplier) => {
+  const updateSupplier = async (supplier: Supplier) => {
     if (!db) throw new Error("Firestore no está inicializado.");
     try {
-        const { id, ...supplierData } = updatedSupplier;
+        const { id, ...supplierData } = supplier;
         const supplierRef = doc(db, 'suppliers', id);
         await updateDoc(supplierRef, supplierData as any);
     } catch(error) {
@@ -1013,7 +1042,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         incomes, expenses, products, rawMaterials, clients, suppliers, invoiceSettings,
         expenseCategories,
         addIncome, addMultipleIncomes, deleteIncome, updateIncome, addPayment, deletePayment,
-        addExpense, addMultipleExpenses, deleteExpense, updateExpense, addPaymentToExpense,
+        addExpense, addMultipleExpenses, deleteExpense, updateExpense, addPaymentToExpense, deletePaymentFromExpense,
         addProduct, addMultipleProducts, deleteProduct, updateProduct,
         addRawMaterial, addMultipleRawMaterials, updateRawMaterial, deleteRawMaterial,
         addClient, addMultipleClients, updateClient, deleteClient,

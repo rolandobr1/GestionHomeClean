@@ -16,20 +16,23 @@ type FormDataType = Partial<Product & RawMaterial>;
 interface InventoryFormProps {
   item: InventoryItem | null;
   itemType: 'product' | 'rawMaterial';
-  onSave: (itemData: any) => Promise<void>;
+  onSave: (itemData: any, stockAdjustment: number) => Promise<void>;
   onClose: () => void;
 }
 
 export const InventoryForm = ({ item, itemType, onSave, onClose }: InventoryFormProps) => {
   const { suppliers } = useAppData();
   const [formData, setFormData] = useState<FormDataType>({});
+  const [stockAdjustment, setStockAdjustment] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
 
   const allSuppliers = [{ id: 'generic', name: 'Suplidor Genérico', code: 'SUP-000', email: '', phone: '', address: '' }, ...suppliers];
 
   useEffect(() => {
     if (item) {
-      setFormData(item);
+      // Don't include stock in the editable form data
+      const { stock, ...rest } = item;
+      setFormData(rest);
     } else {
       setFormData({
         name: '',
@@ -41,6 +44,7 @@ export const InventoryForm = ({ item, itemType, onSave, onClose }: InventoryForm
         ...(itemType === 'rawMaterial' ? { purchasePrice: 0, supplierId: 'generic' } : {}),
       });
     }
+    setStockAdjustment(0);
   }, [item, itemType]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,7 +60,8 @@ export const InventoryForm = ({ item, itemType, onSave, onClose }: InventoryForm
     e.preventDefault();
     setIsSaving(true);
     try {
-      await onSave({ ...item, ...formData });
+        const finalData = { ...item, ...formData };
+        await onSave(finalData, stockAdjustment);
     } finally {
       setIsSaving(false);
     }
@@ -73,15 +78,37 @@ export const InventoryForm = ({ item, itemType, onSave, onClose }: InventoryForm
             <Label htmlFor="sku">SKU</Label>
             <Input id="sku" value={formData.sku} onChange={handleChange} disabled={isSaving}/>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-                <Label htmlFor="stock">Stock</Label>
+        
+        {item ? (
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="currentStock">Stock Actual</Label>
+                    <Input id="currentStock" type="number" value={item.stock} disabled />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="stockAdjustment">Añadir al Stock</Label>
+                    <Input 
+                        id="stockAdjustment" 
+                        type="number" 
+                        value={stockAdjustment} 
+                        onChange={(e) => setStockAdjustment(Number(e.target.value) || 0)} 
+                        inputMode="decimal" 
+                        onFocus={(e) => e.target.select()} 
+                        disabled={isSaving}
+                        placeholder="0"
+                    />
+                </div>
+            </div>
+        ) : (
+             <div className="space-y-2">
+                <Label htmlFor="stock">Stock Inicial</Label>
                 <Input id="stock" type="number" value={formData.stock} onChange={handleChange} required inputMode="decimal" onFocus={(e) => e.target.select()} disabled={isSaving}/>
             </div>
-            <div className="space-y-2">
-                <Label htmlFor="unit">Unidad</Label>
-                <Input id="unit" value={formData.unit} onChange={handleChange} disabled={isSaving}/>
-            </div>
+        )}
+
+        <div className="space-y-2">
+            <Label htmlFor="unit">Unidad</Label>
+            <Input id="unit" value={formData.unit} onChange={handleChange} disabled={isSaving}/>
         </div>
 
         {itemType === 'product' && (

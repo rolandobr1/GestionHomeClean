@@ -180,7 +180,7 @@ export default function MateriaPrimaPage() {
         deleteRawMaterial(materialId);
     };
 
-    const handleSave = async (material: Omit<RawMaterial, 'id'> | RawMaterial) => {
+    const handleSave = async (material: Omit<RawMaterial, 'id'> | RawMaterial, stockAdjustment: number = 0) => {
         if (!user) {
             toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
             return;
@@ -188,7 +188,7 @@ export default function MateriaPrimaPage() {
 
         try {
             if ('id' in material && material.id) {
-                await updateRawMaterial(material as RawMaterial);
+                await updateRawMaterial(material as RawMaterial, stockAdjustment);
                 toast({ title: "Materia Prima Actualizada" });
             } else {
                 const materialToSave = { ...material, recordedBy: user.name };
