@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 
 
 export default function ClientesPage({ params, searchParams }: { params: any; searchParams: any; }) {
-    const { clients, addClient, updateClient, deleteClient, addMultipleClients } = useAppData();
+    const { clients, addClient, updateClient, deleteClient, addMultipleClients } from useAppData();
     const { user } = useAuth();
     const { toast } = useToast();
     const { downloadCSV } = useCsvExport();
