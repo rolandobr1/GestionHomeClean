@@ -10,11 +10,14 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { useAppData } from "@/hooks/use-app-data";
+import { AppProvider } from "@/components/app-provider";
 
-export default function LoginPage() {
+function LoginPageUI() {
   const { login } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { invoiceSettings } = useAppData();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +25,7 @@ export default function LoginPage() {
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem("homeclean-user-email");
+    const storedEmail = localStorage.getItem("quimiogest-user-email");
     if (storedEmail) {
       setEmail(storedEmail);
     }
@@ -33,7 +36,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await login(email, password);
-      localStorage.setItem("homeclean-user-email", email);
+      localStorage.setItem("quimiogest-user-email", email);
       toast({
         title: "Inicio de Sesión Exitoso",
         description: "Bienvenido de nuevo.",
@@ -50,12 +53,12 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
-
+  
   return (
-    <div className="flex flex-col min-h-screen items-center justify-center bg-background">
+      <div className="flex flex-col min-h-screen items-center justify-center bg-background">
       <header className="absolute top-0 px-4 lg:px-6 h-14 flex items-center w-full">
-        <img src="/logohomeclean.png" alt="HOMECLEAN Logo" width={120} height={40} className="object-contain" />
-        <span className="sr-only">HOMECLEAN</span>
+        <img src={invoiceSettings.companyLogo || "/logohomeclean.png"} alt="Logo" width={120} height={40} className="object-contain" />
+        <span className="sr-only">{invoiceSettings.companyName}</span>
       </header>
       <main className="flex-1 flex flex-col items-center justify-center p-4">
         <Card className="w-full max-w-sm">
@@ -101,8 +104,21 @@ export default function LoginPage() {
         </Card>
       </main>
       <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center justify-center px-4 md:px-6 border-t">
-        <p className="text-xs text-muted-foreground">© 2024 HOMECLEAN. Todos los derechos reservados.</p>
+        <p className="text-xs text-muted-foreground">© 2024 {invoiceSettings.companyName}. Todos los derechos reservados.</p>
       </footer>
     </div>
-  );
+  )
 }
+
+
+export default function LoginPage() {
+  // AppProvider is needed for the logo, so we wrap the page with it.
+  // This is a public page, so we cannot rely on the one from DashboardLayout
+  return (
+    <AppProvider>
+      <LoginPageUI />
+    </AppProvider>
+  )
+}
+
+

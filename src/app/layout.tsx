@@ -8,8 +8,8 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "HOMECLEAN",
-  description: "Gestión inteligente para tu negocio de limpieza.",
+  title: "QuimioGest",
+  description: "Gestión inteligente para tu negocio de químicos.",
   manifest: "/manifest.json",
   icons: {
     icon: '/iconohomecleancuadrado.png',
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "HOMECLEAN",
+    title: "QuimioGest",
   },
 };
 
