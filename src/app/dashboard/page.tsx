@@ -157,21 +157,25 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
     const expenseTransactions: ExpenseTransaction[] = expenses.map(e => ({ ...e, type: 'expense' }));
     
     const incomePaymentTransactions: PaymentTransaction[] = incomes.flatMap(income => 
-        (income.payments || []).map(payment => ({
-            type: 'payment' as const,
-            id: `${income.id}-${payment.id}`,
-            parent: income,
-            payment: payment
-        }))
+        (income.paymentMethod === 'credito' && income.payments) 
+            ? income.payments.map(payment => ({
+                type: 'payment' as const,
+                id: `${income.id}-${payment.id}`,
+                parent: income,
+                payment: payment
+              }))
+            : []
     );
 
     const expensePaymentTransactions: ExpensePaymentTransaction[] = expenses.flatMap(expense => 
-        (expense.payments || []).map(payment => ({
-            type: 'expense_payment' as const,
-            id: `${expense.id}-${payment.id}`,
-            parent: expense,
-            payment: payment
-        }))
+        (expense.paymentMethod === 'credito' && expense.payments)
+            ? expense.payments.map(payment => ({
+                type: 'expense_payment' as const,
+                id: `${expense.id}-${payment.id}`,
+                parent: expense,
+                payment: payment
+            }))
+            : []
     );
 
     const combinedTransactions: Transaction[] = [
@@ -540,3 +544,5 @@ export default function DashboardPage({ params, searchParams }: { params: any; s
     </div>
   );
 }
+
+    
