@@ -750,6 +750,8 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                             <div className="md:hidden space-y-3">
                                 {filteredIncomes.length > 0 ? filteredIncomes.map(income => {
                                     const client = allClients.find(c => c.id === income.clientId);
+                                    const showBalance = income.paymentMethod === 'credito' && income.balance > 0.01 && income.balance < income.totalAmount;
+
                                     return (
                                         <Card key={income.id} className={cn("p-4 relative overflow-hidden", getStatusClass(income))} onClick={() => setDetailsIncome(income)}>
                                             <div className="flex justify-between items-start">
@@ -757,7 +759,10 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
                                                     <p className="font-semibold pr-4">{client?.name || 'N/A'}</p>
                                                     <p className="text-sm text-muted-foreground">{format(new Date(income.date + 'T00:00:00'), 'PPP', { locale: es })}</p>
                                                 </div>
-                                                <p className="font-bold text-lg">RD${income.totalAmount.toFixed(2)}</p>
+                                                <div className="text-right">
+                                                    <p className="font-bold text-lg">RD${showBalance ? income.balance.toFixed(2) : income.totalAmount.toFixed(2)}</p>
+                                                    <p className="text-xs text-muted-foreground">{showBalance ? 'Pendiente' : 'Total'}</p>
+                                                </div>
                                             </div>
                                         </Card>
                                 )}) : (
