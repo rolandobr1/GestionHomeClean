@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -114,7 +115,6 @@ const CommandItem = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>
 >(({ className, ...props }, ref) => {
-  const { params, searchParams, ...rest } = props as any
   return (
     <CommandPrimitive.Item
       ref={ref}
@@ -122,7 +122,7 @@ const CommandItem = React.forwardRef<
         "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className
       )}
-      {...rest}
+      {...props}
     />
   )
 })

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAppData } from '@/hooks/use-app-data';
 import type { Income, SoldProduct, Client } from '@/components/app-provider';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { Trash2, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { ContactForm } from '@/components/contact-form';
+import { Combobox } from '@/components/ui/combobox';
 
 interface IncomeFormProps {
   income?: Income | null;
@@ -43,6 +44,16 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
     const [currentPriceType, setCurrentPriceType] = useState<'retail' | 'wholesale'>('retail');
     const [genericProductName, setGenericProductName] = useState('');
     const [genericProductPrice, setGenericProductPrice] = useState<number | string>('');
+
+    const clientOptions = useMemo(() => {
+        const sortedClients = [...allClients].sort((a, b) => a.name.localeCompare(b.name));
+        const options = sortedClients.map(client => ({
+            value: client.id,
+            label: client.name
+        }));
+        // Add generic client at the top
+        return [{ value: 'generic', label: 'Cliente Genérico' }, ...options];
+    }, [allClients]);
 
     useEffect(() => {
         if (income) {
@@ -172,16 +183,14 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                                     Nuevo
                                 </Button>
                             </div>
-                            <Select onValueChange={setClientId} value={clientId} disabled={isSaving}>
-                                <SelectTrigger id="clientId-form">
-                                    <SelectValue placeholder="Selecciona un cliente" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {allClients.map(client => (
-                                        <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Combobox
+                                options={clientOptions}
+                                value={clientId}
+                                onValueChange={setClientId}
+                                placeholder="Selecciona un cliente"
+                                searchPlaceholder="Buscar cliente..."
+                                emptyMessage="No se encontraron clientes."
+                            />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="date-form">Fecha</Label>
