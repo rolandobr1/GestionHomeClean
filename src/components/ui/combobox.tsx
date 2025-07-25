@@ -76,10 +76,14 @@ export function Combobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
-                  onSelect={(selectedValue) => {
-                    onValueChange(selectedValue === value ? "" : selectedValue);
-                    setOpen(false);
+                  value={option.label} // Use label for filtering in cmdk
+                  onSelect={() => { // Keep onSelect for keyboard navigation
+                    onValueChange(option.value)
+                    setOpen(false)
+                  }}
+                  onClick={() => { // Add onClick for robust mouse selection
+                    onValueChange(option.value)
+                    setOpen(false)
                   }}
                 >
                   <Check
