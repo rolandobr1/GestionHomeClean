@@ -190,6 +190,7 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
       <div className="space-y-6">
         <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv" />
         <Card>
+          <Collapsible defaultOpen>
             <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <CardTitle>Lista de Clientes</CardTitle>
@@ -210,135 +211,144 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Cliente
                     </Button>
+                    <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <ChevronsUpDown className="h-4 w-4" />
+                            <span className="sr-only">Mostrar/Ocultar</span>
+                        </Button>
+                    </CollapsibleTrigger>
                 </div>
             </CardHeader>
-            <CardContent>
-                <div className="pb-4">
-                    <div className="relative w-full max-w-sm">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar cliente..."
-                            value={searchTerm}
-                            onChange={(e) => startTransition(() => setSearchTerm(e.target.value))}
-                            className="pl-8"
-                        />
-                         {isPending && (
-                            <div className="absolute right-2.5 top-2.5">
-                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <div className="relative">
-                    <div className="hidden md:block">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead onClick={() => handleSort('code')} className="cursor-pointer">
-                                        <div className="flex items-center">Código {renderSortArrow('code')}</div>
-                                    </TableHead>
-                                    <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
-                                        <div className="flex items-center">Nombre {renderSortArrow('name')}</div>
-                                    </TableHead>
-                                    <TableHead>Teléfono</TableHead>
-                                    <TableHead>Correo</TableHead>
-                                    <TableHead className="text-right">Acciones</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredClients.length > 0 ? filteredClients.map((client) => (
-                                    <TableRow key={client.id}>
-                                        <TableCell className="font-mono">{client.code}</TableCell>
-                                        <TableCell className="font-medium">{client.name}</TableCell>
-                                        <TableCell>{client.phone}</TableCell>
-                                        <TableCell>{client.email}</TableCell>
-                                        <TableCell className="text-right">
-                                            <AlertDialog>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" className="h-8 w-8 p-0">
-                                                            <span className="sr-only">Abrir menú</span>
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => handleEdit(client)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                                        {user?.role === 'admin' && (
-                                                            <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                                                            </AlertDialogTrigger>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>¿Estás seguro de que quieres eliminar este cliente?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del cliente.
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(client.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </TableCell>
-                                    </TableRow>
-                                )) : (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center">
-                                            No se encontraron clientes.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                     <div className="md:hidden space-y-3">
-                        {filteredClients.length > 0 ? filteredClients.map(client => (
-                            <Card key={client.id} className="p-4 flex justify-between items-center">
-                                <div>
-                                    <p className="font-semibold">{client.name}</p>
-                                    <p className="text-sm text-muted-foreground">{client.code}</p>
-                                    <p className="text-sm text-muted-foreground">{client.phone}</p>
-                                </div>
-                                <AlertDialog>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => handleEdit(client)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                            {user?.role === 'admin' && (
-                                                <AlertDialogTrigger asChild>
-                                                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
-                                                </AlertDialogTrigger>
-                                            )}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                     <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                        <AlertDialogTitle>¿Eliminar "{client.name}"?</AlertDialogTitle>
-                                        <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDelete(client.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </Card>
-                        )) : (
-                            <div className="text-center p-8 text-muted-foreground">
-                                No se encontraron clientes.
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </CardContent>
+            <CollapsibleContent>
+              <CardContent>
+                  <div className="pb-4">
+                      <div className="relative w-full max-w-sm">
+                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                              placeholder="Buscar cliente..."
+                              value={searchTerm}
+                              onChange={(e) => startTransition(() => setSearchTerm(e.target.value))}
+                              className="pl-8"
+                          />
+                           {isPending && (
+                              <div className="absolute right-2.5 top-2.5">
+                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              </div>
+                          )}
+                      </div>
+                  </div>
+                  <div className="relative">
+                      <div className="hidden md:block">
+                          <Table>
+                              <TableHeader>
+                                  <TableRow>
+                                      <TableHead onClick={() => handleSort('code')} className="cursor-pointer">
+                                          <div className="flex items-center">Código {renderSortArrow('code')}</div>
+                                      </TableHead>
+                                      <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
+                                          <div className="flex items-center">Nombre {renderSortArrow('name')}</div>
+                                      </TableHead>
+                                      <TableHead>Teléfono</TableHead>
+                                      <TableHead>Correo</TableHead>
+                                      <TableHead className="text-right">Acciones</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {filteredClients.length > 0 ? filteredClients.map((client) => (
+                                      <TableRow key={client.id}>
+                                          <TableCell className="font-mono">{client.code}</TableCell>
+                                          <TableCell className="font-medium">{client.name}</TableCell>
+                                          <TableCell>{client.phone}</TableCell>
+                                          <TableCell>{client.email}</TableCell>
+                                          <TableCell className="text-right">
+                                              <AlertDialog>
+                                                  <DropdownMenu>
+                                                      <DropdownMenuTrigger asChild>
+                                                          <Button variant="ghost" className="h-8 w-8 p-0">
+                                                              <span className="sr-only">Abrir menú</span>
+                                                              <MoreHorizontal className="h-4 w-4" />
+                                                          </Button>
+                                                      </DropdownMenuTrigger>
+                                                      <DropdownMenuContent align="end">
+                                                          <DropdownMenuItem onClick={() => handleEdit(client)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                                          {user?.role === 'admin' && (
+                                                              <AlertDialogTrigger asChild>
+                                                                  <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                              </AlertDialogTrigger>
+                                                          )}
+                                                      </DropdownMenuContent>
+                                                  </DropdownMenu>
+                                                  <AlertDialogContent>
+                                                      <AlertDialogHeader>
+                                                      <AlertDialogTitle>¿Estás seguro de que quieres eliminar este cliente?</AlertDialogTitle>
+                                                      <AlertDialogDescription>
+                                                          Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del cliente.
+                                                      </AlertDialogDescription>
+                                                      </AlertDialogHeader>
+                                                      <AlertDialogFooter>
+                                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                      <AlertDialogAction onClick={() => handleDelete(client.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                      </AlertDialogFooter>
+                                                  </AlertDialogContent>
+                                              </AlertDialog>
+                                          </TableCell>
+                                      </TableRow>
+                                  )) : (
+                                      <TableRow>
+                                          <TableCell colSpan={5} className="h-24 text-center">
+                                              No se encontraron clientes.
+                                          </TableCell>
+                                      </TableRow>
+                                  )}
+                              </TableBody>
+                          </Table>
+                      </div>
+                       <div className="md:hidden space-y-3">
+                          {filteredClients.length > 0 ? filteredClients.map(client => (
+                              <Card key={client.id} className="p-4 flex justify-between items-center">
+                                  <div>
+                                      <p className="font-semibold">{client.name}</p>
+                                      <p className="text-sm text-muted-foreground">{client.code}</p>
+                                      <p className="text-sm text-muted-foreground">{client.phone}</p>
+                                  </div>
+                                  <AlertDialog>
+                                      <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                                  <MoreHorizontal className="h-4 w-4" />
+                                              </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                              <DropdownMenuItem onClick={() => handleEdit(client)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                              {user?.role === 'admin' && (
+                                                  <AlertDialogTrigger asChild>
+                                                      <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                                  </AlertDialogTrigger>
+                                              )}
+                                          </DropdownMenuContent>
+                                      </DropdownMenu>
+                                       <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                          <AlertDialogTitle>¿Eliminar "{client.name}"?</AlertDialogTitle>
+                                          <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDelete(client.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                          </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                  </AlertDialog>
+                              </Card>
+                          )) : (
+                              <div className="text-center p-8 text-muted-foreground">
+                                  No se encontraron clientes.
+                              </div>
+                          )}
+                      </div>
+                  </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
         </Card>
 
         <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
