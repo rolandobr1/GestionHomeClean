@@ -13,15 +13,15 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Trash2, UserPlus } from 'lucide-react';
+import { Trash2, UserPlus, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { ContactForm } from '@/components/contact-form';
-import { Combobox } from '@/components/ui/combobox';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { ScrollArea } from './ui/scroll-area';
 
 const incomeFormSchema = z.object({
   clientId: z.string().min(1, "Debes seleccionar un cliente."),
@@ -45,10 +45,14 @@ interface IncomeFormProps {
 }
 
 export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) => {
-    const { products: allProducts, clients: allClients, invoiceSettings, addClient } = useAppData();
+    const { products: allProducts, clients: allClientsData, invoiceSettings, addClient } = useAppData();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
-    const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
+    
+    // Client selection modal state
+    const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
+    const [clientSearchTerm, setClientSearchTerm] = useState("");
+    const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false);
     
     // Product addition state
     const [currentProduct, setCurrentProduct] = useState('');
@@ -70,15 +74,21 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
 
     const soldProducts = useWatch({ control: form.control, name: 'products' });
     const paymentMethod = useWatch({ control: form.control, name: 'paymentMethod' });
+    const selectedClientId = useWatch({ control: form.control, name: 'clientId' });
 
-    const clientOptions = useMemo(() => {
-        const sortedClients = [...allClients].sort((a, b) => a.name.localeCompare(b.name));
-        const options = sortedClients.map(client => ({
-            value: client.id,
-            label: client.name
-        }));
-        return [{ value: 'generic', label: 'Cliente Genérico' }, ...options];
-    }, [allClients]);
+    const allClients = useMemo(() => [
+        { id: 'generic', name: 'Cliente Genérico', code: 'CLI-000', email: '', phone: '', address: '' },
+        ...[...allClientsData].sort((a,b) => a.name.localeCompare(b.name))
+    ], [allClientsData]);
+
+    const filteredClients = useMemo(() => {
+        if (!clientSearchTerm) return allClients;
+        return allClients.filter(client => client.name.toLowerCase().includes(clientSearchTerm.toLowerCase()));
+    }, [clientSearchTerm, allClients]);
+
+    const selectedClientName = useMemo(() => {
+        return allClients.find(c => c.id === selectedClientId)?.name || 'Cliente Genérico';
+    }, [selectedClientId, allClients]);
     
     useEffect(() => {
         form.reset({
@@ -171,12 +181,18 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
             if (newClient) {
                 toast({ title: "Cliente Añadido", description: `El cliente "${newClient.name}" ha sido creado y seleccionado.` });
                 form.setValue('clientId', newClient.id, { shouldValidate: true });
-                setIsClientDialogOpen(false);
+                setIsNewClientDialogOpen(false);
+                setIsClientSelectorOpen(false);
             }
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'No se pudo crear el nuevo cliente.' });
         }
     };
+
+    const handleClientSelect = (clientId: string) => {
+        form.setValue('clientId', clientId, { shouldValidate: true });
+        setIsClientSelectorOpen(false);
+    }
 
     return (
         <>
@@ -184,32 +200,14 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                 <form onSubmit={form.handleSubmit(handleSubmit)}>
                     <div className="space-y-4 py-4 max-h-[65vh] overflow-y-auto pr-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="clientId"
-                                render={({ field }) => (
-                                    <FormItem className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <FormLabel>Cliente</FormLabel>
-                                            <Button type="button" variant="ghost" size="sm" onClick={() => setIsClientDialogOpen(true)} className="h-7 -mr-2">
-                                                <UserPlus className="h-4 w-4 mr-1"/>
-                                                Nuevo
-                                            </Button>
-                                        </div>
-                                        <FormControl>
-                                            <Combobox
-                                                options={clientOptions}
-                                                value={field.value}
-                                                onValueChange={field.onChange}
-                                                placeholder="Selecciona un cliente"
-                                                searchPlaceholder="Buscar cliente..."
-                                                emptyMessage="No se encontraron clientes."
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                             <div className="space-y-2">
+                                <Label>Cliente</Label>
+                                <div className="flex items-center gap-2">
+                                    <p className="flex-1 p-2 border rounded-md bg-muted text-sm truncate">{selectedClientName}</p>
+                                    <Button type="button" variant="outline" onClick={() => setIsClientSelectorOpen(true)}>Cambiar</Button>
+                                </div>
+                                <FormMessage>{form.formState.errors.clientId?.message}</FormMessage>
+                            </div>
                              <FormField
                                 control={form.control}
                                 name="date"
@@ -392,7 +390,46 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                 </form>
             </Form>
 
-            <Dialog open={isClientDialogOpen} onOpenChange={setIsClientDialogOpen}>
+            {/* Client Selector Modal */}
+            <Dialog open={isClientSelectorOpen} onOpenChange={setIsClientSelectorOpen}>
+                <DialogContent className="sm:max-w-md flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>Seleccionar Cliente</DialogTitle>
+                    </DialogHeader>
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Buscar cliente..."
+                            value={clientSearchTerm}
+                            onChange={(e) => setClientSearchTerm(e.target.value)}
+                            className="pl-8"
+                        />
+                    </div>
+                    <ScrollArea className="flex-grow h-0">
+                        <div className="pr-4">
+                            {filteredClients.map(client => (
+                                <div
+                                    key={client.id}
+                                    onClick={() => handleClientSelect(client.id)}
+                                    className="p-2 -mx-2 rounded-md hover:bg-accent cursor-pointer text-sm"
+                                >
+                                    {client.name}
+                                </div>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                    <DialogFooter className="mt-2">
+                        <Button type="button" variant="outline" onClick={() => {
+                            setIsNewClientDialogOpen(true);
+                        }}>
+                           <UserPlus className="mr-2 h-4 w-4" />
+                           Crear Nuevo Cliente
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <DialogTitle>Añadir Nuevo Cliente</DialogTitle>
@@ -403,12 +440,10 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                     <ContactForm 
                         contact={null} 
                         onSave={handleSaveNewClient as (contactData: any) => Promise<void>} 
-                        onClose={() => setIsClientDialogOpen(false)} 
+                        onClose={() => setIsNewClientDialogOpen(false)} 
                     />
                 </DialogContent>
             </Dialog>
         </>
     );
 };
-
-    
