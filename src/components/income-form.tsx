@@ -264,9 +264,9 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-2/5">Producto</TableHead>
-                                            <TableHead className="w-1/5 text-center">Cant.</TableHead>
-                                            <TableHead className="w-2/5 text-right">Precio</TableHead>
+                                            <TableHead className="w-auto">Producto</TableHead>
+                                            <TableHead className="w-[60px] text-center">Cant.</TableHead>
+                                            <TableHead className="w-[180px] text-right">Precio</TableHead>
                                             <TableHead className="w-auto p-2"></TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -274,7 +274,7 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                                         {fields.length > 0 ? (
                                             fields.map((field, index) => (
                                                 <TableRow key={field.id}>
-                                                    <TableCell className="font-medium">
+                                                    <TableCell className="font-medium p-2 align-middle">
                                                         {field.productId.startsWith('generic_') ? (
                                                             <Input
                                                                 value={field.name}
@@ -284,7 +284,7 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                                                             />
                                                         ) : field.name}
                                                     </TableCell>
-                                                    <TableCell className="align-middle">
+                                                    <TableCell className="p-2 align-middle">
                                                         <Input
                                                             type="number"
                                                             value={field.quantity}
@@ -293,19 +293,19 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                                                             min="1"
                                                         />
                                                     </TableCell>
-                                                    <TableCell className="text-right align-middle">
+                                                    <TableCell className="text-right p-2 align-middle">
                                                          <div className="flex items-center justify-end gap-1">
                                                             <Input
                                                                 type="number"
                                                                 value={field.price}
                                                                 onChange={(e) => update(index, { ...field, price: Number(e.target.value) })}
-                                                                className="h-8 w-24 text-right"
+                                                                className="h-8 w-20 text-right"
                                                                 readOnly={!field.productId.startsWith('generic_')}
                                                             />
                                                             {!field.productId.startsWith('generic_') && (
                                                                 <DropdownMenu>
                                                                     <DropdownMenuTrigger asChild>
-                                                                        <Button type="button" variant="outline" size="sm" className="h-8 text-xs min-w-[80px]">
+                                                                        <Button type="button" variant="outline" size="sm" className="h-8 text-xs min-w-[70px] px-2">
                                                                             {field.priceType === 'retail' ? invoiceSettings.priceLabels.retail : invoiceSettings.priceLabels.wholesale}
                                                                         </Button>
                                                                     </DropdownMenuTrigger>
