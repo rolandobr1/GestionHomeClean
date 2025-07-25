@@ -186,29 +186,30 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
 
 
     return (
-        <>
+        <div className="space-y-6">
             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv" />
-            <div className="flex justify-end gap-2">
-                {user?.role === 'admin' && (
-                  <Button variant="outline" onClick={handleImportClick}>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Imp.
-                  </Button>
-                )}
-                <Button variant="outline" onClick={handleExport}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Exp.
-                </Button>
-                <Button onClick={handleAddNew}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Suplidor
-                </Button>
-            </div>
-
             <Card>
-                <CardHeader>
-                    <CardTitle>Lista de Suplidores</CardTitle>
-                    <CardDescription>Un listado de todos tus suplidores.</CardDescription>
+                <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <CardTitle>Lista de Suplidores</CardTitle>
+                        <CardDescription>Un listado de todos tus suplidores.</CardDescription>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+                        {user?.role === 'admin' && (
+                          <Button variant="outline" size="sm" onClick={handleImportClick}>
+                              <Upload className="mr-2 h-4 w-4" />
+                              Imp.
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={handleExport}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Exp.
+                        </Button>
+                        <Button size="sm" onClick={handleAddNew}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Suplidor
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <div className="pb-4">
@@ -370,8 +371,6 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </>
+        </div>
     );
 }
-
-    
