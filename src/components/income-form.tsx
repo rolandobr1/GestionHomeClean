@@ -405,8 +405,8 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                             className="pl-8"
                         />
                     </div>
-                    <ScrollArea className="flex-grow h-0">
-                        <div className="pr-4">
+                    <ScrollArea className="flex-grow h-0 my-4">
+                        <div className="pr-4 space-y-1">
                             {filteredClients.map(client => (
                                 <div
                                     key={client.id}
