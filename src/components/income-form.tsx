@@ -20,6 +20,12 @@ import { z } from 'zod';
 import { ClientSelectorModal } from './client-selector';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const incomeFormSchema = z.object({
   clientId: z.string().min(1, "Debes seleccionar un cliente."),
@@ -31,6 +37,7 @@ const incomeFormSchema = z.object({
     name: z.string(),
     quantity: z.number().min(1, "La cantidad debe ser al menos 1."),
     price: z.number(),
+    priceType: z.enum(['retail', 'wholesale']).optional().default('retail'),
   })).min(1, "Debes añadir al menos un producto."),
 });
 
@@ -76,7 +83,7 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                 date: format(new Date(income.date + 'T00:00:00'), 'yyyy-MM-dd'),
                 paymentMethod: income.paymentMethod || 'contado',
                 paymentType: income.paymentType || (invoiceSettings.paymentMethods[0] || ''),
-                products: income.products || [],
+                products: income.products.map(p => ({...p, priceType: 'retail'})) || [],
             });
         }
     }, [income, form, invoiceSettings.paymentMethods]);
@@ -91,7 +98,7 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
 
     const handleAddProduct = (product: Product) => {
       const existingProductIndex = fields.findIndex(
-        p => p.productId === product.id && p.price === product.salePriceRetail
+        p => p.productId === product.id
       );
 
       if (existingProductIndex > -1) {
@@ -110,6 +117,7 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
           name: product.name,
           quantity: 1,
           price: product.salePriceRetail,
+          priceType: 'retail',
         });
          toast({
           title: "Producto añadido",
@@ -123,9 +131,24 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
             productId: `generic_${Date.now()}`,
             name: 'Producto Genérico',
             quantity: 1,
-            price: 0
+            price: 0,
+            priceType: 'retail'
         });
         setIsProductSelectorOpen(false);
+    }
+    
+    const handlePriceTypeChange = (index: number, newPriceType: 'retail' | 'wholesale') => {
+        const productInForm = fields[index];
+        const originalProduct = allProducts.find(p => p.id === productInForm.productId);
+
+        if (originalProduct) {
+            const newPrice = newPriceType === 'retail' ? originalProduct.salePriceRetail : originalProduct.salePriceWholesale;
+            update(index, {
+                ...productInForm,
+                price: newPrice,
+                priceType: newPriceType
+            });
+        }
     }
 
     const totalAmount = useMemo(() => {
@@ -241,10 +264,10 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-[60%]">Producto</TableHead>
+                                            <TableHead className="w-[50%]">Producto</TableHead>
                                             <TableHead className="w-[15%] text-center">Cant.</TableHead>
-                                            <TableHead className="w-[20%] text-right">Precio</TableHead>
-                                            <TableHead className="w-[5%]"></TableHead>
+                                            <TableHead className="w-[25%] text-right">Precio</TableHead>
+                                            <TableHead className="w-[10%]"></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -271,13 +294,32 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                                                         />
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Input
-                                                            type="number"
-                                                            value={field.price}
-                                                            onChange={(e) => update(index, { ...field, price: Number(e.target.value) })}
-                                                            className="h-8 text-right"
-                                                            readOnly={!field.productId.startsWith('generic_')}
-                                                        />
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Input
+                                                                type="number"
+                                                                value={field.price}
+                                                                onChange={(e) => update(index, { ...field, price: Number(e.target.value) })}
+                                                                className="h-8 text-right"
+                                                                readOnly={!field.productId.startsWith('generic_')}
+                                                            />
+                                                            {!field.productId.startsWith('generic_') && (
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button type="button" variant="outline" size="sm" className="h-8 text-xs">
+                                                                            {field.priceType === 'retail' ? invoiceSettings.priceLabels.retail : invoiceSettings.priceLabels.wholesale}
+                                                                        </Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent>
+                                                                        <DropdownMenuItem onClick={() => handlePriceTypeChange(index, 'retail')}>
+                                                                            {invoiceSettings.priceLabels.retail}
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem onClick={() => handlePriceTypeChange(index, 'wholesale')}>
+                                                                            {invoiceSettings.priceLabels.wholesale}
+                                                                        </DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            )}
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell>
                                                         <Button variant="ghost" size="icon" type="button" onClick={() => remove(index)} disabled={isSaving}>
@@ -366,4 +408,3 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
         </>
     );
 };
-
