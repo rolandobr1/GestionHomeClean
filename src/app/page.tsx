@@ -25,7 +25,7 @@ function LoginPageUI() {
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem("quimiogest-user-email");
+    const storedEmail = localStorage.getItem("homeclean-user-email");
     if (storedEmail) {
       setEmail(storedEmail);
     }
@@ -36,7 +36,7 @@ function LoginPageUI() {
     setIsLoading(true);
     try {
       await login(email, password);
-      localStorage.setItem("quimiogest-user-email", email);
+      localStorage.setItem("homeclean-user-email", email);
       toast({
         title: "Inicio de Sesión Exitoso",
         description: "Bienvenido de nuevo.",
