@@ -60,15 +60,15 @@ export function ClientSelectorModal({ selectedClientId, onClientSelect }: Client
 
     return (
         <>
-            <Label>Cliente</Label>
-            <div className="flex items-center gap-2">
-                <Button type="button" variant="outline" className="flex-1 justify-start font-normal truncate" onClick={() => setIsSelectorOpen(true)}>
+            <div className="space-y-2">
+                <Label>Cliente</Label>
+                <Button type="button" variant="outline" className="w-full justify-start font-normal truncate" onClick={() => setIsSelectorOpen(true)}>
                     {selectedClientName}
                 </Button>
             </div>
             
             <Dialog open={isSelectorOpen} onOpenChange={setIsSelectorOpen}>
-                <DialogContent className="sm:max-w-md flex flex-col">
+                <DialogContent className="sm:max-w-md flex flex-col h-[70vh]">
                     <DialogHeader>
                         <DialogTitle>Seleccionar Cliente</DialogTitle>
                     </DialogHeader>
@@ -81,7 +81,7 @@ export function ClientSelectorModal({ selectedClientId, onClientSelect }: Client
                             className="pl-8"
                         />
                     </div>
-                    <ScrollArea className="flex-grow h-0 my-4">
+                    <ScrollArea className="flex-grow">
                         <div className="pr-4 space-y-1">
                             {filteredClients.map(client => (
                                 <div

@@ -1,14 +1,13 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppData } from '@/hooks/use-app-data';
-import type { Income, SoldProduct, Client } from '@/components/app-provider';
+import type { Income, SoldProduct } from '@/components/app-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -16,11 +15,12 @@ import { DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
-import { useForm, Controller, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ClientSelectorModal } from './client-selector';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 const incomeFormSchema = z.object({
   clientId: z.string().min(1, "Debes seleccionar un cliente."),
@@ -66,9 +66,10 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
       }
     });
 
-    const soldProducts = useWatch({ control: form.control, name: 'products' });
-    const paymentMethod = useWatch({ control: form.control, name: 'paymentMethod' });
-    const selectedClientId = useWatch({ control: form.control, name: 'clientId' });
+    const { control, watch, setValue, formState: { errors } } = form;
+    const soldProducts = watch('products');
+    const paymentMethod = watch('paymentMethod');
+    const selectedClientId = watch('clientId');
     
     useEffect(() => {
         form.reset({
@@ -110,14 +111,14 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
             if (existingProductIndex > -1) {
                 const updatedProducts = [...soldProducts];
                 updatedProducts[existingProductIndex].quantity += currentQuantity;
-                form.setValue('products', updatedProducts, { shouldValidate: true });
+                setValue('products', updatedProducts, { shouldValidate: true });
             } else {
                 newProduct = { productId: product.id, name: product.name, quantity: currentQuantity, price };
             }
         }
         
         if (newProduct) {
-            form.setValue('products', [...soldProducts, newProduct], { shouldValidate: true });
+            setValue('products', [...soldProducts, newProduct], { shouldValidate: true });
         }
         
         setCurrentProduct('');
@@ -127,7 +128,7 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
 
     const handleRemoveProduct = (productId: string) => {
         const updatedProducts = soldProducts.filter(p => p.productId !== productId);
-        form.setValue('products', updatedProducts, { shouldValidate: true });
+        setValue('products', updatedProducts, { shouldValidate: true });
     };
 
     const totalAmount = soldProducts.reduce((acc, p) => acc + (p.price * p.quantity), 0);
@@ -161,15 +162,12 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                 <form onSubmit={form.handleSubmit(handleSubmit)}>
                     <div className="space-y-4 py-4 max-h-[65vh] overflow-y-auto pr-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <div className="space-y-2">
-                                <ClientSelectorModal 
-                                    selectedClientId={selectedClientId} 
-                                    onClientSelect={(id) => form.setValue('clientId', id, { shouldValidate: true })}
-                                />
-                                <FormMessage>{form.formState.errors.clientId?.message}</FormMessage>
-                            </div>
+                             <ClientSelectorModal 
+                                selectedClientId={selectedClientId} 
+                                onClientSelect={(id) => setValue('clientId', id, { shouldValidate: true })}
+                            />
                              <FormField
-                                control={form.control}
+                                control={control}
                                 name="date"
                                 render={({ field }) => (
                                     <FormItem className="space-y-2">
@@ -182,9 +180,10 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                                 )}
                             />
                         </div>
+                         <FormMessage>{errors.clientId?.message}</FormMessage>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                             <FormField
-                                control={form.control}
+                                control={control}
                                 name="paymentMethod"
                                 render={({ field }) => (
                                     <FormItem className="space-y-2">
@@ -206,7 +205,7 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                             />
                             {paymentMethod === 'contado' && (
                                 <FormField
-                                    control={form.control}
+                                    control={control}
                                     name="paymentType"
                                     render={({ field }) => (
                                         <FormItem className="space-y-2">
@@ -332,7 +331,7 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                                         </div>
                                     </CardContent>
                                 </Card>
-                                {form.formState.errors.products && <p className="text-sm font-medium text-destructive">{form.formState.errors.products?.message}</p>}
+                                {errors.products && <p className="text-sm font-medium text-destructive">{errors.products?.message}</p>}
                              </div>
                         )}
                     </div>
