@@ -20,6 +20,8 @@ import { useSort } from '@/hooks/use-sort';
 import { useCsvExport } from '@/hooks/use-csv-export';
 import { cn } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export default function ProductosPage() {
     const { products, addProduct, updateProduct, deleteProduct, addMultipleProducts } = useAppData();
     const { user } = useAuth();
@@ -33,7 +35,7 @@ export default function ProductosPage() {
     const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
 
     const [isPending, startTransition] = useTransition();
-    const { sortedData: sortedProducts, handleSort, renderSortArrow } = useSort<Product>(products, 'name');
+    const { sortedData: sortedProducts, handleSort, renderSortArrow } = useSort(products, 'name');
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];

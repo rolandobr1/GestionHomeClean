@@ -20,6 +20,8 @@ import { useSort } from '@/hooks/use-sort';
 import { useCsvExport } from '@/hooks/use-csv-export';
 import { cn } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export default function MateriaPrimaPage() {
     const { rawMaterials, suppliers, addRawMaterial, updateRawMaterial, deleteRawMaterial, addMultipleRawMaterials, addSupplier } = useAppData();
     const { user } = useAuth();
@@ -34,7 +36,7 @@ export default function MateriaPrimaPage() {
     
     const [isPending, startTransition] = useTransition();
 
-    const { sortedData: sortedRawMaterials, handleSort, renderSortArrow } = useSort<RawMaterial>(rawMaterials, 'name');
+    const { sortedData: sortedRawMaterials, handleSort, renderSortArrow } = useSort(rawMaterials, 'name');
 
     const allSuppliers = useMemo(() => [
         { id: 'generic', name: 'Suplidor Genérico', code: 'SUP-000', email: '', phone: '', address: '' },

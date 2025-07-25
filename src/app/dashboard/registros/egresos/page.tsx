@@ -21,6 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
 import { ExpenseForm } from '@/components/expense-form';
 
+export const dynamic = 'force-dynamic';
+
 export default function EgresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { expenses, addExpense, deleteExpense, updateExpense, addMultipleExpenses, suppliers, addSupplier, expenseCategories } = useAppData();
     const { user } = useAuth();
@@ -537,5 +539,3 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
         </>
     );
 }
-
-    

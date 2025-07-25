@@ -18,6 +18,8 @@ import { ContactForm } from '@/components/contact-form';
 import { useSort } from '@/hooks/use-sort';
 import { useCsvExport } from '@/hooks/use-csv-export';
 
+export const dynamic = 'force-dynamic';
+
 export default function SuplidoresPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { suppliers, addSupplier, updateSupplier, deleteSupplier, addMultipleSuppliers } = useAppData();
     const { user } = useAuth();
@@ -33,7 +35,7 @@ export default function SuplidoresPage({ params, searchParams }: { params: any; 
     
     const [isPending, startTransition] = useTransition();
 
-    const { sortedData: sortedSuppliers, handleSort, renderSortArrow } = useSort<Supplier>(
+    const { sortedData: sortedSuppliers, handleSort, renderSortArrow } = useSort(
         suppliers,
         'code',
         'asc'

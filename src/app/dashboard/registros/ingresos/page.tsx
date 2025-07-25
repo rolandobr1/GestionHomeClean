@@ -29,6 +29,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PaymentForm } from '@/components/payment-form';
 import { Separator } from '@/components/ui/separator';
 
+export const dynamic = 'force-dynamic';
+
 export default function IngresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
     const { incomes, addIncome, deleteIncome, updateIncome, products, clients, addMultipleIncomes, invoiceSettings, addClient, deletePayment } = useAppData();
     const { user } = useAuth();
@@ -1019,7 +1021,3 @@ export default function IngresosPage({ params, searchParams }: { params: any; se
         </div>
     );
 }
-
-    
-
-    

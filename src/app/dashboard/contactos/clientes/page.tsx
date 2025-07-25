@@ -20,9 +20,10 @@ import { useSort } from '@/hooks/use-sort';
 import { useCsvExport } from '@/hooks/use-csv-export';
 import { cn } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
 
 export default function ClientesPage({ params, searchParams }: { params: any; searchParams: any; }) {
-    const { clients, addClient, updateClient, deleteClient, addMultipleClients } from useAppData();
+    const { clients, addClient, updateClient, deleteClient, addMultipleClients } = useAppData();
     const { user } = useAuth();
     const { toast } = useToast();
     const { downloadCSV } = useCsvExport();
@@ -36,7 +37,7 @@ export default function ClientesPage({ params, searchParams }: { params: any; se
     
     const [isPending, startTransition] = useTransition();
 
-    const { sortedData: sortedClients, handleSort, renderSortArrow } = useSort<Client>(
+    const { sortedData: sortedClients, handleSort, renderSortArrow } = useSort(
         clients,
         'code',
         'asc'
