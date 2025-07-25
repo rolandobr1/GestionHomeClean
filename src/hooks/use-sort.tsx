@@ -39,5 +39,5 @@ export const useSort = <T,>(initialData: T[], initialSortKey: keyof T, initialDi
         return null;
     };
     
-    return { sortedData, handleSort, renderSortArrow };
+    return { sortedData, handleSort, renderSortArrow, sortConfig };
 };
