@@ -4,7 +4,7 @@
 import React, { useState, useMemo } from 'react';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 
-export const useSort = <T,>(initialData: T[], initialSortKey: keyof T, initialDirection: 'asc' | 'desc' = 'asc') => {
+export function useSort<T>(initialData: T[], initialSortKey: keyof T, initialDirection: 'asc' | 'desc' = 'asc') {
     const [sortConfig, setSortConfig] = useState<{ key: keyof T; direction: 'asc' | 'desc' }>({ key: initialSortKey, direction: initialDirection });
 
     const sortedData = useMemo(() => {
@@ -41,4 +41,3 @@ export const useSort = <T,>(initialData: T[], initialSortKey: keyof T, initialDi
     
     return { sortedData, handleSort, renderSortArrow, sortConfig };
 };
-

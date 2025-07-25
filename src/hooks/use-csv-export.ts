@@ -3,7 +3,7 @@
 
 import { useToast } from "@/hooks/use-toast";
 
-export const useCsvExport = () => {
+export function useCsvExport() {
     const { toast } = useToast();
 
     const convertArrayOfObjectsToCSV = (data: any[], headers: string[]) => {
