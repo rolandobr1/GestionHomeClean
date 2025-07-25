@@ -19,7 +19,6 @@ import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import type { DateRange } from 'react-day-picker';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ExpenseForm } from '@/components/expense-form';
 
 export default function EgresosPage({ params, searchParams }: { params: any; searchParams: any; }) {
@@ -374,119 +373,105 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
             </Card>
 
             <Card>
-                <Collapsible defaultOpen={true}>
-                    <CardHeader>
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <CardTitle>Historial de Egresos</CardTitle>
-                                <CardDescription>Un listado de todas tus transacciones de egresos.</CardDescription>
-                            </div>
-                            <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <ChevronsUpDown className="h-4 w-4" />
-                                    <span className="sr-only">Mostrar/Ocultar</span>
-                                </Button>
-                            </CollapsibleTrigger>
-                        </div>
-                    </CardHeader>
-                    <CollapsibleContent>
-                        <CardContent>
-                            <div className="hidden md:block">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead onClick={() => handleSort('description')} className="cursor-pointer">Descripción</TableHead>
-                                            <TableHead onClick={() => handleSort('category')} className="hidden sm:table-cell cursor-pointer">Categoría</TableHead>
-                                            <TableHead onClick={() => handleSort('supplierId')} className="hidden md:table-cell cursor-pointer">Suplidor</TableHead>
-                                            <TableHead onClick={() => handleSort('recordedBy')} className="hidden lg:table-cell cursor-pointer">Registrado por</TableHead>
-                                            <TableHead onClick={() => handleSort('amount')} className="text-right cursor-pointer">Monto</TableHead>
-                                            <TableHead onClick={() => handleSort('date')} className="text-right hidden md:table-cell cursor-pointer">Fecha</TableHead>
-                                            <TableHead className="text-right">Acciones</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {filteredExpenses.length > 0 ? filteredExpenses.map((expense) => {
-                                            const supplier = allSuppliers.find(s => s.id === expense.supplierId);
-                                            return (
-                                            <TableRow key={expense.id}>
-                                                <TableCell className="font-medium">{expense.description}</TableCell>
-                                                <TableCell className="hidden sm:table-cell">{expense.category}</TableCell>
-                                                <TableCell className="hidden md:table-cell">{supplier?.name || 'Suplidor Genérico'}</TableCell>
-                                                <TableCell className="hidden lg:table-cell">{expense.recordedBy}</TableCell>
-                                                <TableCell className="text-right">RD${expense.amount.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right hidden md:table-cell">{format(new Date(expense.date + 'T00:00:00'), 'PPP', { locale: es })}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <AlertDialog>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                    <span className="sr-only">Abrir menú</span>
-                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onClick={() => handleEdit(expense)}>
-                                                                <Edit className="mr-2 h-4 w-4" /> Editar
-                                                                </DropdownMenuItem>
-                                                                {user?.role === 'admin' && (
-                                                                <AlertDialogTrigger asChild>
-                                                                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                                                                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                                                                    </DropdownMenuItem>
-                                                                </AlertDialogTrigger>
-                                                                )}
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                            <AlertDialogTitle>¿Estás seguro de que quieres eliminar este egreso?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del egreso.
-                                                            </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDelete(expense.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                </TableCell>
-                                            </TableRow>
-                                        )}) : (
-                                            <TableRow>
-                                                <TableCell colSpan={7} className="h-24 text-center">
-                                                    No se encontraron resultados.
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                            <div className="md:hidden space-y-3">
-                                {filteredExpenses.length > 0 ? filteredExpenses.map(expense => {
-                                    const supplier = allSuppliers.find(c => c.id === expense.supplierId);
+                <CardHeader>
+                    <CardTitle>Historial de Egresos</CardTitle>
+                    <CardDescription>Un listado de todas tus transacciones de egresos.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="hidden md:block">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead onClick={() => handleSort('description')} className="cursor-pointer">Descripción</TableHead>
+                                    <TableHead onClick={() => handleSort('category')} className="hidden sm:table-cell cursor-pointer">Categoría</TableHead>
+                                    <TableHead onClick={() => handleSort('supplierId')} className="hidden md:table-cell cursor-pointer">Suplidor</TableHead>
+                                    <TableHead onClick={() => handleSort('recordedBy')} className="hidden lg:table-cell cursor-pointer">Registrado por</TableHead>
+                                    <TableHead onClick={() => handleSort('amount')} className="text-right cursor-pointer">Monto</TableHead>
+                                    <TableHead onClick={() => handleSort('date')} className="text-right hidden md:table-cell cursor-pointer">Fecha</TableHead>
+                                    <TableHead className="text-right">Acciones</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredExpenses.length > 0 ? filteredExpenses.map((expense) => {
+                                    const supplier = allSuppliers.find(s => s.id === expense.supplierId);
                                     return (
-                                    <Card key={expense.id} className="p-4" onClick={() => setDetailsExpense(expense)}>
-                                        <div className="flex justify-between items-start">
-                                            <div className="space-y-1">
-                                                <p className="font-semibold">{expense.description}</p>
-                                                <p className="text-sm text-muted-foreground">{supplier?.name || 'N/A'}</p>
-                                            </div>
-                                            <p className="font-bold text-lg">RD${expense.amount.toFixed(2)}</p>
-                                        </div>
-                                        <div className="text-xs text-muted-foreground mt-2">
-                                            {format(new Date(expense.date + 'T00:00:00'), 'PPP', { locale: es })}
-                                        </div>
-                                    </Card>
+                                    <TableRow key={expense.id}>
+                                        <TableCell className="font-medium">{expense.description}</TableCell>
+                                        <TableCell className="hidden sm:table-cell">{expense.category}</TableCell>
+                                        <TableCell className="hidden md:table-cell">{supplier?.name || 'Suplidor Genérico'}</TableCell>
+                                        <TableCell className="hidden lg:table-cell">{expense.recordedBy}</TableCell>
+                                        <TableCell className="text-right">RD${expense.amount.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right hidden md:table-cell">{format(new Date(expense.date + 'T00:00:00'), 'PPP', { locale: es })}</TableCell>
+                                        <TableCell className="text-right">
+                                            <AlertDialog>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                                            <span className="sr-only">Abrir menú</span>
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => handleEdit(expense)}>
+                                                        <Edit className="mr-2 h-4 w-4" /> Editar
+                                                        </DropdownMenuItem>
+                                                        {user?.role === 'admin' && (
+                                                        <AlertDialogTrigger asChild>
+                                                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                                            </DropdownMenuItem>
+                                                        </AlertDialogTrigger>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                    <AlertDialogTitle>¿Estás seguro de que quieres eliminar este egreso?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del egreso.
+                                                    </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(expense.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </TableCell>
+                                    </TableRow>
                                 )}) : (
-                                    <div className="text-center p-8 text-muted-foreground">
-                                        No se encontraron resultados.
-                                    </div>
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="h-24 text-center">
+                                            No se encontraron resultados.
+                                        </TableCell>
+                                    </TableRow>
                                 )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    <div className="md:hidden space-y-3">
+                        {filteredExpenses.length > 0 ? filteredExpenses.map(expense => {
+                            const supplier = allSuppliers.find(c => c.id === expense.supplierId);
+                            return (
+                            <Card key={expense.id} className="p-4" onClick={() => setDetailsExpense(expense)}>
+                                <div className="flex justify-between items-start">
+                                    <div className="space-y-1">
+                                        <p className="font-semibold">{expense.description}</p>
+                                        <p className="text-sm text-muted-foreground">{supplier?.name || 'N/A'}</p>
+                                    </div>
+                                    <p className="font-bold text-lg">RD${expense.amount.toFixed(2)}</p>
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-2">
+                                    {format(new Date(expense.date + 'T00:00:00'), 'PPP', { locale: es })}
+                                </div>
+                            </Card>
+                        )}) : (
+                            <div className="text-center p-8 text-muted-foreground">
+                                No se encontraron resultados.
                             </div>
-                        </CardContent>
-                    </CollapsibleContent>
-                </Collapsible>
+                        )}
+                    </div>
+                </CardContent>
             </Card>
 
              <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
@@ -552,3 +537,5 @@ export default function EgresosPage({ params, searchParams }: { params: any; sea
         </>
     );
 }
+
+    
