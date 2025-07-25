@@ -151,7 +151,7 @@ export default function ProductosPage() {
     };
 
     return (
-        <>
+        <div className="space-y-6">
             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv" />
             <div className="flex justify-end gap-2">
                 {user?.role === 'admin' && (
@@ -294,6 +294,6 @@ export default function ProductosPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </>
+        </div>
     );
 }
