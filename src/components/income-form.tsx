@@ -264,17 +264,17 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-[50%]">Producto</TableHead>
-                                            <TableHead className="w-[15%] text-center">Cant.</TableHead>
-                                            <TableHead className="w-[25%] text-right">Precio</TableHead>
-                                            <TableHead className="w-[10%]"></TableHead>
+                                            <TableHead className="w-2/5">Producto</TableHead>
+                                            <TableHead className="w-1/5 text-center">Cant.</TableHead>
+                                            <TableHead className="w-2/5 text-right">Precio</TableHead>
+                                            <TableHead className="w-auto p-2"></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {fields.length > 0 ? (
                                             fields.map((field, index) => (
                                                 <TableRow key={field.id}>
-                                                    <TableCell>
+                                                    <TableCell className="font-medium">
                                                         {field.productId.startsWith('generic_') ? (
                                                             <Input
                                                                 value={field.name}
@@ -284,36 +284,36 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                                                             />
                                                         ) : field.name}
                                                     </TableCell>
-                                                    <TableCell>
+                                                    <TableCell className="align-middle">
                                                         <Input
                                                             type="number"
                                                             value={field.quantity}
                                                             onChange={(e) => update(index, { ...field, quantity: Number(e.target.value) })}
-                                                            className="h-8 text-center"
+                                                            className="h-8 w-16 text-center mx-auto"
                                                             min="1"
                                                         />
                                                     </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center justify-end gap-1">
+                                                    <TableCell className="text-right align-middle">
+                                                         <div className="flex items-center justify-end gap-1">
                                                             <Input
                                                                 type="number"
                                                                 value={field.price}
                                                                 onChange={(e) => update(index, { ...field, price: Number(e.target.value) })}
-                                                                className="h-8 text-right"
+                                                                className="h-8 w-24 text-right"
                                                                 readOnly={!field.productId.startsWith('generic_')}
                                                             />
                                                             {!field.productId.startsWith('generic_') && (
                                                                 <DropdownMenu>
                                                                     <DropdownMenuTrigger asChild>
-                                                                        <Button type="button" variant="outline" size="sm" className="h-8 text-xs">
+                                                                        <Button type="button" variant="outline" size="sm" className="h-8 text-xs min-w-[80px]">
                                                                             {field.priceType === 'retail' ? invoiceSettings.priceLabels.retail : invoiceSettings.priceLabels.wholesale}
                                                                         </Button>
                                                                     </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent>
-                                                                        <DropdownMenuItem onClick={() => handlePriceTypeChange(index, 'retail')}>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuItem onSelect={() => handlePriceTypeChange(index, 'retail')}>
                                                                             {invoiceSettings.priceLabels.retail}
                                                                         </DropdownMenuItem>
-                                                                        <DropdownMenuItem onClick={() => handlePriceTypeChange(index, 'wholesale')}>
+                                                                        <DropdownMenuItem onSelect={() => handlePriceTypeChange(index, 'wholesale')}>
                                                                             {invoiceSettings.priceLabels.wholesale}
                                                                         </DropdownMenuItem>
                                                                     </DropdownMenuContent>
@@ -321,8 +321,8 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                                                             )}
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell>
-                                                        <Button variant="ghost" size="icon" type="button" onClick={() => remove(index)} disabled={isSaving}>
+                                                    <TableCell className="p-2 align-middle">
+                                                        <Button variant="ghost" size="icon" type="button" onClick={() => remove(index)} disabled={isSaving} className="h-8 w-8">
                                                             <Trash2 className="h-4 w-4 text-destructive"/>
                                                         </Button>
                                                     </TableCell>
