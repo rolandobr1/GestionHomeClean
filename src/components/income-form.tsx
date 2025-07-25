@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
-import { useToast } from './ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const incomeFormSchema = z.object({
   clientId: z.string().min(1, "Debes seleccionar un cliente."),
@@ -142,9 +142,18 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
             <form onSubmit={form.handleSubmit(handleSubmit)}>
                 <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <ClientSelectorModal 
-                            selectedClientId={selectedClientId} 
-                            onClientSelect={(id) => setValue('clientId', id, { shouldValidate: true })}
+                        <FormField
+                            control={control}
+                            name="clientId"
+                            render={({ field }) => (
+                                <FormItem>
+                                     <ClientSelectorModal 
+                                        selectedClientId={field.value} 
+                                        onClientSelect={field.onChange}
+                                    />
+                                    <FormMessage />
+                                </FormItem>
+                            )}
                         />
                         <FormField
                             control={control}
@@ -160,7 +169,6 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
                             )}
                         />
                     </div>
-                    <FormMessage>{errors.clientId?.message}</FormMessage>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                         <FormField
@@ -315,5 +323,3 @@ export const IncomeForm = ({ income = null, onSave, onClose }: IncomeFormProps) 
         </Form>
     );
 };
-
-    
