@@ -29,19 +29,23 @@ Este es el paso más importante y el que se suele olvidar.
     *   Elige **Modo de producción** y haz clic en "Siguiente".
     *   Deja la ubicación por defecto y haz clic en **"Habilitar"**.
 
-3.  **Configura las Reglas de Seguridad:**
+3.  **Configura las Reglas de Seguridad (¡MUY IMPORTANTE!):**
     *   Una vez creada la base de datos, ve a la pestaña **Reglas**.
-    *   Reemplaza el contenido con lo siguiente y haz clic en **Publicar**:
+    *   Reemplaza todo el contenido con las siguientes reglas. Esto es crucial para que la aplicación pueda leer y escribir datos.
+
     ```javascript
     rules_version = '2';
     service cloud.firestore {
       match /databases/{database}/documents {
         match /{document=**} {
-          allow read, write: if true; // Permite leer/escribir para desarrollo inicial.
+          // Permite la lectura y escritura a cualquier usuario autenticado.
+          // Para un entorno de producción real, estas reglas deberían ser más específicas.
+          allow read, write: if request.auth != null;
         }
       }
     }
     ```
+    * Haz clic en **Publicar** para guardar los cambios.
 
 ---
 
