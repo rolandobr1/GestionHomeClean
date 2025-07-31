@@ -31,16 +31,64 @@ Este es el paso más importante y el que se suele olvidar.
 
 3.  **Configura las Reglas de Seguridad (¡MUY IMPORTANTE!):**
     *   Una vez creada la base de datos, ve a la pestaña **Reglas**.
-    *   Reemplaza todo el contenido con las siguientes reglas. Esto es crucial para que la aplicación pueda leer y escribir datos.
+    *   Reemplaza todo el contenido con las siguientes reglas. Esto es crucial para la seguridad y el correcto funcionamiento de la aplicación.
 
     ```javascript
     rules_version = '2';
     service cloud.firestore {
       match /databases/{database}/documents {
-        match /{document=**} {
-          // Permite la lectura y escritura a cualquier usuario autenticado.
-          // Para un entorno de producción real, estas reglas deberían ser más específicas.
-          allow read, write: if request.auth != null;
+        
+        // --- Funciones de Ayuda ---
+        function isAdmin() {
+          return request.auth.token.email == 'rolando@homeclean.do';
+        }
+        
+        function isAuthenticated() {
+          return request.auth != null;
+        }
+
+        // --- Reglas para Colecciones Específicas ---
+
+        // Clientes y Suplidores: Cualquiera puede leer y crear/actualizar.
+        // Solo el admin puede eliminar.
+        match /clients/{clientId} {
+          allow read, create, update: if isAuthenticated();
+          allow delete: if isAdmin();
+        }
+        
+        match /suppliers/{supplierId} {
+          allow read, create, update: if isAuthenticated();
+          allow delete: if isAdmin();
+        }
+        
+        // Productos y Materia Prima: Cualquiera puede leer y crear/actualizar.
+        // Solo el admin puede eliminar.
+        match /products/{productId} {
+          allow read, create, update: if isAuthenticated();
+          allow delete: if isAdmin();
+        }
+
+        match /rawMaterials/{materialId} {
+          allow read, create, update: if isAuthenticated();
+          allow delete: if isAdmin();
+        }
+        
+        // Ingresos y Egresos: Cualquiera puede leer y crear/actualizar.
+        // Solo el admin puede eliminar.
+        match /incomes/{incomeId} {
+          allow read, create, update: if isAuthenticated();
+          allow delete: if isAdmin();
+        }
+        
+        match /expenses/{expenseId} {
+          allow read, create, update: if isAuthenticated();
+          allow delete: if isAdmin();
+        }
+
+        // Ajustes: Solo el admin puede leer o escribir.
+        // Esto protege la configuración crítica de la aplicación.
+        match /settings/{settingId} {
+          allow read, write: if isAdmin();
         }
       }
     }
